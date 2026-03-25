@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 
 const A = "#D4470A";
 const A2 = "#FF6B35";
@@ -64,6 +65,34 @@ export default function PanelPage() {
   const [items, setItems] = useState(menuItems);
   const [toast, setToast] = useState<string | null>(null);
   const [catFilter, setCatFilter] = useState("Tümü");
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Oturum kontrolü
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        window.location.href = "/auth";
+      } else {
+        setUser(session.user);
+        setLoading(false);
+      }
+    });
+
+    // Oturum değişikliklerini dinle
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT" || !session) {
+        window.location.href = "/auth";
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    window.location.href = "/auth";
+  };
 
   const flash = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 2000); };
   const toggleItem = (id: number) => { setItems(prev => prev.map(i => i.id === id ? { ...i, active: !i.active } : i)); };
@@ -89,6 +118,22 @@ export default function PanelPage() {
     settings: "Ayarlar",
   };
 
+  // Yükleniyor ekranı
+  if (loading) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#080808", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Outfit', system-ui, sans-serif" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: A, margin: "0 auto 16px", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 3 }}>
+            <div style={{ width: 16, height: 2, background: "#fff", borderRadius: 99 }} />
+            <div style={{ width: 11, height: 2, background: "#fff", borderRadius: 99 }} />
+            <div style={{ width: 16, height: 2, background: "#fff", borderRadius: 99 }} />
+          </div>
+          <div style={{ fontSize: 13, color: "rgba(255,255,255,.4)" }}>Yükleniyor...</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#080808", fontFamily: "'Outfit', system-ui, sans-serif", color: "#fff" }}>
       <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
@@ -105,7 +150,6 @@ export default function PanelPage() {
         .btn:hover{opacity:.85}
         .btn:active{transform:scale(.97)}
         .row-item:hover{background:rgba(255,255,255,.03)}
-        .toggle-track{transition:background .2s}
         @media(max-width:960px){
           .sidebar{width:60px!important}
           .sidebar-label{display:none!important}
@@ -147,10 +191,12 @@ export default function PanelPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 10px", background: "rgba(255,255,255,.04)", borderRadius: 10 }}>
             <div style={{ width: 30, height: 30, borderRadius: 8, background: `${A}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>🍽</div>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#fff" }}>Sultanahmet Ocakbaşı</div>
+              <div style={{ fontSize: 11, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#fff" }}>
+                {user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Restoran"}
+              </div>
               <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
                 <div style={{ width: 5, height: 5, borderRadius: 99, background: "#22c55e" }} />
-                <span style={{ fontSize: 9, color: "rgba(255,255,255,.35)" }}>Pro Plan · Aktif</span>
+                <span style={{ fontSize: 9, color: "rgba(255,255,255,.35)" }}>Ücretsiz Plan · Aktif</span>
               </div>
             </div>
           </div>
@@ -176,8 +222,10 @@ export default function PanelPage() {
 
         <div style={{ padding: "12px 10px", borderTop: "1px solid rgba(255,255,255,.06)" }}>
           <div className="sidebar-plan" style={{ padding: "11px 12px", background: `${A}0f`, border: `1px solid ${A}22`, borderRadius: 11, marginBottom: 8 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#fff" }}>Pro Plan</div>
-            <div style={{ fontSize: 10, color: "rgba(255,255,255,.35)", marginTop: 2 }}>Sonraki ödeme: 15 Nis 2026</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#fff" }}>Ücretsiz Plan</div>
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,.35)", marginTop: 2 }}>
+              <a href="/fiyat" style={{ color: A, textDecoration: "none", fontWeight: 600 }}>Pro'ya geç →</a>
+            </div>
           </div>
           <a href="/demo" target="_blank" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 0", borderRadius: 8, border: "1px solid rgba(255,255,255,.08)", background: "transparent", color: "rgba(255,255,255,.45)", fontSize: 12, fontWeight: 600, textDecoration: "none", transition: "all .15s" }}
             onMouseEnter={e => { e.currentTarget.style.color = "#fff"; e.currentTarget.style.borderColor = "rgba(255,255,255,.2)"; }}
@@ -194,11 +242,24 @@ export default function PanelPage() {
         <header style={{ padding: "0 32px", height: 62, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,.06)", background: "#080808", position: "sticky", top: 0, zIndex: 30, backdropFilter: "blur(10px)" }}>
           <div>
             <h1 style={{ fontSize: 16, fontWeight: 700 }}>{tabLabel[activeTab]}</h1>
-            <p style={{ fontSize: 11, color: "rgba(255,255,255,.3)", marginTop: 1 }}>Pazartesi, 25 Mart 2026</p>
+            <p style={{ fontSize: 11, color: "rgba(255,255,255,.3)", marginTop: 1 }}>
+              {user?.email}
+            </p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <button onClick={() => flash("Bildirimler açılıyor...")} className="btn" style={{ width: 36, height: 36, borderRadius: 9, border: "1px solid rgba(255,255,255,.08)", background: "transparent", color: "rgba(255,255,255,.5)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>🔔</button>
-            <div style={{ width: 36, height: 36, borderRadius: 99, background: A, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, cursor: "pointer", boxShadow: `0 0 0 2px ${A}40` }}>S</div>
+            <button onClick={() => flash("Bildirimler yakında!")} className="btn" style={{ width: 36, height: 36, borderRadius: 9, border: "1px solid rgba(255,255,255,.08)", background: "transparent", color: "rgba(255,255,255,.5)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>🔔</button>
+            {/* Çıkış butonu */}
+            <button onClick={handleSignOut} className="btn" style={{ padding: "8px 14px", borderRadius: 9, border: "1px solid rgba(255,255,255,.08)", background: "transparent", color: "rgba(255,255,255,.5)", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+              <span className="sidebar-label">Çıkış</span>
+            </button>
+            <div style={{ width: 36, height: 36, borderRadius: 99, background: A, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, cursor: "pointer", boxShadow: `0 0 0 2px ${A}40` }}>
+              {(user?.user_metadata?.full_name?.[0] || user?.email?.[0] || "U").toUpperCase()}
+            </div>
           </div>
         </header>
 
@@ -207,7 +268,6 @@ export default function PanelPage() {
           {/* DASHBOARD */}
           {activeTab === "dashboard" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 20, animation: "fadeUp .35s both" }}>
-              {/* Stats */}
               <div className="stats-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
                 {[
                   { label: "Bu Hafta Görüntülenme", value: totalViews.toLocaleString(), sub: "↑ +8% geçen haftaya göre", color: "#22c55e" },
@@ -223,7 +283,6 @@ export default function PanelPage() {
                 ))}
               </div>
 
-              {/* Chart row */}
               <div className="chart-grid" style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 14 }}>
                 <div className="card" style={{ padding: "22px 24px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
@@ -258,7 +317,6 @@ export default function PanelPage() {
                 </div>
               </div>
 
-              {/* Quick actions */}
               <div className="card" style={{ padding: "20px 22px" }}>
                 <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14, color: "rgba(255,255,255,.7)" }}>Hızlı İşlemler</div>
                 <div className="actions-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
@@ -293,7 +351,6 @@ export default function PanelPage() {
               </div>
 
               <div className="card" style={{ overflow: "hidden" }}>
-                {/* Table header */}
                 <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 80px 80px 100px 80px", padding: "12px 20px", borderBottom: "1px solid rgba(255,255,255,.06)", background: "rgba(255,255,255,.02)" }}>
                   {["Ürün", "Kategori", "Fiyat", "Görüntü", "Durum", ""].map((h, i) => (
                     <span key={i} style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,.25)", letterSpacing: ".06em" }}>{h}</span>
@@ -413,20 +470,20 @@ export default function PanelPage() {
           {activeTab === "settings" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16, animation: "fadeUp .35s both", maxWidth: 640 }}>
               <div className="card" style={{ padding: "22px 24px" }}>
-                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 18 }}>Restoran Bilgileri</div>
+                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 18 }}>Hesap Bilgileri</div>
                 {[
-                  ["Restoran Adı", "Sultanahmet Ocakbaşı"],
-                  ["Adres", "Divanyolu Cd. No:12, Sultanahmet"],
-                  ["Telefon", "+90 212 555 0123"],
-                  ["Çalışma Saatleri", "09:00 – 23:00"],
-                  ["WiFi Şifresi", "sultanahmet2024"],
+                  ["E-posta", user?.email || "—"],
+                  ["Kayıt Tarihi", user?.created_at ? new Date(user.created_at).toLocaleDateString("tr-TR") : "—"],
+                  ["Plan", "Ücretsiz"],
                 ].map(([label, value], i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: i < 4 ? "1px solid rgba(255,255,255,.06)" : "none" }}>
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: i < 2 ? "1px solid rgba(255,255,255,.06)" : "none" }}>
                     <span style={{ fontSize: 12, color: "rgba(255,255,255,.4)" }}>{label}</span>
                     <span style={{ fontSize: 13, fontWeight: 600 }}>{value}</span>
                   </div>
                 ))}
-                <button onClick={() => flash("Düzenleme formu açılıyor...")} className="btn" style={{ marginTop: 16, padding: "10px 20px", borderRadius: 9, border: "1px solid rgba(255,255,255,.1)", background: "transparent", color: "rgba(255,255,255,.7)", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Düzenle</button>
+                <a href="/fiyat" style={{ display: "inline-block", marginTop: 16, padding: "10px 20px", borderRadius: 9, background: A, color: "#fff", fontSize: 13, fontWeight: 700, textDecoration: "none", boxShadow: `0 4px 16px ${A}40` }}>
+                  Pro'ya Yükselt →
+                </a>
               </div>
 
               <div className="card" style={{ padding: "22px 24px" }}>
@@ -434,15 +491,17 @@ export default function PanelPage() {
                 <div style={{ fontSize: 11, color: "rgba(255,255,255,.35)", marginBottom: 16 }}>Müşteri menüsündeki vurgu rengi</div>
                 <div style={{ display: "flex", gap: 10 }}>
                   {[A, "#111", "#16a34a", "#2563eb", "#8b5cf6", "#f59e0b"].map((c, i) => (
-                    <div key={i} onClick={() => flash("Renk güncellendi!")} style={{ width: 38, height: 38, borderRadius: 10, background: c, cursor: "pointer", border: i === 0 ? "3px solid #fff" : "3px solid transparent", transition: "border-color .15s", boxShadow: i === 0 ? `0 0 0 1px ${c}` : "none" }} />
+                    <div key={i} onClick={() => flash("Renk güncellendi!")} style={{ width: 38, height: 38, borderRadius: 10, background: c, cursor: "pointer", border: i === 0 ? "3px solid #fff" : "3px solid transparent", transition: "border-color .15s" }} />
                   ))}
                 </div>
               </div>
 
               <div className="card" style={{ padding: "22px 24px", border: "1px solid rgba(239,68,68,.2)", background: "rgba(239,68,68,.04)" }}>
-                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Tehlikeli Alan</div>
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,.4)", marginBottom: 16 }}>Bu işlemler geri alınamaz.</div>
-                <button onClick={() => flash("Silme işlemi için destek ile iletişime geçin.")} className="btn" style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid rgba(239,68,68,.3)", background: "transparent", color: "#ef4444", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Hesabı Sil</button>
+                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Oturum</div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,.4)", marginBottom: 16 }}>Hesabınızdan güvenli çıkış yapın.</div>
+                <button onClick={handleSignOut} className="btn" style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid rgba(239,68,68,.3)", background: "transparent", color: "#ef4444", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                  Çıkış Yap
+                </button>
               </div>
             </div>
           )}
