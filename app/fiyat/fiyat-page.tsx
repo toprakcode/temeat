@@ -150,7 +150,7 @@ var extras = [
 export default function FiyatPage() {
   var [annual, setAnnual] = useState(false);
   var [showCompare, setShowCompare] = useState(false);
-  var [selectedFaq, setSelectedFaq] = useState(null);
+  var [selectedFaq, setSelectedFaq] = useState<number | null>(null);
 
   var faqs = [
     { q: "14 gün deneme nasıl çalışır?", a: "Başlangıç, Pro veya İşletme planlarından birini seçin. 14 gün boyunca tüm özellikleri ücretsiz kullanın. Beğenmezseniz iptal edin, ücret alınmaz. Kredi kartı bilgisi istenir ama 14 gün içinde çekim yapılmaz." },
@@ -166,7 +166,6 @@ export default function FiyatPage() {
       <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..900&display=swap" rel="stylesheet" />
       <style>{`*{-webkit-tap-highlight-color:transparent;box-sizing:border-box}@keyframes si{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}.si{animation:si .4s cubic-bezier(.25,1,.5,1) both}.pr:active{transform:scale(.977);transition:transform .06s}::-webkit-scrollbar{display:none}`}</style>
 
-      {/* Header */}
       <div style={{ padding: "32px 20px 0", textAlign: "center" }}>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 16 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
@@ -184,7 +183,6 @@ export default function FiyatPage() {
           Gizli ücret yok, komisyon yok, sözleşme yok.<br />İstediğiniz zaman iptal edin.
         </p>
 
-        {/* Toggle */}
         <div style={{ display: "inline-flex", background: "#EFEFEF", borderRadius: 12, padding: 3, marginBottom: 28 }}>
           <button onClick={function() { setAnnual(false); }}
             style={{ padding: "9px 20px", borderRadius: 10, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "inherit", background: !annual ? "#FFF" : "transparent", color: !annual ? "#111" : "#999", boxShadow: !annual ? "0 1px 4px rgba(0,0,0,.06)" : "none", transition: "all .2s" }}>
@@ -197,7 +195,6 @@ export default function FiyatPage() {
         </div>
       </div>
 
-      {/* Plans */}
       <div style={{ padding: "0 16px" }}>
         {plans.map(function(plan, i) {
           var price = annual ? plan.priceAnnual : plan.price;
@@ -213,7 +210,6 @@ export default function FiyatPage() {
               position: "relative",
               animationDelay: i * 0.06 + "s"
             }}>
-              {/* Popular badge */}
               {isPro && (
                 <div style={{ position: "absolute", top: -11, left: "50%", transform: "translateX(-50%)", background: A, color: "#fff", fontSize: 10, fontWeight: 700, padding: "4px 14px", borderRadius: 99 }}>
                   En Popüler
@@ -222,7 +218,6 @@ export default function FiyatPage() {
 
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
                 <div>
-                  {/* Plan icon */}
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                     <div style={{ width: 32, height: 32, borderRadius: 10, background: plan.color + (isPro ? "" : "12"), display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <span style={{ fontSize: 14, color: isPro ? "#FFF" : plan.color }}>
@@ -236,7 +231,6 @@ export default function FiyatPage() {
                   </div>
                 </div>
 
-                {/* Price */}
                 <div style={{ textAlign: "right" }}>
                   {price === 0 ? (
                     <div style={{ fontSize: 28, fontWeight: 800, color: isPro ? "#FFF" : "#111" }}>₺0</div>
@@ -254,12 +248,10 @@ export default function FiyatPage() {
                 </div>
               </div>
 
-              {/* Target */}
               <div style={{ fontSize: 11, color: isPro ? A : plan.color, fontWeight: 600, marginBottom: 14, background: isPro ? A + "15" : plan.color + "08", display: "inline-block", padding: "4px 10px", borderRadius: 6 }}>
                 {plan.target}
               </div>
 
-              {/* Key features (show top 6-8) */}
               <div style={{ marginBottom: 16 }}>
                 {plan.features.slice(0, plan.id === "free" ? 8 : plan.id === "starter" ? 12 : plan.id === "enterprise" ? 14 : 18).map(function(f, j) {
                   if (!f.included) return null;
@@ -277,7 +269,6 @@ export default function FiyatPage() {
                 )}
               </div>
 
-              {/* CTA */}
               {plan.id === "free" ? (
                 <button className="pr" style={{ width: "100%", padding: 13, borderRadius: 12, border: "1.5px solid #DDD", background: "#FFF", color: "#333", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
                   Ücretsiz Başla
@@ -302,18 +293,15 @@ export default function FiyatPage() {
         })}
       </div>
 
-      {/* Compare button */}
       <div style={{ padding: "12px 16px 0", textAlign: "center" }}>
         <button onClick={function() { setShowCompare(!showCompare); }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, color: A, fontFamily: "inherit", padding: "8px 16px" }}>
           {showCompare ? "Karşılaştırmayı Gizle ↑" : "Tüm Özellikleri Karşılaştır ↓"}
         </button>
       </div>
 
-      {/* Feature Comparison Table */}
       {showCompare && (
         <div style={{ padding: "12px 16px", overflowX: "auto" }}>
           <div style={{ background: "#FFF", borderRadius: 16, border: "1px solid #EEE", overflow: "hidden", minWidth: 460 }}>
-            {/* Header */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 58px 58px 58px 58px", padding: "12px 14px", borderBottom: "1px solid #EEE", background: "#FAFAFA" }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: "#999" }}>ÖZELLİK</span>
               <span style={{ fontSize: 9, fontWeight: 600, color: "#999", textAlign: "center" }}>Free</span>
@@ -322,7 +310,6 @@ export default function FiyatPage() {
               <span style={{ fontSize: 9, fontWeight: 600, color: "#111", textAlign: "center" }}>Enterp</span>
             </div>
 
-            {/* Rows */}
             {[
               ["Ürün limiti", "15", "50", "∞", "∞"],
               ["Menü sayısı", "1", "1", "∞", "∞"],
@@ -359,7 +346,6 @@ export default function FiyatPage() {
               );
             })}
 
-            {/* Support extras */}
             <div style={{ padding: "8px 14px", background: "#F8F8F8", borderTop: "1px solid #EEE" }}>
               <div style={{ fontSize: 9, fontWeight: 700, color: "#999", marginBottom: 6, letterSpacing: ".06em" }}>DESTEK & HİZMET</div>
             </div>
@@ -378,7 +364,6 @@ export default function FiyatPage() {
         </div>
       )}
 
-      {/* Revenue Calculator */}
       <div style={{ padding: "24px 16px 0" }}>
         <div style={{ background: "#FFF", borderRadius: 16, border: "1px solid #EEE", padding: 20 }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: "#111", marginBottom: 4 }}>Yatırımınızın Karşılığı</div>
@@ -408,7 +393,6 @@ export default function FiyatPage() {
         </div>
       </div>
 
-      {/* Trust badges */}
       <div style={{ padding: "24px 16px 0" }}>
         <div style={{ display: "flex", justifyContent: "center", gap: 20, flexWrap: "wrap" }}>
           {[
@@ -427,7 +411,6 @@ export default function FiyatPage() {
         </div>
       </div>
 
-      {/* FAQ */}
       <div style={{ padding: "32px 16px" }}>
         <div style={{ fontSize: 16, fontWeight: 800, color: "#111", textAlign: "center", marginBottom: 16, letterSpacing: "-.03em" }}>Sık Sorulan Sorular</div>
 
@@ -447,7 +430,6 @@ export default function FiyatPage() {
         })}
       </div>
 
-      {/* Final CTA */}
       <div style={{ padding: "0 16px 32px", textAlign: "center" }}>
         <div style={{ background: "#111", borderRadius: 20, padding: "28px 20px" }}>
           <div style={{ fontSize: 18, fontWeight: 800, color: "#FFF", marginBottom: 6, letterSpacing: "-.03em" }}>Hâlâ emin değil misiniz?</div>
@@ -459,7 +441,6 @@ export default function FiyatPage() {
         </div>
       </div>
 
-      {/* Footer */}
       <div style={{ textAlign: "center", padding: "0 0 20px" }}>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
