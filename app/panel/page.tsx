@@ -67,19 +67,27 @@ export default function PanelPage() {
   const [catFilter, setCatFilter] = useState("Tümü");
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [restaurant, setRestaurant] = useState<any>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Onboarding form state
+  const [obName, setObName] = useState("");
+  const [obSlug, setObSlug] = useState("");
+  const [obPhone, setObPhone] = useState("");
+  const [obAddress, setObAddress] = useState("");
+  const [obSaving, setObSaving] = useState(false);
+  const [obError, setObError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Oturum kontrolü
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
         window.location.href = "/auth";
       } else {
         setUser(session.user);
-        setLoading(false);
+        checkRestaurant(session.user.id);
       }
     });
 
-    // Oturum değişikliklerini dinle
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT" || !session) {
         window.location.href = "/auth";
@@ -88,6 +96,52 @@ export default function PanelPage() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const checkRestaurant = async (userId: string) => {
+  const { data, error } = await supabase
+    .from("restaurants")
+    .select("*")
+    .eq("user_id", userId)
+    .single();
+
+  console.log("Restaurant data:", data);
+  console.log("Restaurant error:", error);
+
+  if (data) {
+    setRestaurant(data);
+  } else {
+    setShowOnboarding(true);
+  }
+  setLoading(false);
+};
+
+  const handleOnboardingSave = async () => {
+    if (!obName.trim()) { setObError("Restoran adı zorunlu."); return; }
+    if (!obSlug.trim()) { setObError("Menü adresi zorunlu."); return; }
+    if (!/^[a-z0-9-]+$/.test(obSlug)) { setObError("Menü adresi sadece küçük harf, rakam ve - içerebilir."); return; }
+
+    setObSaving(true);
+    setObError(null);
+
+    const { data, error } = await supabase.from("restaurants").insert({
+      user_id: user.id,
+      name: obName.trim(),
+      slug: obSlug.trim(),
+      phone: obPhone.trim(),
+      address: obAddress.trim(),
+    }).select().single();
+
+    if (error) {
+      if (error.code === "23505") setObError("Bu menü adresi alınmış, başka bir tane dene.");
+      else setObError("Bir hata oluştu, tekrar dene.");
+      setObSaving(false);
+      return;
+    }
+
+    setRestaurant(data);
+    setShowOnboarding(false);
+    setObSaving(false);
+  };
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -129,6 +183,94 @@ export default function PanelPage() {
             <div style={{ width: 16, height: 2, background: "#fff", borderRadius: 99 }} />
           </div>
           <div style={{ fontSize: 13, color: "rgba(255,255,255,.4)" }}>Yükleniyor...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Onboarding ekranı
+  if (showOnboarding) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#080808", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Outfit', system-ui, sans-serif", padding: 20, position: "relative", overflow: "hidden" }}>
+        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+        <style>{`*{box-sizing:border-box;margin:0;padding:0}@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}input::placeholder{color:rgba(255,255,255,.2)}input:focus{outline:none;border-color:${A}!important}`}</style>
+        <div style={{ position: "absolute", inset: 0, backgroundImage: `radial-gradient(ellipse at 50% 0%, ${A}12 0%, transparent 60%)`, pointerEvents: "none" }} />
+        <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(rgba(255,255,255,.025) 1px, transparent 1px)", backgroundSize: "32px 32px", pointerEvents: "none" }} />
+
+        <div style={{ width: "100%", maxWidth: 480, animation: "fadeUp .5s cubic-bezier(.25,1,.5,1) both", position: "relative", zIndex: 1 }}>
+          {/* Logo */}
+          <div style={{ textAlign: "center", marginBottom: 32 }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 9 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                <div style={{ width: 18, height: 2.5, background: A, borderRadius: 99 }} />
+                <div style={{ width: 12, height: 2.5, background: A, borderRadius: 99 }} />
+                <div style={{ width: 18, height: 2.5, background: A, borderRadius: 99 }} />
+              </div>
+              <span style={{ fontSize: 22, fontWeight: 800, color: "#fff" }}>TEM<span style={{ color: A }}>eat</span></span>
+            </div>
+          </div>
+
+          <div style={{ background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.09)", borderRadius: 20, padding: "32px 28px" }}>
+            {/* Steps indicator */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 28 }}>
+              {[1, 2, 3].map((s, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, flex: i < 2 ? 1 : 0 }}>
+                  <div style={{ width: 24, height: 24, borderRadius: 99, background: i === 0 ? A : "rgba(255,255,255,.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: i === 0 ? "#fff" : "rgba(255,255,255,.3)", flexShrink: 0 }}>{s}</div>
+                  {i < 2 && <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,.08)" }} />}
+                </div>
+              ))}
+            </div>
+
+            <h1 style={{ fontSize: 22, fontWeight: 800, color: "#fff", letterSpacing: "-.03em", marginBottom: 6 }}>Restoranınızı kurun</h1>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,.35)", marginBottom: 24 }}>Birkaç bilgi ile dijital menünüz hazır!</p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Restoran Adı *</label>
+                <input type="text" value={obName} onChange={e => { setObName(e.target.value); setObSlug(e.target.value.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-")); }}
+                  placeholder="Sultanahmet Ocakbaşı"
+                  style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", transition: "border-color .2s" }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Menü Adresi *</label>
+                <div style={{ display: "flex", alignItems: "center", gap: 0, borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", overflow: "hidden" }}>
+                  <span style={{ padding: "12px 10px 12px 14px", fontSize: 13, color: "rgba(255,255,255,.3)", whiteSpace: "nowrap", borderRight: "1px solid rgba(255,255,255,.08)" }}>temeat.com.tr/</span>
+                  <input type="text" value={obSlug} onChange={e => setObSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                    placeholder="restoran-adiniz"
+                    style={{ flex: 1, padding: "12px 14px", border: "none", background: "transparent", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
+                </div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,.25)", marginTop: 5 }}>Müşteriler bu adresten menünüze ulaşır</div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Telefon</label>
+                <input type="tel" value={obPhone} onChange={e => setObPhone(e.target.value)}
+                  placeholder="+90 555 000 0000"
+                  style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", transition: "border-color .2s" }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Adres</label>
+                <input type="text" value={obAddress} onChange={e => setObAddress(e.target.value)}
+                  placeholder="Divanyolu Cd. No:12, Sultanahmet"
+                  style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", transition: "border-color .2s" }} />
+              </div>
+
+              {obError && (
+                <div style={{ padding: "10px 14px", borderRadius: 9, background: "rgba(239,68,68,.1)", border: "1px solid rgba(239,68,68,.2)", fontSize: 13, color: "#f87171" }}>{obError}</div>
+              )}
+
+              <button onClick={handleOnboardingSave} disabled={obSaving}
+                style={{ width: "100%", padding: "13px 0", borderRadius: 11, border: "none", background: obSaving ? `${A}80` : A, color: "#fff", fontSize: 14, fontWeight: 700, cursor: obSaving ? "not-allowed" : "pointer", fontFamily: "inherit", boxShadow: `0 6px 20px ${A}40`, marginTop: 4 }}>
+                {obSaving ? "Kaydediliyor..." : "Restoranı Kur →"}
+              </button>
+            </div>
+          </div>
+
+          <p style={{ textAlign: "center", fontSize: 12, color: "rgba(255,255,255,.2)", marginTop: 20 }}>
+            Sonradan ayarlardan değiştirebilirsiniz
+          </p>
         </div>
       </div>
     );
@@ -192,7 +334,7 @@ export default function PanelPage() {
             <div style={{ width: 30, height: 30, borderRadius: 8, background: `${A}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>🍽</div>
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: 11, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#fff" }}>
-                {user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Restoran"}
+                {restaurant?.name || user?.email?.split("@")[0] || "Restoran"}
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
                 <div style={{ width: 5, height: 5, borderRadius: 99, background: "#22c55e" }} />
