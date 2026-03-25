@@ -92,79 +92,116 @@ export default function Home() {
       iconLabel: "Canlı Analitik",
       iconSub: "Anlık veriler",
     },
+    {
+      tag: "QR Kod Yönetimi",
+      title: "Her masaya özel\nQR kod, saniyede",
+      desc: "10 masa, 10 ayrı QR. Müşteri kendi masasından okutunca sipariş doğrudan o masaya düşüyor. PNG, SVG veya PDF olarak indirin, hemen basın.",
+      items: ["Masa bazlı sipariş takibi", "PNG / SVG / PDF indirme", "Özelleştirilebilir logo & renk"],
+      color: "#0d0d0d",
+      icon: (
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke={A} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+          <rect x="3" y="14" width="7" height="7"/>
+          <line x1="14" y1="14" x2="14" y2="14"/><line x1="14" y1="17" x2="17" y2="17"/>
+          <line x1="17" y1="14" x2="20" y2="14"/><line x1="20" y1="17" x2="20" y2="20"/>
+          <line x1="17" y1="20" x2="14" y2="20"/>
+        </svg>
+      ),
+      iconLabel: "QR Yönetimi",
+      iconSub: "Sınırsız masa kodu",
+    },
+    {
+      tag: "Kampanya & İndirim",
+      title: "İndirim rozeti koy,\nsatışı artır",
+      desc: "Ürünlere yüzde indirim etiketi yapıştırın. Müşteri hem eski hem yeni fiyatı görüyor, kampanyalı ürünler otomatik öne çıkıyor.",
+      items: ["Yüzdesel indirim etiketi", "Üst üste kampanya desteği", "Anında fiyat güncelleme"],
+      color: "#140a00",
+      icon: (
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke={A} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+          <line x1="7" y1="7" x2="7.01" y2="7"/>
+        </svg>
+      ),
+      iconLabel: "Kampanya Sistemi",
+      iconSub: "-%10, -%20, -%30...",
+    },
+    {
+      tag: "Garson Çağır & WiFi",
+      title: "Garson çağır,\nşifreyi paylaş",
+      desc: "Müşteri tek tuşla garson çağırıyor. WiFi şifresi menüde görünüyor, kopyalamak için tek dokunuş yeterli. Gereksiz sorular bitti.",
+      items: ["Anlık garson bildirimi", "Tek dokunuşla WiFi kopyala", "Masa numarasıyla bildirim"],
+      color: "#0a0d0a",
+      icon: (
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke={A} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+        </svg>
+      ),
+      iconLabel: "Masa Servisi",
+      iconSub: "Garson + WiFi",
+    },
   ];
 
   const plans = [
-  {
-    id: "free",
-    name: "Ücretsiz",
-    price: 0,
-    priceA: 0,
-    desc: "Dijital menüye ilk adım",
-    features: [
-      "15 ürüne kadar",
-      "1 menü",
-      "Temel QR kod",
-      "5 dil desteği",
-      "Karanlık mod",
-      "Mekan fotoğrafları",
-      "WiFi gösterimi",
-      "Garson çağır butonu",
-    ],
-    cta: "Ücretsiz Başla",
-    highlight: false,
-  },
-  {
-    id: "starter",
-    name: "Başlangıç",
-    price: 149,
-    priceA: 119,
-    desc: "Büyümek isteyen restoranlar",
-    features: [
-      "50 ürüne kadar",
-      "1 menü",
-      "Özelleştirilebilir QR kod",
-      "5 dil desteği",
-      "Karanlık mod",
-      "Mekan fotoğrafları",
-      "WiFi gösterimi",
-      "Garson çağır butonu",
-      "Sepet & WhatsApp sipariş",
-      "Şefin seçimi bölümü",
-      "Fotoğraf galerisi (3 foto/ürün)",
-      "Hazırlık süresi & porsiyon",
-      "Masa bazlı QR (5 masa)",
-      "Temel analitik",
-    ],
-    cta: "14 Gün Ücretsiz Dene",
-    highlight: false,
-  },
-  {
-    id: "pro",
-    name: "Profesyonel",
-    price: 299,
-    priceA: 239,
-    desc: "Tüm özellikler, sınırsız güç",
-    features: [
-      "Sınırsız ürün & menü",
-      "Premium QR kod tasarımı",
-      "5 dil desteği",
-      "Karanlık mod & mekan fotoğrafları",
-      "Sepet & WhatsApp sipariş",
-      "Şefin seçimi bölümü",
-      "Fotoğraf galerisi (sınırsız)",
-      "Hazırlık süresi & porsiyon",
-      "Benzer yemek önerileri",
-      "Kampanya & indirim",
-      "Detaylı analitik",
-      "Logo kaldırma (white-label)",
-      "Özel domain",
-      "Masa bazlı QR (sınırsız)",
-    ],
-    cta: "14 Gün Ücretsiz Dene",
-    highlight: true,
-  },
-];
+    {
+      id: "free",
+      name: "Ücretsiz",
+      price: 0,
+      priceA: 0,
+      desc: "Başlamak için",
+      features: [
+        "15 ürüne kadar",
+        "1 menü",
+        "5 dil desteği",
+        "Temel QR kod",
+        "Karanlık mod",
+        "Mekan fotoğrafları",
+        "WiFi gösterimi",
+        "Garson çağır butonu",
+      ],
+      cta: "Ücretsiz Başla",
+      highlight: false,
+    },
+    {
+      id: "starter",
+      name: "Başlangıç",
+      price: 149,
+      priceA: 119,
+      desc: "Büyümek isteyenler için",
+      features: [
+        "50 ürüne kadar",
+        "1 menü",
+        "Özelleştirilebilir QR kod",
+        "5 dil desteği",
+        "Sepet & WhatsApp sipariş",
+        "Şefin seçimi bölümü",
+        "Fotoğraf galerisi",
+        "Hazırlık süresi & porsiyon",
+        "Temel analitik",
+        "Masa bazlı QR (5 masa)",
+      ],
+      cta: "14 Gün Ücretsiz Dene",
+      highlight: false,
+    },
+    {
+      id: "pro",
+      name: "Pro",
+      price: 299,
+      priceA: 239,
+      desc: "Tüm özellikler",
+      features: [
+        "Sınırsız ürün & menü",
+        "Premium QR kod tasarımı",
+        "Benzer yemek önerileri",
+        "Kampanya & indirim",
+        "Detaylı analitik",
+        "Logo kaldırma (white-label)",
+        "Özel domain",
+        "Sınırsız masa bazlı QR",
+      ],
+      cta: "14 Gün Ücretsiz Dene",
+      highlight: true,
+    },
+  ];
 
   const testimonials = [
     { name: "Ahmet Yılmaz", role: "Sultanahmet Ocakbaşı", text: "Turistler artık 'menü yok mu' diye sormadan kendileri hallediyor. Garsonlarımız çok daha hızlı.", avatar: "AY" },
@@ -392,20 +429,27 @@ export default function Home() {
       </section>
 
       {/* FEATURES */}
-      <section id="ozellikler" style={{ padding: "100px 5%", background: "#fff" }}>
+      <section id="ozellikler" style={{ padding: "100px 5% 20px", background: "#fff" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-          <div id="feat-header" data-animate style={{ textAlign: "center", marginBottom: 64 }}
+          <div id="feat-header" data-animate style={{ textAlign: "center", marginBottom: 80 }}
             className={`animate ${visibleSections.has("feat-header") ? "visible" : ""}`}>
             <p style={{ fontSize: 12, fontWeight: 700, color: A, letterSpacing: ".12em", textTransform: "uppercase", marginBottom: 12 }}>Özellikler</p>
             <h2 style={{ fontSize: "clamp(28px, 4vw, 48px)", fontWeight: 900, letterSpacing: "-.04em", lineHeight: 1.1 }}>
               Restoranınızın ihtiyacı<br />olan her şey
             </h2>
+            <p style={{ fontSize: 16, color: "#888", marginTop: 16, maxWidth: 480, margin: "16px auto 0", lineHeight: 1.6 }}>
+              QR menüden siparişe, analitiğe kadar tüm araçlar tek platformda.
+            </p>
           </div>
+        </div>
+      </section>
 
-          {features.map((feat, i) => (
-            <div key={i} id={`feat-${i}`} data-animate
-              className={`features-row animate animate-delay-${i + 1} ${visibleSections.has(`feat-${i}`) ? "visible" : ""}`}
-              style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "center", marginBottom: 80 }}>
+      {features.map((feat, i) => (
+        <section key={i} style={{ padding: "80px 5%", background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
+          <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+            <div id={`feat-${i}`} data-animate
+              className={`features-row animate ${visibleSections.has(`feat-${i}`) ? "visible" : ""}`}
+              style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 80, alignItems: "center", animationDelay: `${(i % 3) * 0.1}s` }}>
               <div style={{ order: i % 2 === 0 ? 0 : 1 }}>
                 <div style={{ display: "inline-block", padding: "5px 12px", background: `${A}12`, borderRadius: 6, fontSize: 11, fontWeight: 700, color: A, marginBottom: 16 }}>{feat.tag}</div>
                 <h3 style={{ fontSize: "clamp(22px, 3vw, 36px)", fontWeight: 800, letterSpacing: "-.03em", lineHeight: 1.15, marginBottom: 16, whiteSpace: "pre-line" }}>{feat.title}</h3>
@@ -437,9 +481,9 @@ export default function Home() {
                 </div>
               </div>
             </div>
-          ))}
-        </div>
-      </section>
+          </div>
+        </section>
+      ))}
 
       {/* STATS */}
       <section style={{ padding: "80px 5%", background: "#0a0a0a" }}>
