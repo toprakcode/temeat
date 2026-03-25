@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import React from "react";
 
-/* ============ SHARED ============ */
 const A = "#D4470A";
 
 type LangKey = "tr" | "en" | "ar" | "de" | "ru";
@@ -35,13 +35,10 @@ const ITEMS: Item[][] = [
 ];
 
 const INT = ["https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=200&fit=crop&q=80","https://images.unsplash.com/photo-1552566626-52f8b828add9?w=400&h=200&fit=crop&q=80","https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=200&fit=crop&q=80"];
-
 const all: Item[] = ITEMS.flat();
-
 function tC(t: string): string { return ({"pop":A,"nw":"#2563eb","sp":"#dc2626","vg":"#16a34a"} as Record<string,string>)[t] || "#999"; }
 
-/* ============ MAIN APP ============ */
-export default function DemoPage() {
+function MenuApp() {
   const [mode, setMode] = useState("pro");
   const [lang, setLang] = useState<LangKey>("tr");
   const [dk, setDk] = useState(false);
@@ -75,14 +72,13 @@ export default function DemoPage() {
   function tL(t: string) { return ({"pop":u.pop,"nw":u.nw,"sp":u.sp,"vg":u.vg} as Record<string,string>)[t] || t; }
 
   return (
-    <div style={{ maxWidth: 430, margin: "0 auto", minHeight: "100vh", background: C.bg, fontFamily: "'Inter',system-ui,sans-serif", transition: "background .4s", position: "relative", color: C.tx }}>
-      <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..900&display=swap" rel="stylesheet" />
+    <div style={{ width: "100%", height: "100%", background: C.bg, fontFamily: "'Inter',system-ui,sans-serif", transition: "background .4s", position: "relative", color: C.tx, overflowY: "auto", overflowX: "hidden" }}>
       <style>{`*{-webkit-tap-highlight-color:transparent;box-sizing:border-box}@keyframes si{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes fi{from{opacity:0}to{opacity:1}}@keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}@keyframes ti{0%{opacity:0;transform:translateX(-50%) scale(.95)}100%{opacity:1;transform:translateX(-50%) scale(1)}}.si{animation:si .4s cubic-bezier(.25,1,.5,1) both}.pr:active{transform:scale(.977);transition:transform .06s}::-webkit-scrollbar{display:none}`}</style>
 
-      {toast && <div style={{ position: "fixed", top: 14, left: "50%", transform: "translateX(-50%)", zIndex: 200, animation: "ti .2s", background: C.cd, border: "1px solid " + C.bd, borderRadius: 100, padding: "7px 18px", boxShadow: "0 4px 20px rgba(0,0,0,.08)", fontSize: 12, fontWeight: 600, color: A, whiteSpace: "nowrap" }}>{toast}</div>}
+      {toast && <div style={{ position: "absolute", top: 14, left: "50%", transform: "translateX(-50%)", zIndex: 200, animation: "ti .2s", background: C.cd, border: "1px solid " + C.bd, borderRadius: 100, padding: "7px 18px", boxShadow: "0 4px 20px rgba(0,0,0,.08)", fontSize: 12, fontWeight: 600, color: A, whiteSpace: "nowrap" }}>{toast}</div>}
 
       <div style={{ padding: "10px 16px", background: dk ? "#111" : "#FFF", borderBottom: "1px solid " + C.bd, display: "flex", gap: 4, overflowX: "auto", position: "sticky", top: 0, zIndex: 30 }}>
-        {[{ id: "pro", label: "Müşteri Menüsü (Pro)" },{ id: "free", label: "Ücretsiz Menü" }].map(function(m) {
+        {[{ id: "pro", label: "Pro Menü" },{ id: "free", label: "Ücretsiz Menü" }].map(function(m) {
           return (
             <button key={m.id} onClick={function() { setMode(m.id); setCart({}); setShowCart(false); setDet(null); }}
               style={{ padding: "7px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 10, fontWeight: mode === m.id ? 700 : 400, fontFamily: "inherit", background: mode === m.id ? A : "transparent", color: mode === m.id ? "#fff" : C.mt, whiteSpace: "nowrap", transition: "all .2s" }}>
@@ -181,7 +177,7 @@ export default function DemoPage() {
         </div>
       )}
 
-      <div style={{ padding: "4px 0 " + (cCount > 0 && isPro ? "130px" : !isPro ? "80px" : "70px") }}>
+      <div style={{ padding: "4px 0 130px" }}>
         {items.map(function(it, i) {
           const qty = cart[it.id] || 0;
           const dp = it.disc ? Math.round(it.p * (1 - it.disc / 100)) : null;
@@ -194,7 +190,7 @@ export default function DemoPage() {
                   <div style={{ fontSize: 12, color: C.mt, lineHeight: 1.4, marginBottom: 8, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{it.d[lang] || it.d.en}</div>
                   {isPro && <div style={{ display: "flex", gap: 8, marginBottom: 8, fontSize: 10, color: C.mt }}>{it.prep > 0 && <span>{it.prep}{u.prep}</span>}<span>{it.por}{u.por}</span><span>{it.cal}{u.cal}</span></div>}
                   <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                    <span style={{ fontSize: 18, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{dp ? "₺" + dp : "₺" + it.p}</span>
+                    <span style={{ fontSize: 18, fontWeight: 700 }}>{dp ? "₺" + dp : "₺" + it.p}</span>
                     {dp && <span style={{ fontSize: 12, color: C.dm, textDecoration: "line-through" }}>₺{it.p}</span>}
                   </div>
                 </div>
@@ -244,7 +240,7 @@ export default function DemoPage() {
         )}
       </div>
 
-      <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", maxWidth: 430, width: "100%", borderTop: "1px solid " + C.bd, background: C.bg, padding: "10px 20px 14px", display: "flex", gap: 8, zIndex: 20 }}>
+      <div style={{ position: "sticky", bottom: 0, background: C.bg, padding: "10px 20px 14px", display: "flex", gap: 8, borderTop: "1px solid " + C.bd, zIndex: 20 }}>
         <button onClick={function() { fl(u.notified); }} className="pr" style={{ flex: 1, padding: 12, borderRadius: 12, border: "1.5px solid " + C.bd, background: C.cd, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", color: C.tx }}>{u.waiter}</button>
         {isPro && cCount > 0 && (
           <button onClick={function() { setShowCart(true); }} className="pr" style={{ flex: 2, padding: "12px 16px", borderRadius: 12, border: "none", background: A, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 4px 16px " + A + "30" }}>
@@ -258,12 +254,12 @@ export default function DemoPage() {
 
       {showCart && (
         <div>
-          <div onClick={function() { setShowCart(false); }} style={{ position: "fixed", inset: 0, background: dk ? "rgba(0,0,0,.6)" : "rgba(0,0,0,.25)", zIndex: 40, animation: "fi .15s" }} />
-          <div style={{ position: "fixed", bottom: 0, left: "50%", marginLeft: -215, maxWidth: 430, width: "100%", background: C.cd, borderRadius: "20px 20px 0 0", zIndex: 50, maxHeight: "70vh", display: "flex", flexDirection: "column", animation: "su .3s cubic-bezier(.25,1,.5,1)" }}>
+          <div onClick={function() { setShowCart(false); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 40, animation: "fi .15s" }} />
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: C.cd, borderRadius: "20px 20px 0 0", zIndex: 50, maxHeight: "70%", display: "flex", flexDirection: "column", animation: "su .3s cubic-bezier(.25,1,.5,1)" }}>
             <div style={{ width: 28, height: 3, borderRadius: 99, background: C.dm, margin: "10px auto 0" }} />
             <div style={{ padding: "14px 20px 10px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid " + C.bd }}>
               <span style={{ fontWeight: 700, fontSize: 15 }}>{u.cart}</span>
-              <button onClick={function() { setShowCart(false); }} style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid " + C.bd, background: "transparent", cursor: "pointer", fontSize: 12, color: C.mt, display: "flex", alignItems: "center", justifyContent: "center" }}>{u.close}</button>
+              <button onClick={function() { setShowCart(false); }} style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid " + C.bd, background: "transparent", cursor: "pointer", fontSize: 12, color: C.mt }}>{u.close}</button>
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: "0 20px" }}>
               {cList.length === 0 ? <div style={{ textAlign: "center", padding: 40, color: C.mt, fontSize: 13 }}>{u.empty}</div>
@@ -278,7 +274,7 @@ export default function DemoPage() {
                       <span style={{ minWidth: 16, textAlign: "center", fontSize: 12, fontWeight: 700 }}>{c.qty}</span>
                       <button onClick={function() { ac(c.it); }} style={{ width: 28, height: 28, border: "none", background: "none", cursor: "pointer", color: C.s2, fontSize: 14 }}>+</button>
                     </div>
-                    <span style={{ fontWeight: 700, fontSize: 14, minWidth: 48, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>₺{pr * c.qty}</span>
+                    <span style={{ fontWeight: 700, fontSize: 14, minWidth: 48, textAlign: "right" }}>₺{pr * c.qty}</span>
                   </div>
                 );
               })}
@@ -287,7 +283,7 @@ export default function DemoPage() {
               <div style={{ padding: "14px 20px 28px", borderTop: "1px solid " + C.bd }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 16 }}>
                   <span style={{ fontSize: 13, color: C.mt }}>{u.total}</span>
-                  <span style={{ fontSize: 26, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>₺{cTotal}</span>
+                  <span style={{ fontSize: 26, fontWeight: 800 }}>₺{cTotal}</span>
                 </div>
                 <button onClick={function() { let m = "🍽️ *Sultanahmet Ocakbaşı*\n\n"; cList.forEach(function(c) { const pr = c.it.disc ? Math.round(c.it.p * (1 - c.it.disc / 100)) : c.it.p; m += c.qty + "× " + (c.it.n[lang] || c.it.n.en) + "  ₺" + (pr * c.qty) + "\n"; }); m += "\n" + u.total + ": ₺" + cTotal; window.open("https://wa.me/905551234567?text=" + encodeURIComponent(m), "_blank"); }} className="pr"
                   style={{ width: "100%", padding: 15, borderRadius: 12, border: "none", background: "#25D366", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{u.send}</button>
@@ -299,14 +295,14 @@ export default function DemoPage() {
 
       {det && isPro && (
         <div>
-          <div onClick={function() { setDet(null); }} style={{ position: "fixed", inset: 0, background: dk ? "rgba(0,0,0,.6)" : "rgba(0,0,0,.25)", zIndex: 60, animation: "fi .15s" }} />
-          <div style={{ position: "fixed", bottom: 0, left: "50%", marginLeft: -215, maxWidth: 430, width: "100%", background: C.cd, borderRadius: "20px 20px 0 0", zIndex: 70, animation: "su .3s cubic-bezier(.25,1,.5,1)", maxHeight: "85vh", overflowY: "auto" }}>
+          <div onClick={function() { setDet(null); }} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 60, animation: "fi .15s" }} />
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: C.cd, borderRadius: "20px 20px 0 0", zIndex: 70, animation: "su .3s cubic-bezier(.25,1,.5,1)", maxHeight: "85%", overflowY: "auto" }}>
             <div style={{ width: 28, height: 3, borderRadius: 99, background: C.dm, margin: "10px auto 6px" }} />
             <img src={det.img} alt="" style={{ width: "100%", height: 220, objectFit: "cover" }} />
             <button onClick={function() { setDet(null); }} style={{ position: "absolute", top: 20, right: 16, width: 30, height: 30, borderRadius: 99, background: "rgba(0,0,0,.3)", border: "none", cursor: "pointer", color: "#fff", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>{u.close}</button>
             <div style={{ padding: "16px 20px 28px" }}>
               {det.t.length > 0 && <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>{det.t.map(function(tg) { return <span key={tg} style={{ fontSize: 9, fontWeight: 600, color: tC(tg), letterSpacing: ".06em", textTransform: "uppercase" }}>{tL(tg)}</span>; })}</div>}
-              <h2 style={{ fontSize: 22, fontWeight: 700, margin: "0 0 8px", letterSpacing: "-.03em" }}>{det.n[lang] || det.n.en}</h2>
+              <h2 style={{ fontSize: 22, fontWeight: 700, margin: "0 0 8px" }}>{det.n[lang] || det.n.en}</h2>
               <div style={{ display: "flex", gap: 12, marginBottom: 12, fontSize: 11, color: C.mt }}>{det.prep > 0 && <span>{det.prep}{u.prep}</span>}<span>{det.por}{u.por}</span><span>{det.cal}{u.cal}</span></div>
               <p style={{ fontSize: 13, color: C.s2, margin: "0 0 18px", lineHeight: 1.65 }}>{det.d[lang] || det.d.en}</p>
               {det.sim && det.sim.length > 0 && (
@@ -319,7 +315,7 @@ export default function DemoPage() {
                       return (
                         <div key={sid} onClick={function() { setDet(si); }} style={{ display: "flex", alignItems: "center", gap: 8, background: C.bg, border: "1px solid " + C.bd, borderRadius: 10, padding: 8, cursor: "pointer", flex: 1 }}>
                           <img src={si.img} alt="" style={{ width: 36, height: 36, borderRadius: 8, objectFit: "cover" }} />
-                          <div><div style={{ fontSize: 11, fontWeight: 600, lineHeight: 1.2 }}>{si.n[lang] || si.n.en}</div><div style={{ fontSize: 11, fontWeight: 700, color: A }}>₺{si.p}</div></div>
+                          <div><div style={{ fontSize: 11, fontWeight: 600 }}>{si.n[lang] || si.n.en}</div><div style={{ fontSize: 11, fontWeight: 700, color: A }}>₺{si.p}</div></div>
                         </div>
                       );
                     })}
@@ -337,8 +333,8 @@ export default function DemoPage() {
 
       {modal && (
         <div>
-          <div onClick={function() { setModal(false); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 80, animation: "fi .15s" }} />
-          <div style={{ position: "fixed", bottom: 0, left: "50%", marginLeft: -215, maxWidth: 430, width: "100%", background: C.cd, borderRadius: "20px 20px 0 0", zIndex: 90, animation: "su .3s cubic-bezier(.25,1,.5,1)" }}>
+          <div onClick={function() { setModal(false); }} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 80, animation: "fi .15s" }} />
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: C.cd, borderRadius: "20px 20px 0 0", zIndex: 90, animation: "su .3s cubic-bezier(.25,1,.5,1)" }}>
             <div style={{ width: 28, height: 3, borderRadius: 99, background: C.dm, margin: "10px auto 0" }} />
             <div style={{ padding: "20px 24px" }}>
               <div style={{ textAlign: "center", marginBottom: 20 }}>
@@ -346,28 +342,259 @@ export default function DemoPage() {
                 <h2 style={{ fontSize: 18, fontWeight: 800, margin: "0 0 4px" }}><span>TEM</span><span style={{ color: A }}>eat</span> Pro</h2>
                 <p style={{ fontSize: 12, color: C.mt, margin: 0 }}>Restoranınızı dijitalde büyütün</p>
               </div>
-              <div style={{ marginBottom: 16 }}>
-                {[["Sınırsız ürün","15","∞"],["Sepet & Sipariş","—","✓"],["Şefin Seçimi","—","✓"],["Fotoğraf Galerisi","1","∞"],["Süre & Porsiyon","—","✓"],["Benzer Öneriler","—","✓"],["Kampanyalar","—","✓"],["Logo Kaldırma","—","✓"],["Analitik","—","✓"]].map(function(r, i) {
-                  return (
-                    <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 50px 50px", padding: "6px 0", borderBottom: i < 8 ? "1px solid " + C.bd : "none" }}>
-                      <span style={{ fontSize: 11 }}>{r[0]}</span>
-                      <span style={{ fontSize: 11, color: C.dm, textAlign: "center" }}>{r[1]}</span>
-                      <span style={{ fontSize: 11, color: A, textAlign: "center", fontWeight: 600 }}>{r[2]}</span>
-                    </div>
-                  );
-                })}
-              </div>
               <div style={{ background: C.bg, borderRadius: 12, padding: 14, textAlign: "center", marginBottom: 14, border: "1px solid " + C.bd }}>
-                <span style={{ fontSize: 28, fontWeight: 800 }}>₺199</span>
+                <span style={{ fontSize: 28, fontWeight: 800 }}>₺299</span>
                 <span style={{ fontSize: 12, color: C.mt }}>/ay</span>
                 <div style={{ fontSize: 10, color: C.mt, marginTop: 4 }}>14 gün ücretsiz · İstediğin zaman iptal</div>
               </div>
-              <button className="pr" style={{ width: "100%", padding: 14, borderRadius: 12, border: "none", background: A, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>14 Gün Ücretsiz Dene</button>
+              <a href="/fiyat" className="pr" style={{ display: "block", textAlign: "center", width: "100%", padding: 14, borderRadius: 12, border: "none", background: A, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textDecoration: "none" }}>Fiyatları İncele</a>
               <button onClick={function() { setModal(false); }} style={{ width: "100%", padding: 10, marginTop: 6, background: "transparent", border: "none", color: C.mt, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>Ücretsiz devam et</button>
             </div>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+export default function DemoPage() {
+  const [device, setDevice] = useState<"phone"|"tablet">("phone");
+
+  function MockupToggleBtn({ id, icon, label }: { id: string; icon: React.ReactNode; label: string }) {
+    const active = device === id;
+    return (
+      <button onClick={() => setDevice(id as "phone"|"tablet")} style={{
+        display: "flex", alignItems: "center", gap: 6,
+        padding: "7px 16px", borderRadius: 9, border: "none", cursor: "pointer",
+        fontFamily: "inherit", fontSize: 13, fontWeight: active ? 700 : 500,
+        background: active ? "rgba(255,255,255,.12)" : "transparent",
+        color: active ? "#fff" : "rgba(255,255,255,.45)",
+        transition: "all .2s",
+      }}>{icon}{label}</button>
+    );
+  }
+
+  function MockupDisplay() {
+    const isPhone = device === "phone";
+
+    if (isPhone) {
+      return (
+        <div style={{ position: "relative" }}>
+          {/* Glow */}
+          <div style={{ position: "absolute", inset: -50, background: `radial-gradient(circle, ${A}20 0%, transparent 65%)`, pointerEvents: "none", zIndex: 0 }} />
+          <div style={{ position: "relative", zIndex: 1 }}>
+            {/* iPhone 16 outer shell — dark teal/black like reference */}
+            <div style={{
+              width: 340,
+              height: 680,
+              borderRadius: 50,
+              background: "linear-gradient(160deg, #1c2b2b 0%, #111b1b 30%, #0d1515 60%, #111b1b 100%)",
+              padding: "0",
+              boxShadow: "0 0 0 1.5px rgba(255,255,255,.06), 0 0 0 3px #0d1515, 0 40px 80px rgba(0,0,0,.75), inset 0 1px 0 rgba(255,255,255,.08)",
+              position: "relative",
+              overflow: "visible",
+            }}>
+              {/* Screen area */}
+              <div style={{
+                width: "100%", height: "100%",
+                borderRadius: 50,
+                background: "#000",
+                overflow: "hidden",
+                position: "relative",
+              }}>
+                {/* Dynamic Island */}
+                <div style={{
+                  position: "absolute", top: 14, left: "50%", transform: "translateX(-50%)",
+                  width: 110, height: 30,
+                  background: "#000",
+                  borderRadius: 18,
+                  zIndex: 10,
+                  boxShadow: "0 0 0 1.5px #1a1a1a",
+                  display: "flex", alignItems: "center", justifyContent: "space-around", padding: "0 18px",
+                }}>
+                  <div style={{ width: 10, height: 10, borderRadius: 99, background: "#111", border: "1.5px solid #1e3a3a", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ width: 4, height: 4, borderRadius: 99, background: "#0a1e2e", opacity: .8 }} />
+                  </div>
+                  <div style={{ width: 7, height: 7, borderRadius: 99, background: "#0f0f0f" }} />
+                </div>
+                {/* Menu content */}
+                <div style={{ height: "100%", overflow: "hidden" }}>
+                  <MenuApp />
+                </div>
+              </div>
+
+              {/* Power button right */}
+              <div style={{ position: "absolute", right: -3.5, top: 155, width: 3.5, height: 68, background: "linear-gradient(to right, #1c2b2b, #243535)", borderRadius: "0 4px 4px 0", boxShadow: "2px 0 6px rgba(0,0,0,.5)" }} />
+              {/* Silent switch left */}
+              <div style={{ position: "absolute", left: -3.5, top: 118, width: 3.5, height: 30, background: "linear-gradient(to left, #1c2b2b, #243535)", borderRadius: "4px 0 0 4px", boxShadow: "-2px 0 6px rgba(0,0,0,.5)" }} />
+              {/* Volume up */}
+              <div style={{ position: "absolute", left: -3.5, top: 164, width: 3.5, height: 52, background: "linear-gradient(to left, #1c2b2b, #243535)", borderRadius: "4px 0 0 4px", boxShadow: "-2px 0 6px rgba(0,0,0,.5)" }} />
+              {/* Volume down */}
+              <div style={{ position: "absolute", left: -3.5, top: 228, width: 3.5, height: 52, background: "linear-gradient(to left, #1c2b2b, #243535)", borderRadius: "4px 0 0 4px", boxShadow: "-2px 0 6px rgba(0,0,0,.5)" }} />
+              {/* Home indicator */}
+              <div style={{ position: "absolute", bottom: 8, left: "50%", transform: "translateX(-50%)", width: 100, height: 4, background: "rgba(255,255,255,.18)", borderRadius: 99 }} />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Tablet (iPad-style)
+    return (
+      <div style={{ position: "relative" }}>
+        <div style={{ position: "absolute", inset: -50, background: `radial-gradient(circle, ${A}15 0%, transparent 65%)`, pointerEvents: "none", zIndex: 0 }} />
+        <div style={{ position: "relative", zIndex: 1 }}>
+          <div style={{
+            width: 520,
+            height: 700,
+            borderRadius: 24,
+            background: "linear-gradient(160deg, #1c2b2b 0%, #111b1b 30%, #0d1515 60%, #111b1b 100%)",
+            boxShadow: "0 0 0 1.5px rgba(255,255,255,.06), 0 0 0 3px #0d1515, 0 40px 80px rgba(0,0,0,.75), inset 0 1px 0 rgba(255,255,255,.08)",
+            position: "relative",
+            overflow: "visible",
+          }}>
+            {/* Screen */}
+            <div style={{ width: "100%", height: "100%", borderRadius: 24, background: "#000", overflow: "hidden", position: "relative" }}>
+              {/* Top camera bar */}
+              <div style={{ height: 20, background: "#000", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <div style={{ width: 8, height: 8, borderRadius: 99, background: "#111", border: "1px solid #1e3a3a" }} />
+              </div>
+              {/* Same menu — no sidebar, just wider */}
+              <div style={{ height: "calc(100% - 20px)", overflow: "hidden" }}>
+                <MenuApp />
+              </div>
+            </div>
+
+            {/* Power button top */}
+            <div style={{ position: "absolute", top: -3.5, right: 80, width: 52, height: 3.5, background: "linear-gradient(to top, #1c2b2b, #243535)", borderRadius: "4px 4px 0 0" }} />
+            {/* Volume right */}
+            <div style={{ position: "absolute", right: -3.5, top: 80, width: 3.5, height: 44, background: "linear-gradient(to right, #1c2b2b, #243535)", borderRadius: "0 4px 4px 0" }} />
+            <div style={{ position: "absolute", right: -3.5, top: 136, width: 3.5, height: 44, background: "linear-gradient(to right, #1c2b2b, #243535)", borderRadius: "0 4px 4px 0" }} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+  const features = [
+    {
+      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={A} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>,
+      title: "5 Dil Desteği", desc: "Tr · En · Ar · De · Ru"
+    },
+    {
+      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={A} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,
+      title: "Sepet & Sipariş", desc: "WhatsApp entegrasyonu"
+    },
+    {
+      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={A} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+      title: "Şefin Seçimi", desc: "Öne çıkan ürünler"
+    },
+    {
+      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={A} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>,
+      title: "Analitik", desc: "Gerçek zamanlı veriler"
+    },
+    {
+      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={A} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
+      title: "Karanlık Mod", desc: "Göz dostu tasarım"
+    },
+    {
+      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={A} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
+      title: "QR Sipariş", desc: "Masa bazlı kodlar"
+    },
+  ];
+
+  return (
+    <div style={{
+      minHeight: "100vh",
+      background: "linear-gradient(160deg, #0a0a0a 0%, #1a0a05 60%, #0a0a0a 100%)",
+      fontFamily: "'Outfit', system-ui, sans-serif",
+      position: "relative",
+      overflow: "hidden",
+    }}>
+      <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+      <style>{`
+        *{box-sizing:border-box;margin:0;padding:0}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+        @media(max-width:900px){
+          .demo-layout{flex-direction:column!important;align-items:center!important;padding:80px 20px 40px!important}
+          .demo-left{text-align:center!important;align-items:center!important}
+          .features-grid{grid-template-columns:repeat(3,1fr)!important}
+        }
+        @media(max-width:500px){
+          .features-grid{grid-template-columns:repeat(2,1fr)!important}
+        }
+      `}</style>
+
+      {/* Background dots */}
+      <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(rgba(255,255,255,.025) 1px, transparent 1px)", backgroundSize: "32px 32px", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", inset: 0, backgroundImage: `radial-gradient(circle at 30% 50%, ${A}15 0%, transparent 50%)`, pointerEvents: "none" }} />
+
+      {/* Navbar */}
+      <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 50, padding: "0 5%", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(10,10,10,.8)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
+        <a href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
+            <div style={{ width: 16, height: 2, background: A, borderRadius: 99 }} />
+            <div style={{ width: 11, height: 2, background: A, borderRadius: 99 }} />
+            <div style={{ width: 16, height: 2, background: A, borderRadius: 99 }} />
+          </div>
+          <span style={{ fontSize: 16, fontWeight: 800, color: "#fff" }}>TEM<span style={{ color: A }}>eat</span></span>
+        </a>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <a href="/fiyat" style={{ fontSize: 13, color: "rgba(255,255,255,.6)", textDecoration: "none" }}>Fiyatlar</a>
+          <a href="/fiyat" style={{ padding: "8px 18px", borderRadius: 8, background: A, color: "#fff", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>Ücretsiz Başla</a>
+        </div>
+      </nav>
+
+      {/* Main layout */}
+      <div className="demo-layout" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 64, minHeight: "100vh", padding: "80px 5% 60px" }}>
+
+        {/* Left — text */}
+        <div className="demo-left" style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 400, animation: "fadeUp .8s cubic-bezier(.25,1,.5,1) both" }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: `${A}15`, border: `1px solid ${A}30`, borderRadius: 99, padding: "6px 14px", width: "fit-content" }}>
+            <div style={{ width: 6, height: 6, borderRadius: 99, background: "#4ade80" }} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.8)" }}>Canlı Demo</span>
+          </div>
+
+          <h1 style={{ fontSize: "clamp(28px, 4vw, 44px)", fontWeight: 900, color: "#fff", letterSpacing: "-.04em", lineHeight: 1.1 }}>
+            Müşterinizin<br />gördüğü <span style={{ color: A }}>tam<br />bu menü</span>
+          </h1>
+
+          <p style={{ fontSize: 15, color: "rgba(255,255,255,.55)", lineHeight: 1.65 }}>
+            Pro ve ücretsiz sürümü karşılaştırın. Dil değiştirin, sepete ekleyin — tamamen interaktif.
+          </p>
+
+          <div className="features-grid" style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginTop: 8 }}>
+            {features.map((f, i) => (
+              <div key={i} style={{ background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)", borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ flexShrink: 0 }}>{f.icon}</div>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>{f.title}</div>
+                  <div style={{ fontSize: 10, color: "rgba(255,255,255,.4)" }}>{f.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <a href="/fiyat" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "13px 24px", borderRadius: 12, background: A, color: "#fff", fontSize: 14, fontWeight: 700, textDecoration: "none", width: "fit-content", boxShadow: `0 8px 24px ${A}40`, marginTop: 8 }}>
+            Hemen Başla →
+          </a>
+        </div>
+
+        {/* Right — Device mockup */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20, animation: "fadeUp 1s .2s cubic-bezier(.25,1,.5,1) both" }}>
+
+          {/* Toggle */}
+          <div style={{ display: "inline-flex", background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.1)", borderRadius: 12, padding: 3, gap: 3 }}>
+            {[
+              { id: "phone", label: "Telefon", icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="17" r="1"/></svg> },
+              { id: "tablet", label: "Tablet", icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg> },
+            ].map(m => (
+              <MockupToggleBtn key={m.id} id={m.id} icon={m.icon} label={m.label} />
+            ))}
+          </div>
+
+          <MockupDisplay />
+        </div>
+      </div>
     </div>
   );
 }
