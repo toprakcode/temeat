@@ -229,11 +229,17 @@ export default function PanelPage() {
   }, []);
 
   const checkRestaurant = async (userId: string) => {
-    const { data } = await supabase.from("restaurants").select("*").eq("user_id", userId).single();
-    if (data) { setRestaurant(data); loadMenuData(data.id); }
-    else setShowOnboarding(true);
-    setLoading(false);
-  };
+  const { data } = await supabase
+    .from("restaurants")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (data) { setRestaurant(data); loadMenuData(data.id); }
+  else setShowOnboarding(true);
+  setLoading(false);
+};
 
   const loadMenuData = async (restaurantId: string) => {
     const { data: cats } = await supabase.from("categories").select("*").eq("restaurant_id", restaurantId).order("sort_order");
