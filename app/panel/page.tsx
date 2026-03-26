@@ -662,7 +662,7 @@ setWeeklyViews(days.map((day, i) => {
           {activeTab === "analytics" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16, animation: "fadeUp .35s both" }}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
-                {[{ label: "Toplam Görüntülenme", value: "14,521", sub: "↑ +23% bu ay" }, { label: "QR Tarama", value: "11,847", sub: "↑ +15% bu ay" }, { label: "Ortalama Sipariş", value: "₺187", sub: "↑ +8% bu ay" }].map((s, i) => (
+                {[{ label: "Toplam Görüntülenme", value: totalViewsReal.toLocaleString(), sub: "Tüm zamanlar" }, { label: "Bu Hafta Görüntülenme", value: thisWeekViews.toLocaleString(), sub: "Son 7 gün" }, { label: "Aktif Ürün", value: products.filter(p => p.is_active).length.toString(), sub: "Menüde görünür" }].map((s, i) => (
                   <div key={i} className="card" style={{ padding: "20px" }}>
                     <div style={{ fontSize: 11, color: "rgba(255,255,255,.38)", marginBottom: 10 }}>{s.label}</div>
                     <div style={{ fontSize: 28, fontWeight: 900, letterSpacing: "-.03em", marginBottom: 6 }}>{s.value}</div>
