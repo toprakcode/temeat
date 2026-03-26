@@ -105,6 +105,11 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
 
     if (!rest) { setNotFound(true); setLoading(false); return; }
     setRestaurant(rest);
+    // Görüntülenmeyi kaydet
+supabase.from("page_views").insert({
+  restaurant_id: rest.id,
+  lang: navigator.language?.slice(0, 2) || "tr",
+});
 
     const { data: cats } = await supabase
       .from("categories")

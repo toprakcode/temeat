@@ -212,7 +212,10 @@ export default function PanelPage() {
 
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-
+const [thisWeekViews, setThisWeekViews] = useState(0);
+const [lastWeekViews, setLastWeekViews] = useState(0);
+const [totalViewsReal, setTotalViewsReal] = useState(0);
+const [weeklyViews, setWeeklyViews] = useState<{day:string;views:number;orders:number}[]>([]);
   const [showAddCat, setShowAddCat] = useState(false);
   const [newCatName, setNewCatName] = useState("");
   const [catSaving, setCatSaving] = useState(false);
@@ -246,6 +249,27 @@ export default function PanelPage() {
     const { data: prods } = await supabase.from("products").select("*").eq("restaurant_id", restaurantId).order("sort_order");
     setCategories(cats || []);
     setProducts(prods || []);
+    const now = new Date();
+const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+const [{ data: thisWeek }, { data: lastWeek }, { count: total }] = await Promise.all([
+  supabase.from("page_views").select("viewed_at").eq("restaurant_id", restaurantId).gte("viewed_at", weekAgo.toISOString()),
+  supabase.from("page_views").select("viewed_at").eq("restaurant_id", restaurantId).gte("viewed_at", twoWeeksAgo.toISOString()).lt("viewed_at", weekAgo.toISOString()),
+  supabase.from("page_views").select("*", { count: "exact", head: true }).eq("restaurant_id", restaurantId),
+]);
+setThisWeekViews(thisWeek?.length || 0);
+setLastWeekViews(lastWeek?.length || 0);
+setTotalViewsReal(total || 0);
+const days = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
+setWeeklyViews(days.map((day, i) => {
+  const dayStart = new Date(weekAgo.getTime() + i * 24 * 60 * 60 * 1000);
+  const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+  return { 
+  day, 
+  views: thisWeek?.filter(v => { const d = new Date(v.viewed_at); return d >= dayStart && d < dayEnd; }).length || 0,
+  orders: 0
+};
+}));
   };
 
   const handleOnboardingSave = async () => {
@@ -486,9 +510,8 @@ export default function PanelPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: 20, animation: "fadeUp .35s both" }}>
               <div className="stats-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
                 {[
-                  { label: "Bu Hafta Görüntülenme", value: totalViews.toLocaleString(), sub: "↑ +8% geçen haftaya göre", color: "#22c55e" },
-                  { label: "Bu Hafta Sipariş", value: totalOrders.toLocaleString(), sub: "↑ +22% geçen haftaya göre", color: "#22c55e" },
-                  { label: "Aktif Ürün", value: `${products.filter(p => p.is_active).length}/${products.length}`, sub: `${products.filter(p => !p.is_active).length} ürün pasif`, color: "rgba(255,255,255,.3)" },
+                  { label: "Bu Hafta Görüntülenme", value: thisWeekViews.toLocaleString(), sub: lastWeekViews > 0 ? `↑ +${Math.round((thisWeekViews - lastWeekViews) / lastWeekViews * 100)}% geçen haftaya göre` : "Veri toplanıyor...", color: "#22c55e" },
+                  { label: "Toplam Görüntülenme", value: totalViewsReal.toLocaleString(), sub: "Tüm zamanlar", color: "rgba(255,255,255,.3)" },                  { label: "Aktif Ürün", value: `${products.filter(p => p.is_active).length}/${products.length}`, sub: `${products.filter(p => !p.is_active).length} ürün pasif`, color: "rgba(255,255,255,.3)" },
                   { label: "Kategori", value: categories.length.toString(), sub: "Menü kategorisi", color: "rgba(255,255,255,.3)" },
                 ].map((s, i) => (
                   <div key={i} className="card" style={{ padding: "20px" }}>
@@ -502,7 +525,7 @@ export default function PanelPage() {
                 <div className="card" style={{ padding: "22px 24px" }}>
                   <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Haftalık Görüntülenme</div>
                   <div style={{ fontSize: 11, color: "rgba(255,255,255,.3)", marginBottom: 20 }}>Son 7 gün · {totalViews.toLocaleString()} toplam</div>
-                  <BarChart data={weeklyData} height={140} />
+                  <BarChart data={weeklyViews.length > 0 ? weeklyViews : weeklyData} height={140} />
                 </div>
                 <div className="card" style={{ padding: "22px 24px" }}>
                   <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 2 }}>En Popüler Ürünler</div>
