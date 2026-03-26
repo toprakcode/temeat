@@ -44,7 +44,152 @@ function BarChart({ data, height = 140 }: { data: typeof weeklyData; height?: nu
 }
 
 type Category = { id: string; name: string; sort_order: number };
-type Product = { id: string; category_id: string | null; name_tr: string; price: number; is_active: boolean; image_url: string | null; discount_pct: number };
+type Product = {
+  id: string;
+  category_id: string | null;
+  name_tr: string;
+  name_en: string | null;
+  desc_tr: string | null;
+  price: number;
+  is_active: boolean;
+  image_url: string | null;
+  discount_pct: number;
+  calories: number | null;
+  prep_time: number | null;
+  is_chef_pick: boolean;
+};
+
+function ProductModal({
+  title,
+  categories,
+  initial,
+  onSave,
+  onClose,
+}: {
+  title: string;
+  categories: Category[];
+  initial: Partial<Product> & { category_id?: string | null };
+  onSave: (data: any) => Promise<void>;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState(initial.name_tr || "");
+  const [nameEn, setNameEn] = useState(initial.name_en || "");
+  const [desc, setDesc] = useState(initial.desc_tr || "");
+  const [price, setPrice] = useState(initial.price ? String(initial.price) : "");
+  const [discount, setDiscount] = useState(initial.discount_pct ? String(initial.discount_pct) : "0");
+  const [calories, setCalories] = useState(initial.calories ? String(initial.calories) : "");
+  const [prepTime, setPrepTime] = useState(initial.prep_time ? String(initial.prep_time) : "");
+  const [catId, setCatId] = useState(initial.category_id || "");
+  const [chefPick, setChefPick] = useState(initial.is_chef_pick || false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSave = async () => {
+    if (!name.trim()) { setError("Ürün adı zorunlu."); return; }
+    if (!price || isNaN(Number(price))) { setError("Geçerli bir fiyat girin."); return; }
+    if (!catId) { setError("Kategori seçin."); return; }
+    setSaving(true); setError(null);
+    await onSave({
+      category_id: catId,
+      name_tr: name.trim(),
+      name_en: nameEn.trim() || null,
+      desc_tr: desc.trim() || null,
+      price: Number(price),
+      discount_pct: Number(discount) || 0,
+      calories: calories ? Number(calories) : null,
+      prep_time: prepTime ? Number(prepTime) : null,
+      is_chef_pick: chefPick,
+    });
+    setSaving(false);
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+      <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.7)" }} />
+      <div style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 560, maxHeight: "90vh", overflowY: "auto", background: "#111", borderRadius: 20, border: "1px solid rgba(255,255,255,.1)", padding: "28px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>{title}</h2>
+          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid rgba(255,255,255,.1)", background: "transparent", color: "rgba(255,255,255,.5)", cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Kategori *</label>
+            <select value={catId} onChange={e => setCatId(e.target.value)}
+              style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "#1a1a1a", color: catId ? "#fff" : "rgba(255,255,255,.3)", fontSize: 14, fontFamily: "inherit", outline: "none" }}>
+              <option value="">Kategori seçin</option>
+              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Ürün Adı (TR) *</label>
+              <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Adana Kebap"
+                style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Ürün Adı (EN)</label>
+              <input type="text" value={nameEn} onChange={e => setNameEn(e.target.value)} placeholder="Adana Kebab"
+                style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
+            </div>
+          </div>
+
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Açıklama</label>
+            <textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="El kıyması kuzu, pul biber, lavaş..." rows={2}
+              style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", resize: "none", outline: "none" }} />
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Fiyat (₺) *</label>
+              <input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="220"
+                style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>İndirim (%)</label>
+              <input type="number" value={discount} onChange={e => setDiscount(e.target.value)} placeholder="0" min="0" max="100"
+                style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Kalori</label>
+              <input type="number" value={calories} onChange={e => setCalories(e.target.value)} placeholder="450"
+                style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Hazırlık (dk)</label>
+              <input type="number" value={prepTime} onChange={e => setPrepTime(e.target.value)} placeholder="18"
+                style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
+            </div>
+          </div>
+
+          <button onClick={() => setChefPick(!chefPick)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderRadius: 10, border: `1.5px solid ${chefPick ? A : "rgba(255,255,255,.1)"}`, background: chefPick ? `${A}15` : "rgba(255,255,255,.04)", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
+            <div style={{ width: 20, height: 20, borderRadius: 6, background: chefPick ? A : "rgba(255,255,255,.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              {chefPick && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>Şefin Seçimi</div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)" }}>Menüde öne çıkar</div>
+            </div>
+          </button>
+
+          {error && <div style={{ padding: "10px 14px", borderRadius: 9, background: "rgba(239,68,68,.1)", border: "1px solid rgba(239,68,68,.2)", fontSize: 13, color: "#f87171" }}>{error}</div>}
+
+          <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+            <button onClick={onClose} style={{ flex: 1, padding: "13px 0", borderRadius: 11, border: "1px solid rgba(255,255,255,.1)", background: "transparent", color: "rgba(255,255,255,.5)", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>İptal</button>
+            <button onClick={handleSave} disabled={saving} style={{ flex: 2, padding: "13px 0", borderRadius: 11, border: "none", background: saving ? `${A}80` : A, color: "#fff", fontSize: 14, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit", boxShadow: `0 4px 16px ${A}40` }}>
+              {saving ? "Kaydediliyor..." : title}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function PanelPage() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -54,12 +199,10 @@ export default function PanelPage() {
   const [restaurant, setRestaurant] = useState<any>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  // Real menu data
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [catFilter, setCatFilter] = useState("Tümü");
 
-  // Onboarding
   const [obName, setObName] = useState("");
   const [obSlug, setObSlug] = useState("");
   const [obPhone, setObPhone] = useState("");
@@ -67,21 +210,9 @@ export default function PanelPage() {
   const [obSaving, setObSaving] = useState(false);
   const [obError, setObError] = useState<string | null>(null);
 
-  // Add product modal
   const [showAddProduct, setShowAddProduct] = useState(false);
-  const [apName, setApName] = useState("");
-  const [apNameEn, setApNameEn] = useState("");
-  const [apDesc, setApDesc] = useState("");
-  const [apPrice, setApPrice] = useState("");
-  const [apDiscount, setApDiscount] = useState("0");
-  const [apCalories, setApCalories] = useState("");
-  const [apPrepTime, setApPrepTime] = useState("");
-  const [apCatId, setApCatId] = useState("");
-  const [apChefPick, setApChefPick] = useState(false);
-  const [apSaving, setApSaving] = useState(false);
-  const [apError, setApError] = useState<string | null>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-  // Add category modal
   const [showAddCat, setShowAddCat] = useState(false);
   const [newCatName, setNewCatName] = useState("");
   const [catSaving, setCatSaving] = useState(false);
@@ -129,33 +260,28 @@ export default function PanelPage() {
     setCatSaving(false);
   };
 
-  const handleAddProduct = async () => {
-    if (!apName.trim()) { setApError("Ürün adı zorunlu."); return; }
-    if (!apPrice || isNaN(Number(apPrice))) { setApError("Geçerli bir fiyat girin."); return; }
-    if (!apCatId) { setApError("Kategori seçin."); return; }
-    setApSaving(true); setApError(null);
+  const handleAddProduct = async (formData: any) => {
     const { data, error } = await supabase.from("products").insert({
       restaurant_id: restaurant.id,
-      category_id: apCatId,
-      name_tr: apName.trim(),
-      name_en: apNameEn.trim() || null,
-      desc_tr: apDesc.trim() || null,
-      price: Number(apPrice),
-      discount_pct: Number(apDiscount) || 0,
-      calories: apCalories ? Number(apCalories) : null,
-      prep_time: apPrepTime ? Number(apPrepTime) : null,
+      ...formData,
       is_active: true,
-      is_chef_pick: apChefPick,
       tags: [],
       serves: 1,
       sort_order: products.length,
     }).select().single();
-    if (error) { setApError("Hata oluştu, tekrar dene."); setApSaving(false); return; }
+    if (error) throw error;
     setProducts(prev => [...prev, data]);
     setShowAddProduct(false);
-    setApName(""); setApNameEn(""); setApDesc(""); setApPrice(""); setApDiscount("0"); setApCalories(""); setApPrepTime(""); setApCatId(""); setApChefPick(false);
     flash("Ürün eklendi! 🎉");
-    setApSaving(false);
+  };
+
+  const handleEditProduct = async (formData: any) => {
+    if (!editingProduct) return;
+    const { data, error } = await supabase.from("products").update(formData).eq("id", editingProduct.id).select().single();
+    if (error) throw error;
+    setProducts(prev => prev.map(p => p.id === editingProduct.id ? { ...p, ...data } : p));
+    setEditingProduct(null);
+    flash("Ürün güncellendi! ✓");
   };
 
   const toggleProduct = async (id: string, current: boolean) => {
@@ -164,6 +290,7 @@ export default function PanelPage() {
   };
 
   const deleteProduct = async (id: string) => {
+    if (!confirm("Bu ürünü silmek istediğinize emin misiniz?")) return;
     await supabase.from("products").delete().eq("id", id);
     setProducts(prev => prev.filter(p => p.id !== id));
     flash("Ürün silindi.");
@@ -221,7 +348,7 @@ export default function PanelPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Restoran Adı *</label>
-              <input type="text" value={obName} onChange={e => { setObName(e.target.value); setObSlug(e.target.value.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-")); }} placeholder="Sultanahmet Ocakbaşı" style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit" }} />
+              <input type="text" value={obName} onChange={e => { setObName(e.target.value); setObSlug(e.target.value.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-")); }} placeholder="Sultanahmet Ocakbaşı" style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
             </div>
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Menü Adresi *</label>
@@ -232,11 +359,11 @@ export default function PanelPage() {
             </div>
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Telefon</label>
-              <input type="tel" value={obPhone} onChange={e => setObPhone(e.target.value)} placeholder="+90 555 000 0000" style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit" }} />
+              <input type="tel" value={obPhone} onChange={e => setObPhone(e.target.value)} placeholder="+90 555 000 0000" style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
             </div>
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Adres</label>
-              <input type="text" value={obAddress} onChange={e => setObAddress(e.target.value)} placeholder="Divanyolu Cd. No:12" style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit" }} />
+              <input type="text" value={obAddress} onChange={e => setObAddress(e.target.value)} placeholder="Divanyolu Cd. No:12" style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
             </div>
             {obError && <div style={{ padding: "10px 14px", borderRadius: 9, background: "rgba(239,68,68,.1)", border: "1px solid rgba(239,68,68,.2)", fontSize: 13, color: "#f87171" }}>{obError}</div>}
             <button onClick={handleOnboardingSave} disabled={obSaving} style={{ width: "100%", padding: "13px 0", borderRadius: 11, border: "none", background: obSaving ? `${A}80` : A, color: "#fff", fontSize: 14, fontWeight: 700, cursor: obSaving ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
@@ -256,8 +383,6 @@ export default function PanelPage() {
         ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:99px}
         @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
         @keyframes toastAnim{0%{opacity:0;transform:translateY(8px)}10%{opacity:1;transform:translateY(0)}90%{opacity:1}100%{opacity:0}}
-        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-        @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
         .card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:16px;transition:border-color .2s}
         .card:hover{border-color:rgba(255,255,255,.11)}
         .btn{transition:all .15s;cursor:pointer}.btn:hover{opacity:.85}.btn:active{transform:scale(.97)}
@@ -432,13 +557,13 @@ export default function PanelPage() {
                 </div>
               ) : (
                 <div className="card" style={{ overflow: "hidden" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 80px 90px 80px", padding: "12px 20px", borderBottom: "1px solid rgba(255,255,255,.06)", background: "rgba(255,255,255,.02)" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 80px 90px 100px", padding: "12px 20px", borderBottom: "1px solid rgba(255,255,255,.06)", background: "rgba(255,255,255,.02)" }}>
                     {["Ürün", "Kategori", "Fiyat", "Durum", ""].map((h, i) => (
                       <span key={i} style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,.25)", letterSpacing: ".06em" }}>{h}</span>
                     ))}
                   </div>
                   {filteredProducts.map((item, i) => (
-                    <div key={item.id} className="row-item" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 80px 90px 80px", padding: "14px 20px", borderBottom: i < filteredProducts.length - 1 ? "1px solid rgba(255,255,255,.05)" : "none", alignItems: "center", opacity: item.is_active ? 1 : 0.5 }}>
+                    <div key={item.id} className="row-item" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 80px 90px 100px", padding: "14px 20px", borderBottom: i < filteredProducts.length - 1 ? "1px solid rgba(255,255,255,.05)" : "none", alignItems: "center", opacity: item.is_active ? 1 : 0.5 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                         {item.image_url ? (
                           <img src={item.image_url} alt="" style={{ width: 40, height: 40, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
@@ -458,7 +583,11 @@ export default function PanelPage() {
                         </div>
                         <span style={{ fontSize: 11, fontWeight: 600, color: item.is_active ? "#22c55e" : "rgba(255,255,255,.3)" }}>{item.is_active ? "Aktif" : "Pasif"}</span>
                       </button>
-                      <button onClick={() => deleteProduct(item.id)} className="btn" style={{ width: 30, height: 30, borderRadius: 7, border: "1px solid rgba(239,68,68,.2)", background: "transparent", cursor: "pointer", color: "#ef4444", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                      {/* Düzenle + Sil butonları */}
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button onClick={() => setEditingProduct(item)} className="btn" style={{ width: 30, height: 30, borderRadius: 7, border: "1px solid rgba(255,255,255,.1)", background: "transparent", cursor: "pointer", color: "rgba(255,255,255,.5)", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}>✎</button>
+                        <button onClick={() => deleteProduct(item.id)} className="btn" style={{ width: 30, height: 30, borderRadius: 7, border: "1px solid rgba(239,68,68,.2)", background: "transparent", cursor: "pointer", color: "#ef4444", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -562,7 +691,7 @@ export default function PanelPage() {
         <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
           <div onClick={() => setShowAddCat(false)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.6)" }} />
           <div style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 400, background: "#111", borderRadius: 20, border: "1px solid rgba(255,255,255,.1)", padding: "28px" }}>
-            <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 20 }}>Kategori Ekle</h2>
+            <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 20, color: "#fff" }}>Kategori Ekle</h2>
             <input type="text" value={newCatName} onChange={e => setNewCatName(e.target.value)} onKeyDown={e => e.key === "Enter" && handleAddCategory()}
               placeholder="Örn: Başlangıç, Izgara, Tatlı..."
               style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", marginBottom: 16, outline: "none" }} />
@@ -576,103 +705,24 @@ export default function PanelPage() {
 
       {/* ÜRÜN EKLEME MODALI */}
       {showAddProduct && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-          <div onClick={() => setShowAddProduct(false)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.7)" }} />
-          <div style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 560, maxHeight: "90vh", overflowY: "auto", background: "#111", borderRadius: 20, border: "1px solid rgba(255,255,255,.1)", padding: "28px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 800 }}>Ürün Ekle</h2>
-              <button onClick={() => setShowAddProduct(false)} style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid rgba(255,255,255,.1)", background: "transparent", color: "rgba(255,255,255,.5)", cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-            </div>
+        <ProductModal
+          title="Ürün Ekle"
+          categories={categories}
+          initial={{}}
+          onSave={handleAddProduct}
+          onClose={() => setShowAddProduct(false)}
+        />
+      )}
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {/* Kategori */}
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Kategori *</label>
-                {categories.length === 0 ? (
-                  <div style={{ padding: "12px 14px", borderRadius: 10, background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.1)", fontSize: 13, color: "rgba(255,255,255,.4)" }}>
-                    Önce kategori ekleyin →{" "}
-                    <button onClick={() => { setShowAddProduct(false); setShowAddCat(true); }} style={{ background: "none", border: "none", color: A, cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600 }}>Kategori Ekle</button>
-                  </div>
-                ) : (
-                  <select value={apCatId} onChange={e => setApCatId(e.target.value)}
-                    style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "#1a1a1a", color: apCatId ? "#fff" : "rgba(255,255,255,.3)", fontSize: 14, fontFamily: "inherit" }}>
-                    <option value="">Kategori seçin</option>
-                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                )}
-              </div>
-
-              {/* İsim */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Ürün Adı (TR) *</label>
-                  <input type="text" value={apName} onChange={e => setApName(e.target.value)} placeholder="Adana Kebap"
-                    style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit" }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Ürün Adı (EN)</label>
-                  <input type="text" value={apNameEn} onChange={e => setApNameEn(e.target.value)} placeholder="Adana Kebab"
-                    style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit" }} />
-                </div>
-              </div>
-
-              {/* Açıklama */}
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Açıklama</label>
-                <textarea value={apDesc} onChange={e => setApDesc(e.target.value)} placeholder="El kıyması kuzu, pul biber, lavaş..." rows={2}
-                  style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", resize: "none" }} />
-              </div>
-
-              {/* Fiyat & İndirim */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Fiyat (₺) *</label>
-                  <input type="number" value={apPrice} onChange={e => setApPrice(e.target.value)} placeholder="220"
-                    style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit" }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>İndirim (%)</label>
-                  <input type="number" value={apDiscount} onChange={e => setApDiscount(e.target.value)} placeholder="0" min="0" max="100"
-                    style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit" }} />
-                </div>
-              </div>
-
-              {/* Kalori & Hazırlık */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Kalori</label>
-                  <input type="number" value={apCalories} onChange={e => setApCalories(e.target.value)} placeholder="450"
-                    style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit" }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Hazırlık (dk)</label>
-                  <input type="number" value={apPrepTime} onChange={e => setApPrepTime(e.target.value)} placeholder="18"
-                    style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit" }} />
-                </div>
-              </div>
-
-              {/* Şefin seçimi */}
-              <button onClick={() => setApChefPick(!apChefPick)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderRadius: 10, border: `1.5px solid ${apChefPick ? A : "rgba(255,255,255,.1)"}`, background: apChefPick ? `${A}15` : "rgba(255,255,255,.04)", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
-                <div style={{ width: 20, height: 20, borderRadius: 6, background: apChefPick ? A : "rgba(255,255,255,.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  {apChefPick && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
-                </div>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>Şefin Seçimi</div>
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)" }}>Menüde öne çıkar</div>
-                </div>
-              </button>
-
-              {apError && <div style={{ padding: "10px 14px", borderRadius: 9, background: "rgba(239,68,68,.1)", border: "1px solid rgba(239,68,68,.2)", fontSize: 13, color: "#f87171" }}>{apError}</div>}
-
-              <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-                <button onClick={() => setShowAddProduct(false)} style={{ flex: 1, padding: "13px 0", borderRadius: 11, border: "1px solid rgba(255,255,255,.1)", background: "transparent", color: "rgba(255,255,255,.5)", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>İptal</button>
-                <button onClick={handleAddProduct} disabled={apSaving} style={{ flex: 2, padding: "13px 0", borderRadius: 11, border: "none", background: apSaving ? `${A}80` : A, color: "#fff", fontSize: 14, fontWeight: 700, cursor: apSaving ? "not-allowed" : "pointer", fontFamily: "inherit", boxShadow: `0 4px 16px ${A}40` }}>
-                  {apSaving ? "Kaydediliyor..." : "Ürünü Ekle"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* ÜRÜN DÜZENLEME MODALI */}
+      {editingProduct && (
+        <ProductModal
+          title="Ürünü Düzenle"
+          categories={categories}
+          initial={editingProduct}
+          onSave={handleEditProduct}
+          onClose={() => setEditingProduct(null)}
+        />
       )}
     </div>
   );
