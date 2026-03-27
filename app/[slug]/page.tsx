@@ -64,13 +64,12 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
   const A = restaurant?.theme_color || DEFAULT_COLOR;
   const o = dark ? 1 : 0;
   const isRTL = lang === "ar";
-  const C = {
-    bg: ["#FAFAFA", "#0B0B0B"][o], cd: ["#FFF", "#161616"][o],
-    bd: ["#EBEBEB", "#232323"][o], tx: ["#111", "#EDEDED"][o],
-    mt: ["#999", "#555"][o], dm: ["#CCC", "#333"][o], al: ["#FFF5F0", "#1C1210"][o],
-    s2: ["#555", "#999"][o],
+const C = {
+    bg: ["#FAFAFA", "#111111"][o], cd: ["#FFF", "#1E1E1E"][o],
+    bd: ["#EBEBEB", "#2E2E2E"][o], tx: ["#111", "#F5F5F5"][o],
+    mt: ["#777", "#888"][o], dm: ["#CCC", "#444"][o], al: ["#FFF5F0", "#2A1810"][o],
+    s2: ["#555", "#BBBBBB"][o],
   };
-
   useEffect(() => { loadMenu(); }, [slug]);
 
   const loadMenu = async () => {
@@ -137,8 +136,7 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
 
   return (
     <div
-      style={{ maxWidth: 430, margin: "0 auto", minHeight: "100vh", background: C.bg, fontFamily: "'Inter', system-ui, sans-serif", color: C.tx, position: "relative" }}
-      dir={isRTL ? "rtl" : "ltr"}
+style={{ maxWidth: 680, margin: "0 auto", minHeight: "100vh", background: C.bg, fontFamily: "'Inter', system-ui, sans-serif", color: C.tx, position: "relative" }}      dir={isRTL ? "rtl" : "ltr"}
     >
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
       <style>{`
@@ -158,7 +156,7 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
       )}
 
       {/* Header */}
-      <div style={{ padding: "14px 20px", background: dark ? "#111" : "#fff", borderBottom: `1px solid ${C.bd}`, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 30 }}>
+      <div style={{ padding: "14px 20px", background: dark ? "#1E1E1E" : "#fff", borderBottom: `1px solid ${C.bd}`, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 30 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: "-.02em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{restaurant!.name}</div>
           {restaurant!.hours && <div style={{ fontSize: 10, color: "#22c55e", fontWeight: 600, marginTop: 1 }}>● {restaurant!.hours}</div>}
