@@ -291,6 +291,15 @@ setWeeklyViews(days.map((day, i) => {
   };
 
   const handleAddProduct = async (formData: any) => {
+    // Plan kısıtlaması kontrolü
+  const plan = restaurant?.plan || "free";
+  const limits: Record<string, number> = { free: 15, starter: 50, pro: Infinity };
+  const limit = limits[plan] || 15;
+  
+  if (products.length >= limit) {
+    flash(`${plan === "free" ? "Ücretsiz planda" : "Başlangıç planında"} maksimum ${limit} ürün ekleyebilirsiniz. Yükseltmek için /fiyat sayfasını ziyaret edin.`);
+    return;
+  }
     const { data, error } = await supabase.from("products").insert({
       restaurant_id: restaurant.id,
       ...formData,
