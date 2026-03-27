@@ -7,13 +7,13 @@ const A = "#D4470A";
 const A2 = "#FF6B35";
 
 const weeklyData = [
-  { day: "Pzt", views: 280, orders: 42 },
-  { day: "Sal", views: 310, orders: 51 },
-  { day: "Çar", views: 290, orders: 38 },
-  { day: "Per", views: 420, orders: 67 },
-  { day: "Cum", views: 510, orders: 89 },
-  { day: "Cmt", views: 680, orders: 124 },
-  { day: "Paz", views: 490, orders: 93 },
+  { day: "Pzt", views: 0, orders: 0 },
+  { day: "Sal", views: 0, orders: 0 },
+  { day: "Çar", views: 0, orders: 0 },
+  { day: "Per", views: 0, orders: 0 },
+  { day: "Cum", views: 0, orders: 0 },
+  { day: "Cmt", views: 0, orders: 0 },
+  { day: "Paz", views: 0, orders: 0 },
 ];
 
 const langData = [
@@ -24,19 +24,31 @@ const langData = [
   { lang: "Русский", pct: 4, color: "#8b5cf6" },
 ];
 
-function BarChart({ data, height = 140 }: { data: typeof weeklyData; height?: number }) {
-  const maxViews = Math.max(...data.map(d => d.views));
+const ALLERGENS = [
+  { key: "gluten", label: "Gluten", icon: "🌾" },
+  { key: "sut", label: "Süt", icon: "🥛" },
+  { key: "yumurta", label: "Yumurta", icon: "🥚" },
+  { key: "findik", label: "Fındık", icon: "🥜" },
+  { key: "balik", label: "Balık", icon: "🐟" },
+  { key: "kabuklu", label: "Kabuklu", icon: "🦐" },
+  { key: "soya", label: "Soya", icon: "🫘" },
+  { key: "susam", label: "Susam", icon: "🌱" },
+];
+
+function BarChart({ data, height = 140 }: { data: { day: string; views: number; orders: number }[]; height?: number }) {
+  const maxViews = Math.max(...data.map(d => d.views), 1);
+  const maxIdx = data.reduce((mi, d, i) => d.views > data[mi].views ? i : mi, 0);
   return (
     <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height }}>
       {data.map((d, i) => (
         <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, height: "100%" }}>
           <div style={{ flex: 1, width: "100%", display: "flex", flexDirection: "column", justifyContent: "flex-end", position: "relative" }}>
-            {i === 5 && (
+            {i === maxIdx && d.views > 0 && (
               <div style={{ position: "absolute", top: -28, left: "50%", transform: "translateX(-50%)", background: A, color: "#fff", fontSize: 9, fontWeight: 700, padding: "3px 7px", borderRadius: 5, whiteSpace: "nowrap" }}>{d.views}</div>
             )}
-            <div style={{ width: "100%", height: `${(d.views / maxViews) * 100}%`, minHeight: 4, background: i === 5 ? `linear-gradient(to top, ${A}, ${A2})` : "rgba(255,255,255,.07)", borderRadius: "4px 4px 0 0" }} />
+            <div style={{ width: "100%", height: `${(d.views / maxViews) * 100}%`, minHeight: 4, background: i === maxIdx ? `linear-gradient(to top, ${A}, ${A2})` : "rgba(255,255,255,.07)", borderRadius: "4px 4px 0 0" }} />
           </div>
-          <span style={{ fontSize: 10, fontWeight: i === 5 ? 700 : 400, color: i === 5 ? "rgba(255,255,255,.7)" : "rgba(255,255,255,.25)" }}>{d.day}</span>
+          <span style={{ fontSize: 10, fontWeight: i === maxIdx ? 700 : 400, color: i === maxIdx ? "rgba(255,255,255,.7)" : "rgba(255,255,255,.25)" }}>{d.day}</span>
         </div>
       ))}
     </div>
@@ -57,6 +69,7 @@ type Product = {
   calories: number | null;
   prep_time: number | null;
   is_chef_pick: boolean;
+  allergens: string[];
 };
 
 function ProductModal({
@@ -81,6 +94,7 @@ function ProductModal({
   const [prepTime, setPrepTime] = useState(initial.prep_time ? String(initial.prep_time) : "");
   const [catId, setCatId] = useState(initial.category_id || "");
   const [chefPick, setChefPick] = useState(initial.is_chef_pick || false);
+  const [allergens, setAllergens] = useState<string[]>(initial.allergens || []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -99,6 +113,7 @@ function ProductModal({
       calories: calories ? Number(calories) : null,
       prep_time: prepTime ? Number(prepTime) : null,
       is_chef_pick: chefPick,
+      allergens,
     });
     setSaving(false);
   };
@@ -167,6 +182,26 @@ function ProductModal({
             </div>
           </div>
 
+          {/* Alerjenler */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 8 }}>
+              Alerjenler
+              <span style={{ fontSize: 10, color: "rgba(255,255,255,.25)", fontWeight: 400, marginLeft: 6 }}>1 Temmuz yönetmeliği gereği</span>
+            </label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {ALLERGENS.map(a => {
+                const selected = allergens.includes(a.key);
+                return (
+                  <button key={a.key} type="button"
+                    onClick={() => setAllergens(prev => selected ? prev.filter(x => x !== a.key) : [...prev, a.key])}
+                    style={{ padding: "6px 10px", borderRadius: 8, border: `1.5px solid ${selected ? A : "rgba(255,255,255,.1)"}`, background: selected ? `${A}20` : "transparent", color: selected ? "#fff" : "rgba(255,255,255,.4)", fontSize: 11, fontWeight: selected ? 700 : 400, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4 }}>
+                    {a.icon} {a.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <button onClick={() => setChefPick(!chefPick)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderRadius: 10, border: `1.5px solid ${chefPick ? A : "rgba(255,255,255,.1)"}`, background: chefPick ? `${A}15` : "rgba(255,255,255,.04)", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
             <div style={{ width: 20, height: 20, borderRadius: 6, background: chefPick ? A : "rgba(255,255,255,.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               {chefPick && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
@@ -212,10 +247,12 @@ export default function PanelPage() {
 
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-const [thisWeekViews, setThisWeekViews] = useState(0);
-const [lastWeekViews, setLastWeekViews] = useState(0);
-const [totalViewsReal, setTotalViewsReal] = useState(0);
-const [weeklyViews, setWeeklyViews] = useState<{day:string;views:number;orders:number}[]>([]);
+
+  const [thisWeekViews, setThisWeekViews] = useState(0);
+  const [lastWeekViews, setLastWeekViews] = useState(0);
+  const [totalViewsReal, setTotalViewsReal] = useState(0);
+  const [weeklyViews, setWeeklyViews] = useState<{day:string;views:number;orders:number}[]>([]);
+
   const [showAddCat, setShowAddCat] = useState(false);
   const [newCatName, setNewCatName] = useState("");
   const [catSaving, setCatSaving] = useState(false);
@@ -232,44 +269,45 @@ const [weeklyViews, setWeeklyViews] = useState<{day:string;views:number;orders:n
   }, []);
 
   const checkRestaurant = async (userId: string) => {
-  const { data } = await supabase
-    .from("restaurants")
-    .select("*")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-  if (data) { setRestaurant(data); loadMenuData(data.id); }
-  else setShowOnboarding(true);
-  setLoading(false);
-};
+    const { data } = await supabase
+      .from("restaurants")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (data) { setRestaurant(data); loadMenuData(data.id); }
+    else setShowOnboarding(true);
+    setLoading(false);
+  };
 
   const loadMenuData = async (restaurantId: string) => {
     const { data: cats } = await supabase.from("categories").select("*").eq("restaurant_id", restaurantId).order("sort_order");
     const { data: prods } = await supabase.from("products").select("*").eq("restaurant_id", restaurantId).order("sort_order");
     setCategories(cats || []);
     setProducts(prods || []);
+
     const now = new Date();
-const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
-const [{ data: thisWeek }, { data: lastWeek }, { count: total }] = await Promise.all([
-  supabase.from("page_views").select("viewed_at").eq("restaurant_id", restaurantId).gte("viewed_at", weekAgo.toISOString()),
-  supabase.from("page_views").select("viewed_at").eq("restaurant_id", restaurantId).gte("viewed_at", twoWeeksAgo.toISOString()).lt("viewed_at", weekAgo.toISOString()),
-  supabase.from("page_views").select("*", { count: "exact", head: true }).eq("restaurant_id", restaurantId),
-]);
-setThisWeekViews(thisWeek?.length || 0);
-setLastWeekViews(lastWeek?.length || 0);
-setTotalViewsReal(total || 0);
-const days = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
-setWeeklyViews(days.map((day, i) => {
-  const dayStart = new Date(weekAgo.getTime() + i * 24 * 60 * 60 * 1000);
-  const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
-  return { 
-  day, 
-  views: thisWeek?.filter(v => { const d = new Date(v.viewed_at); return d >= dayStart && d < dayEnd; }).length || 0,
-  orders: 0
-};
-}));
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+    const [{ data: thisWeek }, { data: lastWeek }, { count: total }] = await Promise.all([
+      supabase.from("page_views").select("viewed_at").eq("restaurant_id", restaurantId).gte("viewed_at", weekAgo.toISOString()),
+      supabase.from("page_views").select("viewed_at").eq("restaurant_id", restaurantId).gte("viewed_at", twoWeeksAgo.toISOString()).lt("viewed_at", weekAgo.toISOString()),
+      supabase.from("page_views").select("*", { count: "exact", head: true }).eq("restaurant_id", restaurantId),
+    ]);
+    setThisWeekViews(thisWeek?.length || 0);
+    setLastWeekViews(lastWeek?.length || 0);
+    setTotalViewsReal(total || 0);
+    const days = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
+    setWeeklyViews(days.map((day, i) => {
+      const dayStart = new Date(weekAgo.getTime() + i * 24 * 60 * 60 * 1000);
+      const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+      return {
+        day,
+        views: thisWeek?.filter(v => { const d = new Date(v.viewed_at); return d >= dayStart && d < dayEnd; }).length || 0,
+        orders: 0,
+      };
+    }));
   };
 
   const handleOnboardingSave = async () => {
@@ -291,15 +329,13 @@ setWeeklyViews(days.map((day, i) => {
   };
 
   const handleAddProduct = async (formData: any) => {
-    // Plan kısıtlaması kontrolü
-  const plan = restaurant?.plan || "free";
-  const limits: Record<string, number> = { free: 15, starter: 50, pro: Infinity };
-  const limit = limits[plan] || 15;
-  
-  if (products.length >= limit) {
-    flash(`${plan === "free" ? "Ücretsiz planda" : "Başlangıç planında"} maksimum ${limit} ürün ekleyebilirsiniz. Yükseltmek için /fiyat sayfasını ziyaret edin.`);
-    return;
-  }
+    const plan = restaurant?.plan || "free";
+    const limits: Record<string, number> = { free: 15, starter: 50, pro: Infinity };
+    const limit = limits[plan] || 15;
+    if (products.length >= limit) {
+      flash(`${plan === "free" ? "Ücretsiz planda" : "Başlangıç planında"} maksimum ${limit} ürün ekleyebilirsiniz.`);
+      return;
+    }
     const { data, error } = await supabase.from("products").insert({
       restaurant_id: restaurant.id,
       ...formData,
@@ -339,8 +375,7 @@ setWeeklyViews(days.map((day, i) => {
   const flash = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 2000); };
 
   const filteredProducts = catFilter === "Tümü" ? products : products.filter(p => p.category_id === catFilter);
-  const totalViews = weeklyData.reduce((s, d) => s + d.views, 0);
-  const totalOrders = weeklyData.reduce((s, d) => s + d.orders, 0);
+  const chartData = weeklyViews.length > 0 ? weeklyViews : weeklyData;
 
   const navItems = [
     { id: "dashboard", label: "Panel", icon: "◫" },
@@ -461,7 +496,7 @@ setWeeklyViews(days.map((day, i) => {
               <div style={{ fontSize: 11, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#fff" }}>{restaurant?.name || "Restoran"}</div>
               <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
                 <div style={{ width: 5, height: 5, borderRadius: 99, background: "#22c55e" }} />
-                <span style={{ fontSize: 9, color: "rgba(255,255,255,.35)" }}>Ücretsiz · Aktif</span>
+                <span style={{ fontSize: 9, color: "rgba(255,255,255,.35)" }}>{restaurant?.plan === "pro" ? "Pro" : restaurant?.plan === "starter" ? "Başlangıç" : "Ücretsiz"} · Aktif</span>
               </div>
             </div>
           </div>
@@ -483,8 +518,8 @@ setWeeklyViews(days.map((day, i) => {
         </nav>
         <div style={{ padding: "12px 10px", borderTop: "1px solid rgba(255,255,255,.06)" }}>
           <div className="sidebar-plan" style={{ padding: "11px 12px", background: `${A}0f`, border: `1px solid ${A}22`, borderRadius: 11, marginBottom: 8 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#fff" }}>Ücretsiz Plan</div>
-            <div style={{ fontSize: 10, marginTop: 2 }}><a href="/fiyat" style={{ color: A, textDecoration: "none", fontWeight: 600 }}>Pro'ya geç →</a></div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#fff" }}>{restaurant?.plan === "pro" ? "Pro Plan" : restaurant?.plan === "starter" ? "Başlangıç Plan" : "Ücretsiz Plan"}</div>
+            {restaurant?.plan !== "pro" && <div style={{ fontSize: 10, marginTop: 2 }}><a href="/fiyat" style={{ color: A, textDecoration: "none", fontWeight: 600 }}>Pro'ya geç →</a></div>}
           </div>
           <a href={restaurant ? `/${restaurant.slug}` : "/demo"} target="_blank" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 0", borderRadius: 8, border: "1px solid rgba(255,255,255,.08)", background: "transparent", color: "rgba(255,255,255,.45)", fontSize: 12, fontWeight: 600, textDecoration: "none" }}
             onMouseEnter={e => { e.currentTarget.style.color = "#fff"; e.currentTarget.style.borderColor = "rgba(255,255,255,.2)"; }}
@@ -520,7 +555,8 @@ setWeeklyViews(days.map((day, i) => {
               <div className="stats-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
                 {[
                   { label: "Bu Hafta Görüntülenme", value: thisWeekViews.toLocaleString(), sub: lastWeekViews > 0 ? `↑ +${Math.round((thisWeekViews - lastWeekViews) / lastWeekViews * 100)}% geçen haftaya göre` : "Veri toplanıyor...", color: "#22c55e" },
-                  { label: "Toplam Görüntülenme", value: totalViewsReal.toLocaleString(), sub: "Tüm zamanlar", color: "rgba(255,255,255,.3)" },                  { label: "Aktif Ürün", value: `${products.filter(p => p.is_active).length}/${products.length}`, sub: `${products.filter(p => !p.is_active).length} ürün pasif`, color: "rgba(255,255,255,.3)" },
+                  { label: "Toplam Görüntülenme", value: totalViewsReal.toLocaleString(), sub: "Tüm zamanlar", color: "rgba(255,255,255,.3)" },
+                  { label: "Aktif Ürün", value: `${products.filter(p => p.is_active).length}/${products.length}`, sub: `${products.filter(p => !p.is_active).length} ürün pasif`, color: "rgba(255,255,255,.3)" },
                   { label: "Kategori", value: categories.length.toString(), sub: "Menü kategorisi", color: "rgba(255,255,255,.3)" },
                 ].map((s, i) => (
                   <div key={i} className="card" style={{ padding: "20px" }}>
@@ -533,8 +569,8 @@ setWeeklyViews(days.map((day, i) => {
               <div className="chart-grid" style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 14 }}>
                 <div className="card" style={{ padding: "22px 24px" }}>
                   <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Haftalık Görüntülenme</div>
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,.3)", marginBottom: 20 }}>Son 7 gün · {totalViews.toLocaleString()} toplam</div>
-                  <BarChart data={weeklyViews.length > 0 ? weeklyViews : weeklyData} height={140} />
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,.3)", marginBottom: 20 }}>Son 7 gün · {thisWeekViews.toLocaleString()} toplam</div>
+                  <BarChart data={chartData} height={140} />
                 </div>
                 <div className="card" style={{ padding: "22px 24px" }}>
                   <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 2 }}>En Popüler Ürünler</div>
@@ -610,6 +646,12 @@ setWeeklyViews(days.map((day, i) => {
                         )}
                         <div>
                           <div style={{ fontSize: 13, fontWeight: 600 }}>{item.name_tr}</div>
+                          <div style={{ display: "flex", gap: 3, marginTop: 2 }}>
+                            {item.allergens?.slice(0, 3).map(a => (
+                              <span key={a} style={{ fontSize: 10 }}>{ALLERGENS.find(al => al.key === a)?.icon}</span>
+                            ))}
+                            {item.allergens?.length > 3 && <span style={{ fontSize: 9, color: "rgba(255,255,255,.3)" }}>+{item.allergens.length - 3}</span>}
+                          </div>
                           {item.discount_pct > 0 && <div style={{ fontSize: 10, color: A, fontWeight: 600 }}>-%{item.discount_pct} indirim</div>}
                         </div>
                       </div>
@@ -621,7 +663,6 @@ setWeeklyViews(days.map((day, i) => {
                         </div>
                         <span style={{ fontSize: 11, fontWeight: 600, color: item.is_active ? "#22c55e" : "rgba(255,255,255,.3)" }}>{item.is_active ? "Aktif" : "Pasif"}</span>
                       </button>
-                      {/* Düzenle + Sil butonları */}
                       <div style={{ display: "flex", gap: 6 }}>
                         <button onClick={() => setEditingProduct(item)} className="btn" style={{ width: 30, height: 30, borderRadius: 7, border: "1px solid rgba(255,255,255,.1)", background: "transparent", cursor: "pointer", color: "rgba(255,255,255,.5)", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}>✎</button>
                         <button onClick={() => deleteProduct(item.id)} className="btn" style={{ width: 30, height: 30, borderRadius: 7, border: "1px solid rgba(239,68,68,.2)", background: "transparent", cursor: "pointer", color: "#ef4444", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
@@ -671,7 +712,11 @@ setWeeklyViews(days.map((day, i) => {
           {activeTab === "analytics" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16, animation: "fadeUp .35s both" }}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
-                {[{ label: "Toplam Görüntülenme", value: totalViewsReal.toLocaleString(), sub: "Tüm zamanlar" }, { label: "Bu Hafta Görüntülenme", value: thisWeekViews.toLocaleString(), sub: "Son 7 gün" }, { label: "Aktif Ürün", value: products.filter(p => p.is_active).length.toString(), sub: "Menüde görünür" }].map((s, i) => (
+                {[
+                  { label: "Toplam Görüntülenme", value: totalViewsReal.toLocaleString(), sub: "Tüm zamanlar" },
+                  { label: "Bu Hafta Görüntülenme", value: thisWeekViews.toLocaleString(), sub: "Son 7 gün" },
+                  { label: "Aktif Ürün", value: products.filter(p => p.is_active).length.toString(), sub: "Menüde görünür" },
+                ].map((s, i) => (
                   <div key={i} className="card" style={{ padding: "20px" }}>
                     <div style={{ fontSize: 11, color: "rgba(255,255,255,.38)", marginBottom: 10 }}>{s.label}</div>
                     <div style={{ fontSize: 28, fontWeight: 900, letterSpacing: "-.03em", marginBottom: 6 }}>{s.value}</div>
@@ -682,7 +727,7 @@ setWeeklyViews(days.map((day, i) => {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
                 <div className="card" style={{ padding: "22px 24px" }}>
                   <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 20 }}>Haftalık Trend</div>
-                  <BarChart data={weeklyData} height={160} />
+                  <BarChart data={chartData} height={160} />
                 </div>
                 <div className="card" style={{ padding: "22px 24px" }}>
                   <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 20 }}>Dil Dağılımı</div>
@@ -706,13 +751,13 @@ setWeeklyViews(days.map((day, i) => {
             <div style={{ display: "flex", flexDirection: "column", gap: 16, animation: "fadeUp .35s both", maxWidth: 640 }}>
               <div className="card" style={{ padding: "22px 24px" }}>
                 <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 18 }}>Hesap Bilgileri</div>
-                {[["E-posta", user?.email || "—"], ["Restoran", restaurant?.name || "—"], ["Menü Adresi", `temeat.com.tr/${restaurant?.slug}`], ["Plan", "Ücretsiz"]].map(([label, value], i) => (
+                {[["E-posta", user?.email || "—"], ["Restoran", restaurant?.name || "—"], ["Menü Adresi", `temeat.com.tr/${restaurant?.slug}`], ["Plan", restaurant?.plan === "pro" ? "Pro" : restaurant?.plan === "starter" ? "Başlangıç" : "Ücretsiz"]].map(([label, value], i) => (
                   <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: i < 3 ? "1px solid rgba(255,255,255,.06)" : "none" }}>
                     <span style={{ fontSize: 12, color: "rgba(255,255,255,.4)" }}>{label}</span>
                     <span style={{ fontSize: 13, fontWeight: 600 }}>{value}</span>
                   </div>
                 ))}
-                <a href="/fiyat" style={{ display: "inline-block", marginTop: 16, padding: "10px 20px", borderRadius: 9, background: A, color: "#fff", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>Pro'ya Yükselt →</a>
+                {restaurant?.plan !== "pro" && <a href="/fiyat" style={{ display: "inline-block", marginTop: 16, padding: "10px 20px", borderRadius: 9, background: A, color: "#fff", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>Pro'ya Yükselt →</a>}
               </div>
               <div className="card" style={{ padding: "22px 24px", border: "1px solid rgba(239,68,68,.2)", background: "rgba(239,68,68,.04)" }}>
                 <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Oturum</div>
@@ -741,26 +786,12 @@ setWeeklyViews(days.map((day, i) => {
         </div>
       )}
 
-      {/* ÜRÜN EKLEME MODALI */}
       {showAddProduct && (
-        <ProductModal
-          title="Ürün Ekle"
-          categories={categories}
-          initial={{}}
-          onSave={handleAddProduct}
-          onClose={() => setShowAddProduct(false)}
-        />
+        <ProductModal title="Ürün Ekle" categories={categories} initial={{}} onSave={handleAddProduct} onClose={() => setShowAddProduct(false)} />
       )}
 
-      {/* ÜRÜN DÜZENLEME MODALI */}
       {editingProduct && (
-        <ProductModal
-          title="Ürünü Düzenle"
-          categories={categories}
-          initial={editingProduct}
-          onSave={handleEditProduct}
-          onClose={() => setEditingProduct(null)}
-        />
+        <ProductModal title="Ürünü Düzenle" categories={categories} initial={editingProduct} onSave={handleEditProduct} onClose={() => setEditingProduct(null)} />
       )}
     </div>
   );
