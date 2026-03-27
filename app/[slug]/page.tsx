@@ -136,7 +136,7 @@ const C = {
 
   return (
     <div
-style={{ maxWidth: 680, margin: "0 auto", minHeight: "100vh", background: C.bg, fontFamily: "'Inter', system-ui, sans-serif", color: C.tx, position: "relative" }}      dir={isRTL ? "rtl" : "ltr"}
+style={{ maxWidth: "100%", margin: "0 auto", minHeight: "100vh", background: C.bg, fontFamily: "'Inter', system-ui, sans-serif", color: C.tx, position: "relative" }}      dir={isRTL ? "rtl" : "ltr"}
     >
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
       <style>{`
@@ -338,7 +338,7 @@ style={{ maxWidth: 680, margin: "0 auto", minHeight: "100vh", background: C.bg, 
       </div>
 
       {/* Bottom bar */}
-      <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", maxWidth: 430, width: "100%", borderTop: `1px solid ${C.bd}`, background: C.bg, padding: "10px 20px 16px", display: "flex", gap: 8, zIndex: 20 }}>
+      <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", maxWidth: 680, width: "100%", borderTop: `1px solid ${C.bd}`, background: C.bg, padding: "10px 20px 16px", display: "flex", gap: 8, zIndex: 20 }}>
         <button onClick={() => flash("Garson çağrıldı!")}
           style={{ flex: 1, padding: 11, borderRadius: 11, border: `1.5px solid ${C.bd}`, background: C.cd, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", color: C.tx }}>
           {isRTL ? "اطلب النادل" : "Garson Çağır"}
