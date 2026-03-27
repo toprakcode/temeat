@@ -213,10 +213,9 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
 
       {/* Kategoriler */}
       {!search && categories.length > 0 && (
-        <div style={{ padding: "0 20px 10px", display: "flex", gap: 0, borderBottom: `1px solid ${C.bd}`, overflowX: "auto" }}>
-          {categories.map(cat => (
+<div style={{ padding: "0 20px 10px", display: "flex", gap: 0, borderBottom: `1px solid ${C.bd}`, overflowX: "auto", WebkitOverflowScrolling: "touch", scrollSnapType: "x mandatory" }}>          {categories.map(cat => (
             <button key={cat.id} onClick={() => setActiveCat(cat.id)}
-              style={{ flex: "0 0 auto", padding: "10px 14px", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: activeCat === cat.id ? 700 : 400, color: activeCat === cat.id ? C.tx : C.mt, background: "transparent", borderBottom: activeCat === cat.id ? `2px solid ${C.tx}` : "2px solid transparent" }}>
+              style={{ flex: "0 0 auto", scrollSnapAlign: "start", padding: "10px 14px", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: activeCat === cat.id ? 700 : 400, color: activeCat === cat.id ? C.tx : C.mt, background: "transparent", borderBottom: activeCat === cat.id ? `2px solid ${C.tx}` : "2px solid transparent" }}>
               {cat.name}
               <span style={{ fontSize: 9, color: C.dm, marginLeft: 3 }}>({products.filter(p => p.category_id === cat.id).length})</span>
             </button>
