@@ -5,62 +5,42 @@ import { supabase } from "@/lib/supabase";
 
 const DEFAULT_COLOR = "#D4470A";
 
-type Restaurant = {
-  id: string;
-  name: string;
-  slug: string;
-  address: string | null;
-  phone: string | null;
-  hours: string | null;
-  wifi_password: string | null;
-  theme_color: string | null;
-  logo_url: string | null;
+const ALLERGEN_ICONS: Record<string, string> = {
+  gluten: "🌾", sut: "🥛", yumurta: "🥚", findik: "🥜",
+  balik: "🐟", kabuklu: "🦐", soya: "🫘", susam: "🌱",
+};
+const ALLERGEN_LABELS: Record<string, string> = {
+  gluten: "Gluten", sut: "Süt", yumurta: "Yumurta", findik: "Fındık",
+  balik: "Balık", kabuklu: "Kabuklu", soya: "Soya", susam: "Susam",
 };
 
-type Category = {
-  id: string;
-  name: string;
-  sort_order: number;
+type Restaurant = {
+  id: string; name: string; slug: string; address: string | null;
+  phone: string | null; hours: string | null; wifi_password: string | null;
+  theme_color: string | null; logo_url: string | null;
 };
+
+type Category = { id: string; name: string; sort_order: number };
 
 type Product = {
-  id: string;
-  category_id: string | null;
-  name_tr: string;
-  name_en: string | null;
-  name_ar: string | null;
-  name_de: string | null;
-  name_ru: string | null;
-  desc_tr: string | null;
-  desc_en: string | null;
-  desc_ar: string | null;
-  desc_de: string | null;
-  desc_ru: string | null;
-  price: number;
-  discount_pct: number;
-  calories: number | null;
-  prep_time: number | null;
-  serves: number;
-  image_url: string | null;
-  is_active: boolean;
-  is_chef_pick: boolean;
-  tags: string[];
+  id: string; category_id: string | null;
+  name_tr: string; name_en: string | null; name_ar: string | null; name_de: string | null; name_ru: string | null;
+  desc_tr: string | null; desc_en: string | null; desc_ar: string | null; desc_de: string | null; desc_ru: string | null;
+  price: number; discount_pct: number; calories: number | null; prep_time: number | null; serves: number;
+  image_url: string | null; is_active: boolean; is_chef_pick: boolean; tags: string[];
+  allergens: string[];
 };
 
 type LangKey = "tr" | "en" | "ar" | "de" | "ru";
 
 const LANGS: { key: LangKey; label: string }[] = [
-  { key: "tr", label: "TR" },
-  { key: "en", label: "EN" },
-  { key: "ar", label: "عر" },
-  { key: "de", label: "DE" },
-  { key: "ru", label: "RU" },
+  { key: "tr", label: "TR" }, { key: "en", label: "EN" },
+  { key: "ar", label: "عر" }, { key: "de", label: "DE" }, { key: "ru", label: "RU" },
 ];
 
 function getProductName(p: Product, lang: LangKey): string {
   return p[`name_${lang}`] || p.name_tr;
 }
-
 function getProductDesc(p: Product, lang: LangKey): string {
   return p[`desc_${lang}`] || p.desc_tr || "";
 }
@@ -79,51 +59,28 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
   const [showCart, setShowCart] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [detailProduct, setDetailProduct] = useState<Product | null>(null);
 
   const A = restaurant?.theme_color || DEFAULT_COLOR;
   const o = dark ? 1 : 0;
   const C = {
-    bg: ["#FAFAFA", "#0B0B0B"][o],
-    cd: ["#FFF", "#161616"][o],
-    bd: ["#EBEBEB", "#232323"][o],
-    tx: ["#111", "#EDEDED"][o],
-    mt: ["#999", "#555"][o],
-    dm: ["#CCC", "#333"][o],
-    al: ["#FFF5F0", "#1C1210"][o],
+    bg: ["#FAFAFA", "#0B0B0B"][o], cd: ["#FFF", "#161616"][o],
+    bd: ["#EBEBEB", "#232323"][o], tx: ["#111", "#EDEDED"][o],
+    mt: ["#999", "#555"][o], dm: ["#CCC", "#333"][o], al: ["#FFF5F0", "#1C1210"][o],
+    s2: ["#555", "#999"][o],
   };
 
-  useEffect(() => {
-    loadMenu();
-  }, [slug]);
+  useEffect(() => { loadMenu(); }, [slug]);
 
   const loadMenu = async () => {
-    const { data: rest } = await supabase
-      .from("restaurants")
-      .select("*")
-      .eq("slug", slug)
-      .single();
-
+    const { data: rest } = await supabase.from("restaurants").select("*").eq("slug", slug).single();
     if (!rest) { setNotFound(true); setLoading(false); return; }
     setRestaurant(rest);
     document.title = `${rest.name} Menüsü | TEMeat`;
-    // Görüntülenmeyi kaydet
-supabase.from("page_views").insert({
-  restaurant_id: rest.id,
-  lang: navigator.language?.slice(0, 2) || "tr",
-});
+    supabase.from("page_views").insert({ restaurant_id: rest.id, lang: navigator.language?.slice(0, 2) || "tr" });
 
-    const { data: cats } = await supabase
-      .from("categories")
-      .select("*")
-      .eq("restaurant_id", rest.id)
-      .order("sort_order");
-
-    const { data: prods } = await supabase
-      .from("products")
-      .select("*")
-      .eq("restaurant_id", rest.id)
-      .eq("is_active", true)
-      .order("sort_order");
+    const { data: cats } = await supabase.from("categories").select("*").eq("restaurant_id", rest.id).order("sort_order");
+    const { data: prods } = await supabase.from("products").select("*").eq("restaurant_id", rest.id).eq("is_active", true).order("sort_order");
 
     setCategories(cats || []);
     setProducts(prods || []);
@@ -132,67 +89,42 @@ supabase.from("page_views").insert({
   };
 
   const flash = useCallback((msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 1400);
+    setToast(msg); setTimeout(() => setToast(null), 1400);
   }, []);
 
   const addToCart = (p: Product) => {
     setCart(prev => ({ ...prev, [p.id]: (prev[p.id] || 0) + 1 }));
     flash(getProductName(p, lang) + " ✓");
   };
-
   const removeFromCart = (p: Product) => {
-    setCart(prev => {
-      const n = { ...prev };
-      if (n[p.id] > 1) n[p.id]--;
-      else delete n[p.id];
-      return n;
-    });
+    setCart(prev => { const n = { ...prev }; if (n[p.id] > 1) n[p.id]--; else delete n[p.id]; return n; });
   };
 
-  const cartItems = Object.entries(cart).map(([id, qty]) => ({
-    product: products.find(p => p.id === id)!,
-    qty,
-  })).filter(x => x.product);
-
-  const cartTotal = cartItems.reduce((s, { product: p, qty }) => {
-    const price = p.discount_pct ? Math.round(p.price * (1 - p.discount_pct / 100)) : p.price;
-    return s + price * qty;
-  }, 0);
-
+  const cartItems = Object.entries(cart).map(([id, qty]) => ({ product: products.find(p => p.id === id)!, qty })).filter(x => x.product);
+  const cartTotal = cartItems.reduce((s, { product: p, qty }) => { const price = p.discount_pct ? Math.round(p.price * (1 - p.discount_pct / 100)) : p.price; return s + price * qty; }, 0);
   const cartCount = Object.values(cart).reduce((s, v) => s + v, 0);
-
-  const filteredProducts = search
-    ? products.filter(p => getProductName(p, lang).toLowerCase().includes(search.toLowerCase()))
-    : activeCat
-    ? products.filter(p => p.category_id === activeCat)
-    : products;
-
+  const filteredProducts = search ? products.filter(p => getProductName(p, lang).toLowerCase().includes(search.toLowerCase())) : activeCat ? products.filter(p => p.category_id === activeCat) : products;
   const chefPicks = products.filter(p => p.is_chef_pick);
 
-  if (loading) {
-    return (
-      <div style={{ minHeight: "100vh", background: "#FAFAFA", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', system-ui, sans-serif" }}>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ width: 36, height: 36, borderRadius: 99, border: `3px solid ${DEFAULT_COLOR}`, borderTopColor: "transparent", animation: "spin 1s linear infinite", margin: "0 auto 12px" }} />
-          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-          <div style={{ fontSize: 13, color: "#999" }}>Menü yükleniyor...</div>
-        </div>
+  if (loading) return (
+    <div style={{ minHeight: "100vh", background: "#FAFAFA", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', system-ui, sans-serif" }}>
+      <div style={{ textAlign: "center" }}>
+        <div style={{ width: 36, height: 36, borderRadius: 99, border: `3px solid ${DEFAULT_COLOR}`, borderTopColor: "transparent", animation: "spin 1s linear infinite", margin: "0 auto 12px" }} />
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+        <div style={{ fontSize: 13, color: "#999" }}>Menü yükleniyor...</div>
       </div>
-    );
-  }
+    </div>
+  );
 
-  if (notFound) {
-    return (
-      <div style={{ minHeight: "100vh", background: "#FAFAFA", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', system-ui, sans-serif", textAlign: "center", padding: 20 }}>
-        <div>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🍽</div>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: "#111", marginBottom: 8 }}>Menü bulunamadı</h1>
-          <p style={{ fontSize: 14, color: "#999" }}>Bu adrese ait bir restoran yok.</p>
-        </div>
+  if (notFound) return (
+    <div style={{ minHeight: "100vh", background: "#FAFAFA", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', system-ui, sans-serif", textAlign: "center", padding: 20 }}>
+      <div>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>🍽</div>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: "#111", marginBottom: 8 }}>Menü bulunamadı</h1>
+        <p style={{ fontSize: 14, color: "#999" }}>Bu adrese ait bir restoran yok.</p>
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
     <div style={{ maxWidth: 430, margin: "0 auto", minHeight: "100vh", background: C.bg, fontFamily: "'Inter', system-ui, sans-serif", color: C.tx, position: "relative" }}>
@@ -206,7 +138,6 @@ supabase.from("page_views").insert({
         ::-webkit-scrollbar{display:none}
       `}</style>
 
-      {/* Toast */}
       {toast && (
         <div style={{ position: "fixed", top: 14, left: "50%", transform: "translateX(-50%)", zIndex: 200, background: C.cd, border: `1px solid ${C.bd}`, borderRadius: 100, padding: "7px 18px", fontSize: 12, fontWeight: 600, color: A, whiteSpace: "nowrap", boxShadow: "0 4px 20px rgba(0,0,0,.08)", animation: "toast .2s both" }}>
           {toast}
@@ -220,7 +151,6 @@ supabase.from("page_views").insert({
           {restaurant!.hours && <div style={{ fontSize: 10, color: "#22c55e", fontWeight: 600, marginTop: 1 }}>● {restaurant!.hours}</div>}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {/* Dil seçici */}
           <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: `1px solid ${C.bd}` }}>
             {LANGS.map(l => (
               <button key={l.key} onClick={() => setLang(l.key)}
@@ -229,7 +159,6 @@ supabase.from("page_views").insert({
               </button>
             ))}
           </div>
-          {/* Karanlık mod */}
           <button onClick={() => setDark(!dark)}
             style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.bd}`, background: "transparent", cursor: "pointer", fontSize: 12, color: C.mt, display: "flex", alignItems: "center", justifyContent: "center" }}>
             {dark ? "◐" : "◑"}
@@ -257,13 +186,9 @@ supabase.from("page_views").insert({
             {chefPicks.map(p => {
               const discPrice = p.discount_pct ? Math.round(p.price * (1 - p.discount_pct / 100)) : null;
               return (
-                <div key={p.id} style={{ width: 160, flexShrink: 0, cursor: "pointer" }}>
+                <div key={p.id} onClick={() => setDetailProduct(p)} style={{ width: 160, flexShrink: 0, cursor: "pointer" }}>
                   <div style={{ position: "relative", width: 160, height: 110, borderRadius: 12, overflow: "hidden", marginBottom: 6 }}>
-                    {p.image_url ? (
-                      <img src={p.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    ) : (
-                      <div style={{ width: "100%", height: "100%", background: `${A}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>🍽</div>
-                    )}
+                    {p.image_url ? <img src={p.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", background: `${A}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>🍽</div>}
                     <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,.6), transparent 50%)" }} />
                     <div style={{ position: "absolute", bottom: 8, left: 10 }}>
                       <div style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>{getProductName(p, lang)}</div>
@@ -280,8 +205,7 @@ supabase.from("page_views").insert({
       {/* Arama */}
       <div style={{ padding: "14px 20px 10px" }}>
         <div style={{ position: "relative" }}>
-          <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Ne arıyorsunuz?"
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Ne arıyorsunuz?"
             style={{ width: "100%", padding: "11px 16px 11px 36px", borderRadius: 12, border: `1.5px solid ${search ? A + "40" : C.bd}`, background: C.cd, color: C.tx, fontSize: 14, fontFamily: "inherit", outline: "none" }} />
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.mt} strokeWidth="2" strokeLinecap="round" style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)" }}><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         </div>
@@ -305,9 +229,7 @@ supabase.from("page_views").insert({
         {filteredProducts.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 20px", color: C.mt }}>
             <div style={{ fontSize: 32, marginBottom: 12 }}>🍽</div>
-            <div style={{ fontSize: 14, fontWeight: 600 }}>
-              {search ? "Ürün bulunamadı" : "Bu kategoride ürün yok"}
-            </div>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>{search ? "Ürün bulunamadı" : "Bu kategoride ürün yok"}</div>
           </div>
         ) : (
           filteredProducts.map((p, i) => {
@@ -317,8 +239,22 @@ supabase.from("page_views").insert({
               <div key={p.id} style={{ padding: "0 20px", animation: `fadeUp .4s ${i * .03}s both` }}>
                 <div style={{ display: "flex", gap: 14, padding: "16px 0", borderBottom: `1px solid ${C.bd}` }}>
                   <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
-                    <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4, letterSpacing: "-.02em" }}>{getProductName(p, lang)}</div>
-                    <div style={{ fontSize: 12, color: C.mt, lineHeight: 1.4, marginBottom: 8, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{getProductDesc(p, lang)}</div>
+                    <div onClick={() => setDetailProduct(p)} style={{ fontWeight: 600, fontSize: 15, marginBottom: 4, letterSpacing: "-.02em", cursor: "pointer" }}>
+                      {getProductName(p, lang)}
+                    </div>
+                    <div style={{ fontSize: 12, color: C.mt, lineHeight: 1.4, marginBottom: 6, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                      {getProductDesc(p, lang)}
+                    </div>
+                    {/* Alerjenler */}
+                    {p.allergens?.length > 0 && (
+                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 6 }}>
+                        {p.allergens.map(a => (
+                          <span key={a} title={ALLERGEN_LABELS[a]} style={{ fontSize: 10, background: C.cd, border: `1px solid ${C.bd}`, borderRadius: 5, padding: "1px 5px", color: C.mt, display: "flex", alignItems: "center", gap: 2 }}>
+                            {ALLERGEN_ICONS[a]} {ALLERGEN_LABELS[a]}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     {(p.prep_time || p.calories) && (
                       <div style={{ display: "flex", gap: 8, fontSize: 10, color: C.mt, marginBottom: 8 }}>
                         {p.prep_time && <span>{p.prep_time} dk</span>}
@@ -331,15 +267,9 @@ supabase.from("page_views").insert({
                     </div>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                    <div style={{ width: 90, height: 90, borderRadius: 14, overflow: "hidden", position: "relative" }}>
-                      {p.image_url ? (
-                        <img src={p.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      ) : (
-                        <div style={{ width: "100%", height: "100%", background: `${A}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>🍽</div>
-                      )}
-                      {p.discount_pct > 0 && (
-                        <div style={{ position: "absolute", top: 4, left: 4, background: A, color: "#fff", fontSize: 8, fontWeight: 700, padding: "2px 5px", borderRadius: 4 }}>-{p.discount_pct}%</div>
-                      )}
+                    <div onClick={() => setDetailProduct(p)} style={{ width: 90, height: 90, borderRadius: 14, overflow: "hidden", position: "relative", cursor: "pointer" }}>
+                      {p.image_url ? <img src={p.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", background: `${A}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>🍽</div>}
+                      {p.discount_pct > 0 && <div style={{ position: "absolute", top: 4, left: 4, background: A, color: "#fff", fontSize: 8, fontWeight: 700, padding: "2px 5px", borderRadius: 4 }}>-{p.discount_pct}%</div>}
                     </div>
                     {qty > 0 ? (
                       <div style={{ display: "flex", alignItems: "center", background: C.al, borderRadius: 9, border: `1.5px solid ${A}20`, width: 90 }}>
@@ -385,7 +315,72 @@ supabase.from("page_views").insert({
         )}
       </div>
 
-      {/* Sepet modal */}
+      {/* Ürün Detay Modal */}
+      {detailProduct && (
+        <div>
+          <div onClick={() => setDetailProduct(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 60, animation: "fadeIn .15s" }} />
+          <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", maxWidth: 430, width: "100%", background: C.cd, borderRadius: "20px 20px 0 0", zIndex: 70, maxHeight: "85vh", overflowY: "auto", animation: "slideUp .3s cubic-bezier(.25,1,.5,1)" }}>
+            <div style={{ width: 28, height: 3, borderRadius: 99, background: C.dm, margin: "10px auto 6px" }} />
+            {/* Ürün görseli */}
+            <div style={{ position: "relative", width: "100%", height: 220 }}>
+              {detailProduct.image_url
+                ? <img src={detailProduct.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                : <div style={{ width: "100%", height: "100%", background: `${A}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48 }}>🍽</div>
+              }
+              {detailProduct.discount_pct > 0 && (
+                <div style={{ position: "absolute", top: 12, left: 12, background: A, color: "#fff", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 6 }}>
+                  -{detailProduct.discount_pct}%
+                </div>
+              )}
+              <button onClick={() => setDetailProduct(null)} style={{ position: "absolute", top: 12, right: 12, width: 32, height: 32, borderRadius: 99, background: "rgba(0,0,0,.35)", border: "none", cursor: "pointer", color: "#fff", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+            </div>
+            <div style={{ padding: "16px 20px 32px" }}>
+              <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8, letterSpacing: "-.03em" }}>{getProductName(detailProduct, lang)}</h2>
+              {/* Meta bilgiler */}
+              {(detailProduct.prep_time || detailProduct.calories || detailProduct.serves) && (
+                <div style={{ display: "flex", gap: 12, marginBottom: 12, fontSize: 12, color: C.mt }}>
+                  {detailProduct.prep_time && <span>⏱ {detailProduct.prep_time} dk</span>}
+                  {detailProduct.serves > 1 && <span>👤 {detailProduct.serves} kişilik</span>}
+                  {detailProduct.calories && <span>🔥 {detailProduct.calories} kal</span>}
+                </div>
+              )}
+              {/* Açıklama */}
+              <p style={{ fontSize: 14, color: C.s2, lineHeight: 1.65, marginBottom: 16 }}>{getProductDesc(detailProduct, lang)}</p>
+              {/* Alerjenler */}
+              {detailProduct.allergens?.length > 0 && (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: C.mt, marginBottom: 8, textTransform: "uppercase", letterSpacing: ".06em" }}>Alerjenler</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {detailProduct.allergens.map(a => (
+                      <span key={a} style={{ fontSize: 12, background: C.bg, border: `1px solid ${C.bd}`, borderRadius: 8, padding: "4px 10px", color: C.tx, display: "flex", alignItems: "center", gap: 4 }}>
+                        {ALLERGEN_ICONS[a]} {ALLERGEN_LABELS[a]}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Fiyat + Ekle */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 16, borderTop: `1px solid ${C.bd}` }}>
+                <div>
+                  {detailProduct.discount_pct > 0
+                    ? <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                        <span style={{ fontSize: 26, fontWeight: 800 }}>₺{Math.round(detailProduct.price * (1 - detailProduct.discount_pct / 100))}</span>
+                        <span style={{ fontSize: 14, color: C.dm, textDecoration: "line-through" }}>₺{detailProduct.price}</span>
+                      </div>
+                    : <span style={{ fontSize: 26, fontWeight: 800 }}>₺{detailProduct.price}</span>
+                  }
+                </div>
+                <button onClick={() => { addToCart(detailProduct); setDetailProduct(null); }}
+                  style={{ padding: "12px 28px", borderRadius: 12, border: "none", background: A, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: `0 4px 16px ${A}30` }}>
+                  + Sepete Ekle
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sepet Modal */}
       {showCart && (
         <div>
           <div onClick={() => setShowCart(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 40, animation: "fadeIn .15s" }} />
