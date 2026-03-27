@@ -63,6 +63,7 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
 
   const A = restaurant?.theme_color || DEFAULT_COLOR;
   const o = dark ? 1 : 0;
+  const isRTL = lang === "ar";
   const C = {
     bg: ["#FAFAFA", "#0B0B0B"][o], cd: ["#FFF", "#161616"][o],
     bd: ["#EBEBEB", "#232323"][o], tx: ["#111", "#EDEDED"][o],
@@ -126,8 +127,19 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
     </div>
   );
 
+  // Modal wrapper — tam ekran fixed, taşmayı önler
+  const ModalWrapper = ({ children, onClick, zIndex }: { children: React.ReactNode; onClick: () => void; zIndex: number }) => (
+    <div style={{ position: "fixed", inset: 0, zIndex, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+      <div onClick={onClick} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", animation: "fadeIn .15s" }} />
+      {children}
+    </div>
+  );
+
   return (
-    <div style={{ maxWidth: 430, margin: "0 auto", minHeight: "100vh", background: C.bg, fontFamily: "'Inter', system-ui, sans-serif", color: C.tx, position: "relative" }}>
+    <div
+      style={{ maxWidth: 430, margin: "0 auto", minHeight: "100vh", background: C.bg, fontFamily: "'Inter', system-ui, sans-serif", color: C.tx, position: "relative" }}
+      dir={isRTL ? "rtl" : "ltr"}
+    >
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
       <style>{`
         *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -136,6 +148,7 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
         @keyframes toast{0%{opacity:0;transform:translateX(-50%) scale(.95)}100%{opacity:1;transform:translateX(-50%) scale(1)}}
         ::-webkit-scrollbar{display:none}
+        .cat-bar::-webkit-scrollbar{display:none}
       `}</style>
 
       {toast && (
@@ -146,21 +159,21 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
 
       {/* Header */}
       <div style={{ padding: "14px 20px", background: dark ? "#111" : "#fff", borderBottom: `1px solid ${C.bd}`, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 30 }}>
-        <div>
-          <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: "-.02em" }}>{restaurant!.name}</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: "-.02em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{restaurant!.name}</div>
           {restaurant!.hours && <div style={{ fontSize: 10, color: "#22c55e", fontWeight: 600, marginTop: 1 }}>● {restaurant!.hours}</div>}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0, marginLeft: 8 }}>
           <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: `1px solid ${C.bd}` }}>
             {LANGS.map(l => (
               <button key={l.key} onClick={() => setLang(l.key)}
-                style={{ padding: "5px 7px", border: "none", cursor: "pointer", fontSize: 9, fontWeight: lang === l.key ? 700 : 400, fontFamily: "inherit", background: lang === l.key ? C.tx : "transparent", color: lang === l.key ? C.bg : C.mt, minWidth: 24, textAlign: "center" }}>
+                style={{ padding: "5px 6px", border: "none", cursor: "pointer", fontSize: 9, fontWeight: lang === l.key ? 700 : 400, fontFamily: "inherit", background: lang === l.key ? C.tx : "transparent", color: lang === l.key ? C.bg : C.mt, minWidth: 22, textAlign: "center" }}>
                 {l.label}
               </button>
             ))}
           </div>
           <button onClick={() => setDark(!dark)}
-            style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.bd}`, background: "transparent", cursor: "pointer", fontSize: 12, color: C.mt, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${C.bd}`, background: "transparent", cursor: "pointer", fontSize: 12, color: C.mt, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             {dark ? "◐" : "◑"}
           </button>
         </div>
@@ -182,7 +195,7 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
       {chefPicks.length > 0 && !search && (
         <div style={{ padding: "16px 20px 0" }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: A, marginBottom: 10, letterSpacing: ".06em", textTransform: "uppercase" }}>Şefin Seçimi</div>
-          <div style={{ display: "flex", gap: 10, overflowX: "auto" }}>
+          <div style={{ display: "flex", gap: 10, overflowX: "auto", WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
             {chefPicks.map(p => {
               const discPrice = p.discount_pct ? Math.round(p.price * (1 - p.discount_pct / 100)) : null;
               return (
@@ -205,17 +218,45 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
       {/* Arama */}
       <div style={{ padding: "14px 20px 10px" }}>
         <div style={{ position: "relative" }}>
-          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Ne arıyorsunuz?"
-            style={{ width: "100%", padding: "11px 16px 11px 36px", borderRadius: 12, border: `1.5px solid ${search ? A + "40" : C.bd}`, background: C.cd, color: C.tx, fontSize: 14, fontFamily: "inherit", outline: "none" }} />
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.mt} strokeWidth="2" strokeLinecap="round" style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)" }}><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+            placeholder={isRTL ? "ماذا تبحث؟" : "Ne arıyorsunuz?"}
+            style={{ width: "100%", padding: isRTL ? "11px 36px 11px 16px" : "11px 16px 11px 36px", borderRadius: 12, border: `1.5px solid ${search ? A + "40" : C.bd}`, background: C.cd, color: C.tx, fontSize: 14, fontFamily: "inherit", outline: "none", direction: isRTL ? "rtl" : "ltr" }} />
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.mt} strokeWidth="2" strokeLinecap="round"
+            style={{ position: "absolute", [isRTL ? "right" : "left"]: 13, top: "50%", transform: "translateY(-50%)" }}>
+            <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+          </svg>
         </div>
       </div>
 
-      {/* Kategoriler */}
+      {/* Kategoriler — FIX: padding kaldırıldı, overflow düzeltildi */}
       {!search && categories.length > 0 && (
-<div style={{ padding: "0 20px 10px", display: "flex", gap: 0, borderBottom: `1px solid ${C.bd}`, overflowX: "auto", WebkitOverflowScrolling: "touch", scrollSnapType: "x mandatory" }}>          {categories.map(cat => (
+        <div
+          className="cat-bar"
+          style={{
+            display: "flex",
+            borderBottom: `1px solid ${C.bd}`,
+            overflowX: "auto",
+            overflowY: "hidden",
+            WebkitOverflowScrolling: "touch",
+            msOverflowStyle: "none",
+            scrollbarWidth: "none",
+          } as React.CSSProperties}
+        >
+          {categories.map(cat => (
             <button key={cat.id} onClick={() => setActiveCat(cat.id)}
-              style={{ flex: "0 0 auto", scrollSnapAlign: "start", padding: "10px 14px", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: activeCat === cat.id ? 700 : 400, color: activeCat === cat.id ? C.tx : C.mt, background: "transparent", borderBottom: activeCat === cat.id ? `2px solid ${C.tx}` : "2px solid transparent" }}>
+              style={{
+                flexShrink: 0,
+                padding: "10px 14px",
+                border: "none",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                fontSize: 12,
+                fontWeight: activeCat === cat.id ? 700 : 400,
+                color: activeCat === cat.id ? C.tx : C.mt,
+                background: "transparent",
+                borderBottom: activeCat === cat.id ? `2px solid ${C.tx}` : "2px solid transparent",
+                whiteSpace: "nowrap",
+              }}>
               {cat.name}
               <span style={{ fontSize: 9, color: C.dm, marginLeft: 3 }}>({products.filter(p => p.category_id === cat.id).length})</span>
             </button>
@@ -244,7 +285,6 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
                     <div style={{ fontSize: 12, color: C.mt, lineHeight: 1.4, marginBottom: 6, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                       {getProductDesc(p, lang)}
                     </div>
-                    {/* Alerjenler */}
                     {p.allergens?.length > 0 && (
                       <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 6 }}>
                         {p.allergens.map(a => (
@@ -303,24 +343,25 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
       <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", maxWidth: 430, width: "100%", borderTop: `1px solid ${C.bd}`, background: C.bg, padding: "10px 20px 16px", display: "flex", gap: 8, zIndex: 20 }}>
         <button onClick={() => flash("Garson çağrıldı!")}
           style={{ flex: 1, padding: 11, borderRadius: 11, border: `1.5px solid ${C.bd}`, background: C.cd, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", color: C.tx }}>
-          Garson Çağır
+          {isRTL ? "اطلب النادل" : "Garson Çağır"}
         </button>
         {cartCount > 0 && (
           <button onClick={() => setShowCart(true)}
             style={{ flex: 2, padding: "11px 16px", borderRadius: 11, border: "none", background: A, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: `0 4px 16px ${A}30` }}>
-            <span>Sepetim · {cartCount}</span>
+            <span>{isRTL ? "سلة" : "Sepetim"} · {cartCount}</span>
             <span style={{ fontWeight: 800 }}>₺{cartTotal}</span>
           </button>
         )}
       </div>
 
-      {/* Ürün Detay Modal */}
+      {/* Ürün Detay Modal — FIX: ModalWrapper ile taşma önlendi */}
       {detailProduct && (
-        <div>
-          <div onClick={() => setDetailProduct(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 60, animation: "fadeIn .15s" }} />
-          <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", maxWidth: 430, width: "100%", background: C.cd, borderRadius: "20px 20px 0 0", zIndex: 70, maxHeight: "85vh", overflowY: "auto", animation: "slideUp .3s cubic-bezier(.25,1,.5,1)" }}>
+        <ModalWrapper onClick={() => setDetailProduct(null)} zIndex={60}>
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ position: "relative", background: C.cd, borderRadius: "20px 20px 0 0", maxHeight: "85vh", overflowY: "auto", animation: "slideUp .3s cubic-bezier(.25,1,.5,1)", width: "100%" }}
+          >
             <div style={{ width: 28, height: 3, borderRadius: 99, background: C.dm, margin: "10px auto 6px" }} />
-            {/* Ürün görseli */}
             <div style={{ position: "relative", width: "100%", height: 220 }}>
               {detailProduct.image_url
                 ? <img src={detailProduct.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -331,11 +372,10 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
                   -{detailProduct.discount_pct}%
                 </div>
               )}
-              <button onClick={() => setDetailProduct(null)} style={{ position: "absolute", top: 12, right: 12, width: 32, height: 32, borderRadius: 99, background: "rgba(0,0,0,.35)", border: "none", cursor: "pointer", color: "#fff", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+              <button onClick={() => setDetailProduct(null)} style={{ position: "absolute", top: 12, right: 12, width: 32, height: 32, borderRadius: 99, background: "rgba(0,0,0,.35)", border: "none", cursor: "pointer", color: "#fff", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
             </div>
             <div style={{ padding: "16px 20px 32px" }}>
               <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8, letterSpacing: "-.03em" }}>{getProductName(detailProduct, lang)}</h2>
-              {/* Meta bilgiler */}
               {(detailProduct.prep_time || detailProduct.calories || detailProduct.serves) && (
                 <div style={{ display: "flex", gap: 12, marginBottom: 12, fontSize: 12, color: C.mt }}>
                   {detailProduct.prep_time && <span>⏱ {detailProduct.prep_time} dk</span>}
@@ -343,9 +383,7 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
                   {detailProduct.calories && <span>🔥 {detailProduct.calories} kal</span>}
                 </div>
               )}
-              {/* Açıklama */}
               <p style={{ fontSize: 14, color: C.s2, lineHeight: 1.65, marginBottom: 16 }}>{getProductDesc(detailProduct, lang)}</p>
-              {/* Alerjenler */}
               {detailProduct.allergens?.length > 0 && (
                 <div style={{ marginBottom: 16 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: C.mt, marginBottom: 8, textTransform: "uppercase", letterSpacing: ".06em" }}>Alerjenler</div>
@@ -358,7 +396,6 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
                   </div>
                 </div>
               )}
-              {/* Fiyat + Ekle */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 16, borderTop: `1px solid ${C.bd}` }}>
                 <div>
                   {detailProduct.discount_pct > 0
@@ -376,18 +413,20 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
               </div>
             </div>
           </div>
-        </div>
+        </ModalWrapper>
       )}
 
-      {/* Sepet Modal */}
+      {/* Sepet Modal — FIX: ModalWrapper ile taşma önlendi */}
       {showCart && (
-        <div>
-          <div onClick={() => setShowCart(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 40, animation: "fadeIn .15s" }} />
-          <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", maxWidth: 430, width: "100%", background: C.cd, borderRadius: "20px 20px 0 0", zIndex: 50, maxHeight: "70vh", display: "flex", flexDirection: "column", animation: "slideUp .3s cubic-bezier(.25,1,.5,1)" }}>
+        <ModalWrapper onClick={() => setShowCart(false)} zIndex={40}>
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ position: "relative", background: C.cd, borderRadius: "20px 20px 0 0", maxHeight: "70vh", display: "flex", flexDirection: "column", animation: "slideUp .3s cubic-bezier(.25,1,.5,1)", width: "100%" }}
+          >
             <div style={{ width: 28, height: 3, borderRadius: 99, background: C.dm, margin: "10px auto 0" }} />
             <div style={{ padding: "14px 20px 10px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${C.bd}` }}>
               <span style={{ fontWeight: 700, fontSize: 15 }}>Sepetim</span>
-              <button onClick={() => setShowCart(false)} style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${C.bd}`, background: "transparent", cursor: "pointer", fontSize: 12, color: C.mt }}>×</button>
+              <button onClick={() => setShowCart(false)} style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${C.bd}`, background: "transparent", cursor: "pointer", fontSize: 14, color: C.mt }}>×</button>
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: "0 20px" }}>
               {cartItems.map(({ product: p, qty }) => {
@@ -429,7 +468,7 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
               </button>
             </div>
           </div>
-        </div>
+        </ModalWrapper>
       )}
     </div>
   );
