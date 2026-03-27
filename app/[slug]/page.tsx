@@ -105,6 +105,7 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
 
     if (!rest) { setNotFound(true); setLoading(false); return; }
     setRestaurant(rest);
+    document.title = `${rest.name} Menüsü | TEMeat`;
     // Görüntülenmeyi kaydet
 supabase.from("page_views").insert({
   restaurant_id: rest.id,
