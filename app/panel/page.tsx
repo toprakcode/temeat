@@ -95,6 +95,9 @@ function ProductModal({
   const [catId, setCatId] = useState(initial.category_id || "");
   const [chefPick, setChefPick] = useState(initial.is_chef_pick || false);
   const [allergens, setAllergens] = useState<string[]>(initial.allergens || []);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+const [imagePreview, setImagePreview] = useState<string | null>(initial.image_url || null);
+const [imageUploading, setImageUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -103,6 +106,19 @@ function ProductModal({
     if (!price || isNaN(Number(price))) { setError("Geçerli bir fiyat girin."); return; }
     if (!catId) { setError("Kategori seçin."); return; }
     setSaving(true); setError(null);
+    let finalImageUrl = initial.image_url || null;
+if (imageFile) {
+  setImageUploading(true);
+  const ext = imageFile.name.split(".").pop();
+  const path = `${Date.now()}.${ext}`;
+  const { data: uploadData, error: uploadError } = await supabase.storage
+    .from("product-images")
+    .upload(path, imageFile, { upsert: true });
+  if (uploadError) { setError("Fotoğraf yüklenemedi."); setSaving(false); setImageUploading(false); return; }
+  const { data: urlData } = supabase.storage.from("product-images").getPublicUrl(path);
+  finalImageUrl = urlData.publicUrl;
+  setImageUploading(false);
+}
     await onSave({
       category_id: catId,
       name_tr: name.trim(),
@@ -114,6 +130,7 @@ function ProductModal({
       prep_time: prepTime ? Number(prepTime) : null,
       is_chef_pick: chefPick,
       allergens,
+      image_url: finalImageUrl,
     });
     setSaving(false);
   };
@@ -136,6 +153,26 @@ function ProductModal({
               {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
+          {/* Fotoğraf */}
+<div>
+  <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 8 }}>Fotoğraf</label>
+  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+    {imagePreview && (
+      <img src={imagePreview} alt="" style={{ width: 72, height: 72, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
+    )}
+    <label style={{ flex: 1, padding: "11px 14px", borderRadius: 10, border: "1.5px dashed rgba(255,255,255,.2)", background: "rgba(255,255,255,.04)", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, color: "rgba(255,255,255,.5)", fontSize: 13 }}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      {imageUploading ? "Yükleniyor..." : imageFile ? imageFile.name : "Fotoğraf seç"}
+      <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
+        const file = e.target.files?.[0];
+        if (file) {
+          setImageFile(file);
+          setImagePreview(URL.createObjectURL(file));
+        }
+      }} />
+    </label>
+  </div>
+</div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>
