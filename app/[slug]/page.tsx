@@ -2,48 +2,12 @@
 import React from "react";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-
-const DEFAULT_COLOR = "#D4470A";
-
-const ALLERGEN_ICONS: Record<string, string> = {
-  gluten: "🌾", sut: "🥛", yumurta: "🥚", findik: "🥜",
-  balik: "🐟", kabuklu: "🦐", soya: "🫘", susam: "🌱",
-};
-const ALLERGEN_LABELS: Record<string, string> = {
-  gluten: "Gluten", sut: "Süt", yumurta: "Yumurta", findik: "Fındık",
-  balik: "Balık", kabuklu: "Kabuklu", soya: "Soya", susam: "Susam",
-};
-
-type Restaurant = {
-  id: string; name: string; slug: string; address: string | null;
-  phone: string | null; hours: string | null; wifi_password: string | null;
-  theme_color: string | null; logo_url: string | null;
-};
-
-type Category = { id: string; name: string; sort_order: number };
-
-type Product = {
-  id: string; category_id: string | null;
-  name_tr: string; name_en: string | null; name_ar: string | null; name_de: string | null; name_ru: string | null;
-  desc_tr: string | null; desc_en: string | null; desc_ar: string | null; desc_de: string | null; desc_ru: string | null;
-  price: number; discount_pct: number; calories: number | null; prep_time: number | null; serves: number;
-  image_url: string | null; is_active: boolean; is_chef_pick: boolean; tags: string[];
-  allergens: string[];
-};
-
-type LangKey = "tr" | "en" | "ar" | "de" | "ru";
-
-const LANGS: { key: LangKey; label: string }[] = [
-  { key: "tr", label: "TR" }, { key: "en", label: "EN" },
-  { key: "ar", label: "عر" }, { key: "de", label: "DE" }, { key: "ru", label: "RU" },
-];
-
-function getProductName(p: Product, lang: LangKey): string {
-  return p[`name_${lang}`] || p.name_tr;
-}
-function getProductDesc(p: Product, lang: LangKey): string {
-  return p[`desc_${lang}`] || p.desc_tr || "";
-}
+import { Restaurant, Category, Product } from "@/types";
+import { DEFAULT_COLOR, LANGS, LangKey } from "@/lib/constants";
+import { getProductName, getProductDesc } from "@/lib/utils";
+import { ProductCard } from "@/components/menu/ProductCard";
+import { CartModal } from "@/components/menu/CartModal";
+import { DetailModal } from "@/components/menu/DetailModal";
 
 export default function MenuPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = React.use(params);
@@ -127,73 +91,7 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
     </div>
   );
 
-  const ModalWrapper = ({ children, onClick, zIndex }: { children: React.ReactNode; onClick: () => void; zIndex: number }) => (
-    <div style={{ position: "fixed", inset: 0, zIndex, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-      <div onClick={onClick} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", animation: "fadeIn .15s" }} />
-      {children}
-    </div>
-  );
 
-  // Tek ürün kartı — hem telefon hem masaüstü için
-  const ProductCard = ({ p, i }: { p: Product; i: number }) => {
-    const qty = cart[p.id] || 0;
-    const discPrice = p.discount_pct ? Math.round(p.price * (1 - p.discount_pct / 100)) : null;
-    return (
-      <div style={{ animation: `fadeUp .4s ${i * .03}s both`, background: C.cd, borderRadius: 16, border: `1px solid ${C.bd}`, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-        {/* Görsel */}
-        <div onClick={() => setDetailProduct(p)} style={{ position: "relative", width: "100%", paddingTop: "60%", cursor: "pointer", flexShrink: 0 }}>
-          <div style={{ position: "absolute", inset: 0 }}>
-            {p.image_url
-              ? <img src={p.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              : <div style={{ width: "100%", height: "100%", background: `${A}12`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🍽</div>
-            }
-          </div>
-          {p.discount_pct > 0 && (
-            <div style={{ position: "absolute", top: 8, left: 8, background: A, color: "#fff", fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 5 }}>-{p.discount_pct}%</div>
-          )}
-        </div>
-        {/* İçerik */}
-        <div style={{ padding: "12px 14px", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
-          <div onClick={() => setDetailProduct(p)} style={{ fontWeight: 700, fontSize: 14, letterSpacing: "-.01em", cursor: "pointer", lineHeight: 1.3 }}>
-            {getProductName(p, lang)}
-          </div>
-          <div style={{ fontSize: 11, color: C.mt, lineHeight: 1.4, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-            {getProductDesc(p, lang)}
-          </div>
-          {p.allergens?.length > 0 && (
-            <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
-              {p.allergens.map(a => (
-                <span key={a} style={{ fontSize: 9, background: C.bg, border: `1px solid ${C.bd}`, borderRadius: 4, padding: "1px 4px", color: C.mt, display: "flex", alignItems: "center", gap: 2 }}>
-                  {ALLERGEN_ICONS[a]} {ALLERGEN_LABELS[a]}
-                </span>
-              ))}
-            </div>
-          )}
-          {(p.prep_time || p.calories) && (
-            <div style={{ display: "flex", gap: 8, fontSize: 10, color: C.mt }}>
-              {p.prep_time && <span>⏱ {p.prep_time}dk</span>}
-              {p.calories && <span>🔥 {p.calories}kal</span>}
-            </div>
-          )}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto", paddingTop: 8 }}>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-              <span style={{ fontSize: 16, fontWeight: 800 }}>₺{discPrice || p.price}</span>
-              {discPrice && <span style={{ fontSize: 11, color: C.dm, textDecoration: "line-through" }}>₺{p.price}</span>}
-            </div>
-            {qty > 0 ? (
-              <div style={{ display: "flex", alignItems: "center", background: C.al, borderRadius: 8, border: `1.5px solid ${A}20` }}>
-                <button onClick={() => removeFromCart(p)} style={{ width: 28, height: 28, border: "none", background: "none", cursor: "pointer", fontSize: 16, color: A }}>−</button>
-                <span style={{ fontWeight: 700, fontSize: 13, color: A, minWidth: 16, textAlign: "center" }}>{qty}</span>
-                <button onClick={() => addToCart(p)} style={{ width: 28, height: 28, border: "none", background: A, cursor: "pointer", fontSize: 16, color: "#fff", borderRadius: "0 6px 6px 0" }}>+</button>
-              </div>
-            ) : (
-              <button onClick={() => addToCart(p)} style={{ padding: "6px 14px", borderRadius: 8, border: `1.5px solid ${C.bd}`, background: "transparent", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", color: C.tx }}>+ Ekle</button>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, fontFamily: "'Inter', system-ui, sans-serif", color: C.tx }} dir={isRTL ? "rtl" : "ltr"}>
@@ -321,7 +219,20 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
           </div>
         ) : (
           <div className="product-grid" style={{ paddingBottom: cartCount > 0 ? 100 : 40 }}>
-            {filteredProducts.map((p, i) => <ProductCard key={p.id} p={p} i={i} />)}
+            {filteredProducts.map((p, i) => (
+              <ProductCard
+                key={p.id}
+                p={p}
+                i={i}
+                lang={lang}
+                cartQty={cart[p.id] || 0}
+                themeColor={A}
+                C={C}
+                onAdd={addToCart}
+                onRemove={removeFromCart}
+                onClick={setDetailProduct}
+              />
+            ))}
           </div>
         )}
 
@@ -357,113 +268,30 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
 
       {/* Ürün Detay Modal */}
       {detailProduct && (
-        <ModalWrapper onClick={() => setDetailProduct(null)} zIndex={60}>
-          <div className="modal-inner" onClick={e => e.stopPropagation()}
-            style={{ position: "relative", background: C.cd, borderRadius: "20px 20px 0 0", maxHeight: "85vh", overflowY: "auto", animation: "slideUp .3s cubic-bezier(.25,1,.5,1)" }}>
-            <div style={{ width: 28, height: 3, borderRadius: 99, background: C.dm, margin: "10px auto 6px" }} />
-            <div style={{ position: "relative", width: "100%", height: 240 }}>
-              {detailProduct.image_url
-                ? <img src={detailProduct.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                : <div style={{ width: "100%", height: "100%", background: `${A}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48 }}>🍽</div>
-              }
-              {detailProduct.discount_pct > 0 && (
-                <div style={{ position: "absolute", top: 12, left: 12, background: A, color: "#fff", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 6 }}>-{detailProduct.discount_pct}%</div>
-              )}
-              <button onClick={() => setDetailProduct(null)} style={{ position: "absolute", top: 12, right: 12, width: 32, height: 32, borderRadius: 99, background: "rgba(0,0,0,.35)", border: "none", cursor: "pointer", color: "#fff", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
-            </div>
-            <div style={{ padding: "16px 24px 32px" }}>
-              <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>{getProductName(detailProduct, lang)}</h2>
-              {(detailProduct.prep_time || detailProduct.calories || detailProduct.serves) && (
-                <div style={{ display: "flex", gap: 12, marginBottom: 12, fontSize: 12, color: C.mt }}>
-                  {detailProduct.prep_time && <span>⏱ {detailProduct.prep_time} dk</span>}
-                  {detailProduct.serves > 1 && <span>👤 {detailProduct.serves} kişilik</span>}
-                  {detailProduct.calories && <span>🔥 {detailProduct.calories} kal</span>}
-                </div>
-              )}
-              <p style={{ fontSize: 14, color: C.s2, lineHeight: 1.65, marginBottom: 16 }}>{getProductDesc(detailProduct, lang)}</p>
-              {detailProduct.allergens?.length > 0 && (
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: C.mt, marginBottom: 8, textTransform: "uppercase", letterSpacing: ".06em" }}>Alerjenler</div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                    {detailProduct.allergens.map(a => (
-                      <span key={a} style={{ fontSize: 12, background: C.bg, border: `1px solid ${C.bd}`, borderRadius: 8, padding: "4px 10px", color: C.tx, display: "flex", alignItems: "center", gap: 4 }}>
-                        {ALLERGEN_ICONS[a]} {ALLERGEN_LABELS[a]}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 16, borderTop: `1px solid ${C.bd}` }}>
-                <div>
-                  {detailProduct.discount_pct > 0
-                    ? <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                        <span style={{ fontSize: 26, fontWeight: 800 }}>₺{Math.round(detailProduct.price * (1 - detailProduct.discount_pct / 100))}</span>
-                        <span style={{ fontSize: 14, color: C.dm, textDecoration: "line-through" }}>₺{detailProduct.price}</span>
-                      </div>
-                    : <span style={{ fontSize: 26, fontWeight: 800 }}>₺{detailProduct.price}</span>
-                  }
-                </div>
-                <button onClick={() => { addToCart(detailProduct); setDetailProduct(null); }}
-                  style={{ padding: "12px 28px", borderRadius: 12, border: "none", background: A, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: `0 4px 16px ${A}30` }}>
-                  + Sepete Ekle
-                </button>
-              </div>
-            </div>
-          </div>
-        </ModalWrapper>
+        <DetailModal
+          product={detailProduct}
+          lang={lang}
+          themeColor={A}
+          C={C}
+          onClose={() => setDetailProduct(null)}
+          onAdd={addToCart}
+        />
       )}
 
       {/* Sepet Modal */}
       {showCart && (
-        <ModalWrapper onClick={() => setShowCart(false)} zIndex={40}>
-          <div className="modal-inner" onClick={e => e.stopPropagation()}
-            style={{ position: "relative", background: C.cd, borderRadius: "20px 20px 0 0", maxHeight: "70vh", display: "flex", flexDirection: "column", animation: "slideUp .3s cubic-bezier(.25,1,.5,1)" }}>
-            <div style={{ width: 28, height: 3, borderRadius: 99, background: C.dm, margin: "10px auto 0" }} />
-            <div style={{ padding: "14px 20px 10px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${C.bd}` }}>
-              <span style={{ fontWeight: 700, fontSize: 15 }}>Sepetim</span>
-              <button onClick={() => setShowCart(false)} style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${C.bd}`, background: "transparent", cursor: "pointer", fontSize: 14, color: C.mt }}>×</button>
-            </div>
-            <div style={{ flex: 1, overflowY: "auto", padding: "0 20px" }}>
-              {cartItems.map(({ product: p, qty }) => {
-                const price = p.discount_pct ? Math.round(p.price * (1 - p.discount_pct / 100)) : p.price;
-                return (
-                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 0", borderBottom: `1px solid ${C.bd}` }}>
-                    <div style={{ width: 44, height: 44, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: `${A}15` }}>
-                      {p.image_url && <img src={p.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, fontSize: 13 }}>{getProductName(p, lang)}</div>
-                      <div style={{ fontSize: 12, color: C.mt }}>₺{price}</div>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", border: `1px solid ${C.bd}`, borderRadius: 8 }}>
-                      <button onClick={() => removeFromCart(p)} style={{ width: 28, height: 28, border: "none", background: "none", cursor: "pointer", color: C.mt, fontSize: 14 }}>−</button>
-                      <span style={{ minWidth: 16, textAlign: "center", fontSize: 12, fontWeight: 700 }}>{qty}</span>
-                      <button onClick={() => addToCart(p)} style={{ width: 28, height: 28, border: "none", background: "none", cursor: "pointer", color: C.mt, fontSize: 14 }}>+</button>
-                    </div>
-                    <span style={{ fontWeight: 700, fontSize: 14, minWidth: 52, textAlign: "right" }}>₺{price * qty}</span>
-                  </div>
-                );
-              })}
-            </div>
-            <div style={{ padding: "14px 20px 28px", borderTop: `1px solid ${C.bd}` }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14 }}>
-                <span style={{ fontSize: 13, color: C.mt }}>Toplam</span>
-                <span style={{ fontSize: 24, fontWeight: 800 }}>₺{cartTotal}</span>
-              </div>
-              <button onClick={() => {
-                let msg = `🍽️ *${restaurant!.name}*\n\n`;
-                cartItems.forEach(({ product: p, qty }) => {
-                  const price = p.discount_pct ? Math.round(p.price * (1 - p.discount_pct / 100)) : p.price;
-                  msg += `${qty}× ${getProductName(p, lang)}  ₺${price * qty}\n`;
-                });
-                msg += `\nToplam: ₺${cartTotal}`;
-                window.open(`https://wa.me/${restaurant!.phone?.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`, "_blank");
-              }} style={{ width: "100%", padding: 14, borderRadius: 12, border: "none", background: "#25D366", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-                WhatsApp ile Sipariş Ver
-              </button>
-            </div>
-          </div>
-        </ModalWrapper>
+        <CartModal
+          cartItems={cartItems}
+          cartTotal={cartTotal}
+          restaurant={restaurant}
+          lang={lang}
+          themeColor={A}
+          C={C}
+          isRTL={isRTL}
+          onClose={() => setShowCart(false)}
+          onAdd={addToCart}
+          onRemove={removeFromCart}
+        />
       )}
     </div>
   );

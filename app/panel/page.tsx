@@ -2,9 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { Category, Product } from "@/types";
+import { DEFAULT_COLOR, ALLERGENS } from "@/lib/constants";
+import { BarChart } from "@/components/panel/BarChart";
+import { ProductModal } from "@/components/panel/ProductModal";
+import { Sidebar } from "@/components/panel/Sidebar";
+import { SettingsForm } from "@/components/panel/SettingsForm";
+import QRCode from "react-qr-code";
 
-const A = "#D4470A";
-const A2 = "#FF6B35";
+const A_GLOBAL = DEFAULT_COLOR; 
 
 const weeklyData = [
   { day: "Pzt", views: 0, orders: 0 },
@@ -16,252 +22,7 @@ const weeklyData = [
   { day: "Paz", views: 0, orders: 0 },
 ];
 
-const langData = [
-  { lang: "Türkçe", pct: 45, color: A },
-  { lang: "English", pct: 28, color: "#3b82f6" },
-  { lang: "العربية", pct: 15, color: "#10b981" },
-  { lang: "Deutsch", pct: 8, color: "#f59e0b" },
-  { lang: "Русский", pct: 4, color: "#8b5cf6" },
-];
 
-const ALLERGENS = [
-  { key: "gluten", label: "Gluten", icon: "🌾" },
-  { key: "sut", label: "Süt", icon: "🥛" },
-  { key: "yumurta", label: "Yumurta", icon: "🥚" },
-  { key: "findik", label: "Fındık", icon: "🥜" },
-  { key: "balik", label: "Balık", icon: "🐟" },
-  { key: "kabuklu", label: "Kabuklu", icon: "🦐" },
-  { key: "soya", label: "Soya", icon: "🫘" },
-  { key: "susam", label: "Susam", icon: "🌱" },
-];
-
-function BarChart({ data, height = 140 }: { data: { day: string; views: number; orders: number }[]; height?: number }) {
-  const maxViews = Math.max(...data.map(d => d.views), 1);
-  const maxIdx = data.reduce((mi, d, i) => d.views > data[mi].views ? i : mi, 0);
-  return (
-    <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height }}>
-      {data.map((d, i) => (
-        <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, height: "100%" }}>
-          <div style={{ flex: 1, width: "100%", display: "flex", flexDirection: "column", justifyContent: "flex-end", position: "relative" }}>
-            {i === maxIdx && d.views > 0 && (
-              <div style={{ position: "absolute", top: -28, left: "50%", transform: "translateX(-50%)", background: A, color: "#fff", fontSize: 9, fontWeight: 700, padding: "3px 7px", borderRadius: 5, whiteSpace: "nowrap" }}>{d.views}</div>
-            )}
-            <div style={{ width: "100%", height: `${(d.views / maxViews) * 100}%`, minHeight: 4, background: i === maxIdx ? `linear-gradient(to top, ${A}, ${A2})` : "rgba(255,255,255,.07)", borderRadius: "4px 4px 0 0" }} />
-          </div>
-          <span style={{ fontSize: 10, fontWeight: i === maxIdx ? 700 : 400, color: i === maxIdx ? "rgba(255,255,255,.7)" : "rgba(255,255,255,.25)" }}>{d.day}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-type Category = { id: string; name: string; sort_order: number };
-type Product = {
-  id: string;
-  category_id: string | null;
-  name_tr: string;
-  name_en: string | null;
-  desc_tr: string | null;
-  price: number;
-  is_active: boolean;
-  image_url: string | null;
-  discount_pct: number;
-  calories: number | null;
-  prep_time: number | null;
-  is_chef_pick: boolean;
-  allergens: string[];
-};
-
-function ProductModal({
-  title,
-  categories,
-  initial,
-  onSave,
-  onClose,
-}: {
-  title: string;
-  categories: Category[];
-  initial: Partial<Product> & { category_id?: string | null };
-  onSave: (data: any) => Promise<void>;
-  onClose: () => void;
-}) {
-  const [name, setName] = useState(initial.name_tr || "");
-  const [nameEn, setNameEn] = useState(initial.name_en || "");
-  const [desc, setDesc] = useState(initial.desc_tr || "");
-  const [price, setPrice] = useState(initial.price ? String(initial.price) : "");
-  const [discount, setDiscount] = useState(initial.discount_pct ? String(initial.discount_pct) : "0");
-  const [calories, setCalories] = useState(initial.calories ? String(initial.calories) : "");
-  const [prepTime, setPrepTime] = useState(initial.prep_time ? String(initial.prep_time) : "");
-  const [catId, setCatId] = useState(initial.category_id || "");
-  const [chefPick, setChefPick] = useState(initial.is_chef_pick || false);
-  const [allergens, setAllergens] = useState<string[]>(initial.allergens || []);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-const [imagePreview, setImagePreview] = useState<string | null>(initial.image_url || null);
-const [imageUploading, setImageUploading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleSave = async () => {
-    if (!name.trim()) { setError("Ürün adı zorunlu."); return; }
-    if (!price || isNaN(Number(price))) { setError("Geçerli bir fiyat girin."); return; }
-    if (!catId) { setError("Kategori seçin."); return; }
-    setSaving(true); setError(null);
-    let finalImageUrl = initial.image_url || null;
-if (imageFile) {
-  setImageUploading(true);
-  const ext = imageFile.name.split(".").pop();
-  const path = `${Date.now()}.${ext}`;
-  const { data: uploadData, error: uploadError } = await supabase.storage
-    .from("product-images")
-    .upload(path, imageFile, { upsert: true });
-  if (uploadError) { setError("Fotoğraf yüklenemedi."); setSaving(false); setImageUploading(false); return; }
-  const { data: urlData } = supabase.storage.from("product-images").getPublicUrl(path);
-  finalImageUrl = urlData.publicUrl;
-  setImageUploading(false);
-}
-    await onSave({
-      category_id: catId,
-      name_tr: name.trim(),
-      name_en: nameEn.trim() || null,
-      desc_tr: desc.trim() || null,
-      price: Number(price),
-      discount_pct: Number(discount) || 0,
-      calories: calories ? Number(calories) : null,
-      prep_time: prepTime ? Number(prepTime) : null,
-      is_chef_pick: chefPick,
-      allergens,
-      image_url: finalImageUrl,
-    });
-    setSaving(false);
-  };
-
-  return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-      <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.7)" }} />
-      <div style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 560, maxHeight: "90vh", overflowY: "auto", background: "#111", borderRadius: 20, border: "1px solid rgba(255,255,255,.1)", padding: "28px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>{title}</h2>
-          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid rgba(255,255,255,.1)", background: "transparent", color: "rgba(255,255,255,.5)", cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Kategori *</label>
-            <select value={catId} onChange={e => setCatId(e.target.value)}
-              style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "#1a1a1a", color: catId ? "#fff" : "rgba(255,255,255,.3)", fontSize: 14, fontFamily: "inherit", outline: "none" }}>
-              <option value="">Kategori seçin</option>
-              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
-          {/* Fotoğraf */}
-<div>
-  <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 8 }}>Fotoğraf</label>
-  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-    {imagePreview && (
-      <img src={imagePreview} alt="" style={{ width: 72, height: 72, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
-    )}
-    <label style={{ flex: 1, padding: "11px 14px", borderRadius: 10, border: "1.5px dashed rgba(255,255,255,.2)", background: "rgba(255,255,255,.04)", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, color: "rgba(255,255,255,.5)", fontSize: 13 }}>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-      {imageUploading ? "Yükleniyor..." : imageFile ? imageFile.name : "Fotoğraf seç"}
-      <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
-        const file = e.target.files?.[0];
-        if (file) {
-          setImageFile(file);
-          setImagePreview(URL.createObjectURL(file));
-        }
-      }} />
-    </label>
-  </div>
-</div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Ürün Adı (TR) *</label>
-              <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Adana Kebap"
-                style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Ürün Adı (EN)</label>
-              <input type="text" value={nameEn} onChange={e => setNameEn(e.target.value)} placeholder="Adana Kebab"
-                style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
-            </div>
-          </div>
-
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Açıklama</label>
-            <textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="El kıyması kuzu, pul biber, lavaş..." rows={2}
-              style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", resize: "none", outline: "none" }} />
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Fiyat (₺) *</label>
-              <input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="220"
-                style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>İndirim (%)</label>
-              <input type="number" value={discount} onChange={e => setDiscount(e.target.value)} placeholder="0" min="0" max="100"
-                style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
-            </div>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Kalori</label>
-              <input type="number" value={calories} onChange={e => setCalories(e.target.value)} placeholder="450"
-                style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Hazırlık (dk)</label>
-              <input type="number" value={prepTime} onChange={e => setPrepTime(e.target.value)} placeholder="18"
-                style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
-            </div>
-          </div>
-
-          {/* Alerjenler */}
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 8 }}>
-              Alerjenler
-              <span style={{ fontSize: 10, color: "rgba(255,255,255,.25)", fontWeight: 400, marginLeft: 6 }}>1 Temmuz yönetmeliği gereği</span>
-            </label>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {ALLERGENS.map(a => {
-                const selected = allergens.includes(a.key);
-                return (
-                  <button key={a.key} type="button"
-                    onClick={() => setAllergens(prev => selected ? prev.filter(x => x !== a.key) : [...prev, a.key])}
-                    style={{ padding: "6px 10px", borderRadius: 8, border: `1.5px solid ${selected ? A : "rgba(255,255,255,.1)"}`, background: selected ? `${A}20` : "transparent", color: selected ? "#fff" : "rgba(255,255,255,.4)", fontSize: 11, fontWeight: selected ? 700 : 400, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4 }}>
-                    {a.icon} {a.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <button onClick={() => setChefPick(!chefPick)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderRadius: 10, border: `1.5px solid ${chefPick ? A : "rgba(255,255,255,.1)"}`, background: chefPick ? `${A}15` : "rgba(255,255,255,.04)", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
-            <div style={{ width: 20, height: 20, borderRadius: 6, background: chefPick ? A : "rgba(255,255,255,.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              {chefPick && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
-            </div>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>Şefin Seçimi</div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)" }}>Menüde öne çıkar</div>
-            </div>
-          </button>
-
-          {error && <div style={{ padding: "10px 14px", borderRadius: 9, background: "rgba(239,68,68,.1)", border: "1px solid rgba(239,68,68,.2)", fontSize: 13, color: "#f87171" }}>{error}</div>}
-
-          <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-            <button onClick={onClose} style={{ flex: 1, padding: "13px 0", borderRadius: 11, border: "1px solid rgba(255,255,255,.1)", background: "transparent", color: "rgba(255,255,255,.5)", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>İptal</button>
-            <button onClick={handleSave} disabled={saving} style={{ flex: 2, padding: "13px 0", borderRadius: 11, border: "none", background: saving ? `${A}80` : A, color: "#fff", fontSize: 14, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit", boxShadow: `0 4px 16px ${A}40` }}>
-              {saving ? "Kaydediliyor..." : title}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function PanelPage() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -289,10 +50,12 @@ export default function PanelPage() {
   const [lastWeekViews, setLastWeekViews] = useState(0);
   const [totalViewsReal, setTotalViewsReal] = useState(0);
   const [weeklyViews, setWeeklyViews] = useState<{day:string;views:number;orders:number}[]>([]);
+  const [dynamicLangData, setDynamicLangData] = useState<{lang: string, pct: number, color: string}[]>([]);
 
   const [showAddCat, setShowAddCat] = useState(false);
   const [newCatName, setNewCatName] = useState("");
   const [catSaving, setCatSaving] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -313,12 +76,14 @@ export default function PanelPage() {
       .order("created_at", { ascending: true })
       .limit(1)
       .maybeSingle();
-    if (data) { setRestaurant(data); loadMenuData(data.id); }
+    if (data) { setRestaurant(data); loadMenuData(data); }
     else setShowOnboarding(true);
     setLoading(false);
   };
 
-  const loadMenuData = async (restaurantId: string) => {
+  const loadMenuData = async (restData: any) => {
+    const restaurantId = restData.id;
+    const themeColor = restData.theme_color || DEFAULT_COLOR;
     const { data: cats } = await supabase.from("categories").select("*").eq("restaurant_id", restaurantId).order("sort_order");
     const { data: prods } = await supabase.from("products").select("*").eq("restaurant_id", restaurantId).order("sort_order");
     setCategories(cats || []);
@@ -328,7 +93,7 @@ export default function PanelPage() {
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
     const [{ data: thisWeek }, { data: lastWeek }, { count: total }] = await Promise.all([
-      supabase.from("page_views").select("viewed_at").eq("restaurant_id", restaurantId).gte("viewed_at", weekAgo.toISOString()),
+      supabase.from("page_views").select("viewed_at, lang").eq("restaurant_id", restaurantId).gte("viewed_at", weekAgo.toISOString()),
       supabase.from("page_views").select("viewed_at").eq("restaurant_id", restaurantId).gte("viewed_at", twoWeeksAgo.toISOString()).lt("viewed_at", weekAgo.toISOString()),
       supabase.from("page_views").select("*", { count: "exact", head: true }).eq("restaurant_id", restaurantId),
     ]);
@@ -345,6 +110,30 @@ export default function PanelPage() {
         orders: 0,
       };
     }));
+
+    if (thisWeek && thisWeek.length > 0) {
+      const counts: Record<string, number> = {};
+      thisWeek.forEach(v => {
+        const l = v.lang || "tr";
+        counts[l] = (counts[l] || 0) + 1;
+      });
+      const LABELS: Record<string, { label: string, color: string }> = {
+        tr: { label: "Türkçe", color: themeColor },
+        en: { label: "English", color: "#3b82f6" },
+        ar: { label: "العربية", color: "#10b981" },
+        de: { label: "Deutsch", color: "#f59e0b" },
+        ru: { label: "Русский", color: "#8b5cf6" },
+      };
+      const computedLangData = Object.entries(counts)
+        .map(([k, count]) => {
+          const info = LABELS[k] || { label: k, color: "#888" };
+          return { lang: info.label, pct: Math.round((count / thisWeek.length) * 100), color: info.color };
+        })
+        .sort((a, b) => b.pct - a.pct);
+      setDynamicLangData(computedLangData);
+    } else {
+      setDynamicLangData([]);
+    }
   };
 
   const handleOnboardingSave = async () => {
@@ -363,6 +152,28 @@ export default function PanelPage() {
     const { data } = await supabase.from("categories").insert({ restaurant_id: restaurant.id, name: newCatName.trim(), sort_order: categories.length }).select().single();
     if (data) { setCategories(prev => [...prev, data]); setNewCatName(""); setShowAddCat(false); flash("Kategori eklendi!"); }
     setCatSaving(false);
+  };
+
+  const handleEditCategory = async () => {
+    if (!editingCategory || !editingCategory.name.trim()) return;
+    setCatSaving(true);
+    const { data } = await supabase.from("categories").update({ name: editingCategory.name.trim() }).eq("id", editingCategory.id).select().single();
+    if (data) {
+      setCategories(prev => prev.map(c => c.id === data.id ? { ...c, ...data } : c));
+      setEditingCategory(null);
+      flash("Kategori güncellendi!");
+    }
+    setCatSaving(false);
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    if (!confirm("Bu kategoriyi ve içindeki tüm ürünleri silmek istediğinize emin misiniz?")) return;
+    await supabase.from("products").delete().eq("category_id", id);
+    await supabase.from("categories").delete().eq("id", id);
+    setCategories(prev => prev.filter(c => c.id !== id));
+    setProducts(prev => prev.filter(p => p.category_id !== id));
+    if (catFilter === id) setCatFilter("Tümü");
+    flash("Kategori silindi.");
   };
 
   const handleAddProduct = async (formData: any) => {
@@ -414,14 +225,7 @@ export default function PanelPage() {
   const filteredProducts = catFilter === "Tümü" ? products : products.filter(p => p.category_id === catFilter);
   const chartData = weeklyViews.length > 0 ? weeklyViews : weeklyData;
 
-  const navItems = [
-    { id: "dashboard", label: "Panel", icon: "◫" },
-    { id: "menu", label: "Menü", icon: "☰" },
-    { id: "qr", label: "QR Kod", icon: "⊞" },
-    { id: "analytics", label: "Analitik", icon: "◔" },
-    { id: "settings", label: "Ayarlar", icon: "⚙" },
-  ];
-
+  const A = restaurant?.theme_color || DEFAULT_COLOR;
   const tabLabel: Record<string, string> = { dashboard: "Genel Bakış", menu: "Menü Yönetimi", qr: "QR Kodlar", analytics: "Analitik", settings: "Ayarlar" };
 
   if (loading) return (
@@ -511,60 +315,15 @@ export default function PanelPage() {
         </div>
       )}
 
+
       {/* SIDEBAR */}
-      <aside className="sidebar" style={{ width: 240, background: "#0c0c0c", borderRight: "1px solid rgba(255,255,255,.06)", display: "flex", flexDirection: "column", position: "fixed", top: 0, left: 0, bottom: 0, zIndex: 40 }}>
-        <div style={{ padding: "20px 16px", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
-          <a href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-            <div style={{ width: 34, height: 34, borderRadius: 10, background: A, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 2.5, flexShrink: 0 }}>
-              <div style={{ width: 14, height: 2, background: "#fff", borderRadius: 99 }} />
-              <div style={{ width: 9, height: 2, background: "#fff", borderRadius: 99 }} />
-              <div style={{ width: 14, height: 2, background: "#fff", borderRadius: 99 }} />
-            </div>
-            <div className="sidebar-logo-text">
-              <div style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>TEM<span style={{ color: A }}>eat</span></div>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,.3)" }}>Restoran Paneli</div>
-            </div>
-          </a>
-        </div>
-        <div className="sidebar-rest" style={{ padding: "12px", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px", background: "rgba(255,255,255,.04)", borderRadius: 10 }}>
-            <div style={{ width: 30, height: 30, borderRadius: 8, background: `${A}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>🍽</div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#fff" }}>{restaurant?.name || "Restoran"}</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
-                <div style={{ width: 5, height: 5, borderRadius: 99, background: "#22c55e" }} />
-                <span style={{ fontSize: 9, color: "rgba(255,255,255,.35)" }}>{restaurant?.plan === "pro" ? "Pro" : restaurant?.plan === "starter" ? "Başlangıç" : "Ücretsiz"} · Aktif</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <nav style={{ flex: 1, padding: "10px", display: "flex", flexDirection: "column", gap: 1 }}>
-          <div className="sidebar-label" style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,.2)", letterSpacing: ".1em", padding: "4px 6px 8px" }}>NAVIGASYON</div>
-          {navItems.map(item => {
-            const active = activeTab === item.id;
-            return (
-              <button key={item.id} onClick={() => setActiveTab(item.id)} className="btn"
-                style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px", border: "none", cursor: "pointer", fontFamily: "inherit", width: "100%", borderRadius: 9, background: active ? `${A}18` : "transparent", color: active ? "#fff" : "rgba(255,255,255,.4)", textAlign: "left", transition: "all .15s", position: "relative" }}>
-                {active && <div style={{ position: "absolute", left: 0, top: "25%", bottom: "25%", width: 2.5, background: A, borderRadius: 99 }} />}
-                <span style={{ fontSize: 15, flexShrink: 0, color: active ? A : "rgba(255,255,255,.25)" }}>{item.icon}</span>
-                <span className="sidebar-label" style={{ fontSize: 13, fontWeight: active ? 600 : 400 }}>{item.label}</span>
-                {item.id === "menu" && <span className="sidebar-label" style={{ marginLeft: "auto", fontSize: 10, fontWeight: 700, background: "rgba(255,255,255,.07)", borderRadius: 6, padding: "2px 7px", color: "rgba(255,255,255,.4)" }}>{products.length}</span>}
-              </button>
-            );
-          })}
-        </nav>
-        <div style={{ padding: "12px 10px", borderTop: "1px solid rgba(255,255,255,.06)" }}>
-          <div className="sidebar-plan" style={{ padding: "11px 12px", background: `${A}0f`, border: `1px solid ${A}22`, borderRadius: 11, marginBottom: 8 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#fff" }}>{restaurant?.plan === "pro" ? "Pro Plan" : restaurant?.plan === "starter" ? "Başlangıç Plan" : "Ücretsiz Plan"}</div>
-            {restaurant?.plan !== "pro" && <div style={{ fontSize: 10, marginTop: 2 }}><a href="/fiyat" style={{ color: A, textDecoration: "none", fontWeight: 600 }}>Pro'ya geç →</a></div>}
-          </div>
-          <a href={restaurant ? `/${restaurant.slug}` : "/demo"} target="_blank" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 0", borderRadius: 8, border: "1px solid rgba(255,255,255,.08)", background: "transparent", color: "rgba(255,255,255,.45)", fontSize: 12, fontWeight: 600, textDecoration: "none" }}
-            onMouseEnter={e => { e.currentTarget.style.color = "#fff"; e.currentTarget.style.borderColor = "rgba(255,255,255,.2)"; }}
-            onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,.45)"; e.currentTarget.style.borderColor = "rgba(255,255,255,.08)"; }}>
-            <span>👁</span><span className="sidebar-label">Menüyü Gör</span>
-          </a>
-        </div>
-      </aside>
+      <Sidebar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        restaurant={restaurant} 
+        productsCount={products.length} 
+        themeColor={A} 
+      />
 
       {/* MAIN */}
       <main style={{ marginLeft: 240, flex: 1, display: "flex", flexDirection: "column", minHeight: "100vh" }}>
@@ -607,7 +366,7 @@ export default function PanelPage() {
                 <div className="card" style={{ padding: "22px 24px" }}>
                   <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Haftalık Görüntülenme</div>
                   <div style={{ fontSize: 11, color: "rgba(255,255,255,.3)", marginBottom: 20 }}>Son 7 gün · {thisWeekViews.toLocaleString()} toplam</div>
-                  <BarChart data={chartData} height={140} />
+                  <BarChart data={chartData} height={140} color={A} />
                 </div>
                 <div className="card" style={{ padding: "22px 24px" }}>
                   <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 2 }}>En Popüler Ürünler</div>
@@ -647,12 +406,19 @@ export default function PanelPage() {
           {activeTab === "menu" && (
             <div style={{ animation: "fadeUp .35s both" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", width: "100%" }}>
                   <button onClick={() => setCatFilter("Tümü")} className="btn" style={{ padding: "7px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: catFilter === "Tümü" ? 700 : 400, background: catFilter === "Tümü" ? "#fff" : "rgba(255,255,255,.06)", color: catFilter === "Tümü" ? "#111" : "rgba(255,255,255,.5)" }}>Tümü</button>
                   {categories.map(c => (
                     <button key={c.id} onClick={() => setCatFilter(c.id)} className="btn" style={{ padding: "7px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: catFilter === c.id ? 700 : 400, background: catFilter === c.id ? "#fff" : "rgba(255,255,255,.06)", color: catFilter === c.id ? "#111" : "rgba(255,255,255,.5)" }}>{c.name}</button>
                   ))}
                   <button onClick={() => setShowAddCat(true)} className="btn" style={{ padding: "7px 12px", borderRadius: 8, border: "1px dashed rgba(255,255,255,.2)", background: "transparent", color: "rgba(255,255,255,.4)", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>+ Kategori</button>
+
+                  {catFilter !== "Tümü" && (
+                    <div style={{ display: "flex", gap: 6, marginLeft: "auto" }}>
+                      <button onClick={() => setEditingCategory(categories.find(c => c.id === catFilter) || null)} style={{ padding: "7px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.1)", background: "transparent", color: "#fff", fontSize: 12, cursor: "pointer" }}>Düzenle</button>
+                      <button onClick={() => handleDeleteCategory(catFilter)} style={{ padding: "7px 12px", borderRadius: 8, border: "1px solid rgba(239,68,68,.2)", background: "transparent", color: "#ef4444", fontSize: 12, cursor: "pointer" }}>Sil</button>
+                    </div>
+                  )}
                 </div>
                 <button onClick={() => setShowAddProduct(true)} className="btn" style={{ padding: "9px 18px", borderRadius: 9, border: "none", background: A, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, boxShadow: `0 4px 16px ${A}40` }}>
                   <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Ürün Ekle
@@ -719,9 +485,7 @@ export default function PanelPage() {
                   <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Restoran QR Kodu</div>
                   <div style={{ fontSize: 11, color: "rgba(255,255,255,.35)", marginBottom: 24 }}>temeat.com.tr/{restaurant?.slug}</div>
                   <div style={{ width: 180, height: 180, margin: "0 auto 24px", background: "#fff", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-                    <div style={{ width: "100%", height: "100%", display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
-                      {Array.from({ length: 49 }).map((_, i) => <div key={i} style={{ borderRadius: 2, background: Math.random() > 0.45 ? "#111" : "transparent" }} />)}
-                    </div>
+                    <QRCode value={`https://temeat.com.tr/${restaurant?.slug}`} size={148} fgColor="#111" />
                   </div>
                   <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
                     {["PNG", "SVG", "PDF"].map(f => (
@@ -764,20 +528,24 @@ export default function PanelPage() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
                 <div className="card" style={{ padding: "22px 24px" }}>
                   <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 20 }}>Haftalık Trend</div>
-                  <BarChart data={chartData} height={160} />
+                  <BarChart data={chartData} height={160} color={A} />
                 </div>
                 <div className="card" style={{ padding: "22px 24px" }}>
                   <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 20 }}>Dil Dağılımı</div>
-                  {langData.map((l, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: 99, background: l.color, flexShrink: 0 }} />
-                      <span style={{ fontSize: 12, color: "rgba(255,255,255,.6)", flex: 1 }}>{l.lang}</span>
-                      <div style={{ width: 120, height: 4, background: "rgba(255,255,255,.06)", borderRadius: 99 }}>
-                        <div style={{ width: `${l.pct}%`, height: "100%", background: l.color, borderRadius: 99 }} />
+                  {dynamicLangData.length > 0 ? (
+                    dynamicLangData.map((l, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: 99, background: l.color, flexShrink: 0 }} />
+                        <span style={{ fontSize: 12, color: "rgba(255,255,255,.6)", flex: 1 }}>{l.lang}</span>
+                        <div style={{ width: 120, height: 4, background: "rgba(255,255,255,.06)", borderRadius: 99 }}>
+                          <div style={{ width: `${l.pct}%`, height: "100%", background: l.color, borderRadius: 99 }} />
+                        </div>
+                        <span style={{ fontSize: 12, fontWeight: 700, minWidth: 32, textAlign: "right" }}>{l.pct}%</span>
                       </div>
-                      <span style={{ fontSize: 12, fontWeight: 700, minWidth: 32, textAlign: "right" }}>{l.pct}%</span>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <div style={{ fontSize: 13, color: "rgba(255,255,255,.4)", textAlign: "center", padding: "20px 0" }}>Yeterli veri yok</div>
+                  )}
                 </div>
               </div>
             </div>
@@ -796,6 +564,15 @@ export default function PanelPage() {
                 ))}
                 {restaurant?.plan !== "pro" && <a href="/fiyat" style={{ display: "inline-block", marginTop: 16, padding: "10px 20px", borderRadius: 9, background: A, color: "#fff", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>Pro'ya Yükselt →</a>}
               </div>
+              
+              {restaurant && (
+                <SettingsForm 
+                  restaurant={restaurant} 
+                  themeColor={A} 
+                  onUpdate={(updated) => setRestaurant(prev => prev ? { ...prev, ...updated } : null)} 
+                />
+              )}
+
               <div className="card" style={{ padding: "22px 24px", border: "1px solid rgba(239,68,68,.2)", background: "rgba(239,68,68,.04)" }}>
                 <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Oturum</div>
                 <div style={{ fontSize: 12, color: "rgba(255,255,255,.4)", marginBottom: 16 }}>Hesabınızdan güvenli çıkış yapın.</div>
@@ -823,12 +600,28 @@ export default function PanelPage() {
         </div>
       )}
 
+      {/* KATEGORİ DÜZENLEME MODALI */}
+      {editingCategory && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+          <div onClick={() => setEditingCategory(null)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.6)" }} />
+          <div style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 400, background: "#111", borderRadius: 20, border: "1px solid rgba(255,255,255,.1)", padding: "28px" }}>
+            <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 20, color: "#fff" }}>Kategori Düzenle</h2>
+            <input type="text" value={editingCategory.name} onChange={e => setEditingCategory({...editingCategory, name: e.target.value})} onKeyDown={e => e.key === "Enter" && handleEditCategory()}
+              style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", marginBottom: 16, outline: "none" }} />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => setEditingCategory(null)} style={{ flex: 1, padding: "11px 0", borderRadius: 9, border: "1px solid rgba(255,255,255,.1)", background: "transparent", color: "rgba(255,255,255,.5)", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>İptal</button>
+              <button onClick={handleEditCategory} disabled={catSaving} style={{ flex: 2, padding: "11px 0", borderRadius: 9, border: "none", background: A, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{catSaving ? "Kaydediliyor..." : "Kaydet"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showAddProduct && (
-        <ProductModal title="Ürün Ekle" categories={categories} initial={{}} onSave={handleAddProduct} onClose={() => setShowAddProduct(false)} />
+        <ProductModal title="Ürün Ekle" categories={categories} initial={{}} onSave={handleAddProduct} onClose={() => setShowAddProduct(false)} themeColor={A} />
       )}
 
       {editingProduct && (
-        <ProductModal title="Ürünü Düzenle" categories={categories} initial={editingProduct} onSave={handleEditProduct} onClose={() => setEditingProduct(null)} />
+        <ProductModal title="Ürünü Düzenle" categories={categories} initial={editingProduct} onSave={handleEditProduct} onClose={() => setEditingProduct(null)} themeColor={A} />
       )}
     </div>
   );
