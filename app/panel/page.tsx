@@ -569,7 +569,7 @@ export default function PanelPage() {
                 <SettingsForm 
                   restaurant={restaurant} 
                   themeColor={A} 
-                  onUpdate={(updated) => setRestaurant(prev => prev ? { ...prev, ...updated } : null)} 
+                  onUpdate={(updated) => setRestaurant((prev: any) => prev ? { ...prev, ...updated } : null)} 
                 />
               )}
 
