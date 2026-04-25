@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { Category, Product } from "@/types";
 import { ALLERGENS } from "@/lib/constants";
@@ -43,6 +43,17 @@ export function ProductModal({
   const [imageUploading, setImageUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [extras, setExtras] = useState<any[]>([]);
+
+  // Eğer düzenleme modundaysa ekstraları getir
+  useEffect(() => {
+    if (initial.id) {
+      supabase.from("product_extras").select("*").eq("product_id", initial.id).then(({ data }) => {
+        if (data) setExtras(data);
+      });
+    }
+  }, [initial.id]);
 
   const handleSave = async () => {
     if (!name.trim()) { setError("Ürün adı zorunlu."); return; }
@@ -93,6 +104,7 @@ export function ProductModal({
       is_chef_pick: chefPick,
       allergens,
       image_url: finalImageUrl,
+      extras: extras.filter(e => e.name_tr.trim() !== ""), // boş olanları atla
     });
     setSaving(false);
   };
@@ -236,6 +248,31 @@ export function ProductModal({
               <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)" }}>Menüde öne çıkar</div>
             </div>
           </button>
+
+          {/* EKSTRALAR */}
+          <div style={{ marginTop: 8 }}>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 8 }}>
+              Ekstralar / Seçenekler (Opsiyonel)
+            </label>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {extras.map((ex, i) => (
+                <div key={i} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <input type="text" value={ex.name_tr} onChange={e => { const n = [...extras]; n[i].name_tr = e.target.value; setExtras(n); }} placeholder="Örn: Ekstra Peynir" style={{ flex: 2, padding: "9px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.04)", color: "#fff", fontSize: 13, outline: "none" }} />
+                  <div style={{ position: "relative", flex: 1 }}>
+                    <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "rgba(255,255,255,.4)" }}>₺</span>
+                    <input type="number" value={ex.price} onChange={e => { const n = [...extras]; n[i].price = Number(e.target.value); setExtras(n); }} placeholder="0" style={{ width: "100%", padding: "9px 12px 9px 24px", borderRadius: 8, border: "1px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.04)", color: "#fff", fontSize: 13, outline: "none" }} />
+                  </div>
+                  <button type="button" onClick={() => { const n = [...extras]; n[i].is_multiple = !n[i].is_multiple; setExtras(n); }} style={{ padding: "9px 12px", borderRadius: 8, border: `1px solid ${ex.is_multiple ? themeColor : "rgba(255,255,255,.1)"}`, background: ex.is_multiple ? `${themeColor}20` : "transparent", color: ex.is_multiple ? themeColor : "rgba(255,255,255,.5)", fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }} title="Çoklu: Müşteri birden fazla ekstra seçebilir. Tekli: Zorunlu/Tek seçim (Örn: Boyut)">
+                    {ex.is_multiple ? "Çoklu Seçim" : "Tekli Seçim"}
+                  </button>
+                  <button type="button" onClick={() => setExtras(extras.filter((_, idx) => idx !== i))} style={{ padding: "8px", borderRadius: 8, border: "none", background: "transparent", color: "#ef4444", cursor: "pointer" }}>✕</button>
+                </div>
+              ))}
+              <button type="button" onClick={() => setExtras([...extras, { name_tr: "", price: 0, is_multiple: true }])} style={{ padding: "10px", borderRadius: 8, border: "1px dashed rgba(255,255,255,.2)", background: "transparent", color: "rgba(255,255,255,.6)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                + Ekstra Seçenek Ekle
+              </button>
+            </div>
+          </div>
 
           {error && <div style={{ padding: "10px 14px", borderRadius: 9, background: "rgba(239,68,68,.1)", border: "1px solid rgba(239,68,68,.2)", fontSize: 13, color: "#f87171" }}>{error}</div>}
 

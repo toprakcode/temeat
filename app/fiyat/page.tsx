@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import Logo from "../components/Logo";
 
 const A = "#D4470A";
 
@@ -170,21 +172,14 @@ export default function FiyatPage() {
 
       {/* NAVBAR */}
       <nav style={{ position: "sticky", top: 0, zIndex: 50, padding: "0 5%", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(8,8,8,.9)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
-        <a href="/" style={{ display: "flex", alignItems: "center", gap: 9, textDecoration: "none" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            <div style={{ width: 18, height: 2.5, background: A, borderRadius: 99 }} />
-            <div style={{ width: 12, height: 2.5, background: A, borderRadius: 99 }} />
-            <div style={{ width: 18, height: 2.5, background: A, borderRadius: 99 }} />
-          </div>
-          <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: "-.03em", color: "#fff" }}>TEM<span style={{ color: A }}>eat</span></span>
-        </a>
+        <Logo size="sm" />
         <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
           {[["Ana Sayfa", "/"], ["Demo", "/demo"], ["Panel", "/panel"]].map(([l, h]) => (
-            <a key={l} href={h} style={{ fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,.5)", textDecoration: "none", transition: "color .15s" }}
+            <Link key={l} href={h} style={{ fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,.5)", textDecoration: "none", transition: "color .15s" }}
               onMouseEnter={e => e.currentTarget.style.color = "#fff"}
-              onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,.5)"}>{l}</a>
+              onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,.5)"}>{l}</Link>
           ))}
-          <a href="/panel" style={{ padding: "8px 18px", borderRadius: 9, background: A, color: "#fff", fontSize: 13, fontWeight: 700, textDecoration: "none", boxShadow: `0 4px 16px ${A}40` }}>Başla</a>
+          <Link href="/panel" style={{ padding: "8px 18px", borderRadius: 9, background: A, color: "#fff", fontSize: 13, fontWeight: 700, textDecoration: "none", boxShadow: `0 4px 16px ${A}40` }}>Başla</Link>
         </div>
       </nav>
 
@@ -281,7 +276,7 @@ export default function FiyatPage() {
                   </div>
 
                   {/* CTA */}
-                  <a href={plan.ctaHref} className="btn-primary" style={{
+                  <Link href={plan.ctaHref} className="btn-primary" style={{
                     display: "block", textAlign: "center",
                     padding: "13px 0", borderRadius: 11,
                     background: plan.highlight ? A : "rgba(255,255,255,.08)",
@@ -289,7 +284,7 @@ export default function FiyatPage() {
                     textDecoration: "none", marginBottom: 24,
                     boxShadow: plan.highlight ? `0 6px 20px ${A}40` : "none",
                     border: plan.highlight ? "none" : "1px solid rgba(255,255,255,.1)",
-                  }}>{plan.cta}</a>
+                  }}>{plan.cta}</Link>
 
                   {plan.id !== "free" && (
                     <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,.25)", marginBottom: 20, marginTop: -18 }}>
@@ -434,14 +429,14 @@ export default function FiyatPage() {
             Kredi kartı gerekmez. 30 saniyede kurulum. Beğenmezseniz bırakırsınız.
           </p>
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-            <a href="/panel" className="btn-primary" style={{ padding: "14px 32px", borderRadius: 11, background: A, color: "#fff", fontSize: 15, fontWeight: 700, textDecoration: "none", boxShadow: `0 8px 28px ${A}40` }}>
+            <Link href="/panel" className="btn-primary" style={{ padding: "14px 32px", borderRadius: 11, background: A, color: "#fff", fontSize: 15, fontWeight: 700, textDecoration: "none", boxShadow: `0 8px 28px ${A}40` }}>
               Ücretsiz Başla →
-            </a>
-            <a href="/demo" style={{ padding: "14px 32px", borderRadius: 11, border: "1.5px solid rgba(255,255,255,.12)", color: "rgba(255,255,255,.7)", fontSize: 15, fontWeight: 600, textDecoration: "none", transition: "all .2s" }}
+            </Link>
+            <Link href="/demo" style={{ padding: "14px 32px", borderRadius: 11, border: "1.5px solid rgba(255,255,255,.12)", color: "rgba(255,255,255,.7)", fontSize: 15, fontWeight: 600, textDecoration: "none", transition: "all .2s" }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,.3)"; e.currentTarget.style.color = "#fff"; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,.12)"; e.currentTarget.style.color = "rgba(255,255,255,.7)"; }}>
               Demo Gör
-            </a>
+            </Link>
           </div>
           <p style={{ fontSize: 12, color: "rgba(255,255,255,.2)", marginTop: 20 }}>
             Kredi kartı gerekmez · 14 gün ücretsiz · İstediğin zaman iptal
@@ -453,18 +448,13 @@ export default function FiyatPage() {
       <footer style={{ background: "#040404", padding: "40px 5% 28px", borderTop: "1px solid rgba(255,255,255,.05)" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
-              <div style={{ width: 14, height: 2, background: A, borderRadius: 99 }} />
-              <div style={{ width: 9, height: 2, background: A, borderRadius: 99 }} />
-              <div style={{ width: 14, height: 2, background: A, borderRadius: 99 }} />
-            </div>
-            <span style={{ fontSize: 14, fontWeight: 800, color: "#fff" }}>TEM<span style={{ color: A }}>eat</span></span>
+            <Logo size="sm" />
           </div>
           <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
             {[["Ana Sayfa", "/"], ["Demo", "/demo"], ["Panel", "/panel"], ["Gizlilik", "#"], ["KVKK", "#"]].map(([l, h]) => (
-              <a key={l} href={h} style={{ fontSize: 12, color: "rgba(255,255,255,.3)", textDecoration: "none", transition: "color .15s" }}
+              <Link key={l} href={h} style={{ fontSize: 12, color: "rgba(255,255,255,.3)", textDecoration: "none", transition: "color .15s" }}
                 onMouseEnter={e => e.currentTarget.style.color = "#fff"}
-                onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,.3)"}>{l}</a>
+                onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,.3)"}>{l}</Link>
             ))}
           </div>
           <p style={{ fontSize: 11, color: "rgba(255,255,255,.15)" }}>© 2026 TEMeat</p>

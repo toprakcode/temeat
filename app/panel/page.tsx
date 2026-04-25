@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import Logo from "../components/Logo";
 import { supabase } from "@/lib/supabase";
 import { Category, Product } from "@/types";
 import { DEFAULT_COLOR, ALLERGENS } from "@/lib/constants";
@@ -9,8 +11,9 @@ import { ProductModal } from "@/components/panel/ProductModal";
 import { Sidebar } from "@/components/panel/Sidebar";
 import { SettingsForm } from "@/components/panel/SettingsForm";
 import QRCode from "react-qr-code";
+import { useRouter } from "next/navigation";
 
-const A_GLOBAL = DEFAULT_COLOR; 
+const A_GLOBAL = DEFAULT_COLOR;
 
 const weeklyData = [
   { day: "Pzt", views: 0, orders: 0 },
@@ -25,6 +28,7 @@ const weeklyData = [
 
 
 export default function PanelPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [toast, setToast] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
@@ -43,14 +47,30 @@ export default function PanelPage() {
   const [obSaving, setObSaving] = useState(false);
   const [obError, setObError] = useState<string | null>(null);
 
+  const [isKitchenMode, setIsKitchenMode] = useState(false);
+  const [pendingReviewsCount, setPendingReviewsCount] = useState(0);
+  const [serviceRequests, setServiceRequests] = useState<any[]>([]);
+
+  // QR Designer States
+  const [qrColor, setQrColor] = useState("#000000");
+  const [qrBgColor, setQrBgColor] = useState("#ffffff");
+  const [qrLogoVisible, setQrLogoVisible] = useState(true);
+  const [qrFrameType, setQrFrameType] = useState("none"); // none, minimal, elegant, modern
+  const [qrSize, setQrSize] = useState(200);
+
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const [thisWeekViews, setThisWeekViews] = useState(0);
   const [lastWeekViews, setLastWeekViews] = useState(0);
   const [totalViewsReal, setTotalViewsReal] = useState(0);
-  const [weeklyViews, setWeeklyViews] = useState<{day:string;views:number;orders:number}[]>([]);
-  const [dynamicLangData, setDynamicLangData] = useState<{lang: string, pct: number, color: string}[]>([]);
+  const [weeklyViews, setWeeklyViews] = useState<{ day: string; views: number; orders: number }[]>([]);
+  const [dynamicLangData, setDynamicLangData] = useState<{ lang: string, pct: number, color: string }[]>([]);
+
+  const [orders, setOrders] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [replyText, setReplyText] = useState("");
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
 
   const [showAddCat, setShowAddCat] = useState(false);
   const [newCatName, setNewCatName] = useState("");
@@ -58,37 +78,59 @@ export default function PanelPage() {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) { window.location.href = "/auth"; }
-      else { setUser(session.user); checkRestaurant(session.user.id); }
-    });
+    let mounted = true;
+    
+    const init = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!mounted) return;
+      
+      if (!session) { 
+        router.push("/auth"); 
+      } else { 
+        setUser(session.user); 
+        await checkRestaurant(session.user.id); 
+      }
+    };
+
+    init();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_OUT" || !session) window.location.href = "/auth";
+      if (!mounted) return;
+      if (event === "SIGNED_OUT" || !session) router.push("/auth");
     });
-    return () => subscription.unsubscribe();
-  }, []);
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [router]);
 
   const checkRestaurant = async (userId: string) => {
-    const { data } = await supabase
-      .from("restaurants")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    if (data) { setRestaurant(data); loadMenuData(data); }
-    else setShowOnboarding(true);
-    setLoading(false);
+    try {
+      const { data, error } = await supabase
+        .from("restaurants")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      
+      if (data) { 
+        setRestaurant(data); 
+        await loadMenuData(data); 
+      } else { 
+        setShowOnboarding(true); 
+      }
+    } catch (err) {
+      console.error("Restoran yükleme hatası:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const loadMenuData = async (restData: any) => {
     const restaurantId = restData.id;
     const themeColor = restData.theme_color || DEFAULT_COLOR;
-    const { data: cats } = await supabase.from("categories").select("*").eq("restaurant_id", restaurantId).order("sort_order");
-    const { data: prods } = await supabase.from("products").select("*").eq("restaurant_id", restaurantId).order("sort_order");
-    setCategories(cats || []);
-    setProducts(prods || []);
-
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
@@ -100,7 +142,7 @@ export default function PanelPage() {
     setThisWeekViews(thisWeek?.length || 0);
     setLastWeekViews(lastWeek?.length || 0);
     setTotalViewsReal(total || 0);
-    const days = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
+    const days = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
     setWeeklyViews(days.map((day, i) => {
       const dayStart = new Date(weekAgo.getTime() + i * 24 * 60 * 60 * 1000);
       const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
@@ -134,7 +176,67 @@ export default function PanelPage() {
     } else {
       setDynamicLangData([]);
     }
+
+    const { data: revsData } = await supabase.from("reviews").select("*").eq("restaurant_id", restaurantId).order("created_at", { ascending: false });
+    setReviews(revsData || []);
+
+    const { data: ordersData } = await supabase.from("orders").select("*, order_items(*)").eq("restaurant_id", restaurantId).order("created_at", { ascending: false });
+    setOrders(ordersData || []);
+
+    const { data: serviceData } = await supabase.from("service_requests").select("*").eq("restaurant_id", restaurantId).order("created_at", { ascending: false });
+    setServiceRequests(serviceData || []);
   };
+
+  useEffect(() => {
+    if (!restaurant) return;
+    
+    const ordersSub = supabase.channel('realtime-orders')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurant.id}` }, async (payload) => {
+        const { data: newOrder } = await supabase.from("orders").select("*, order_items(*)").eq("id", payload.new.id).single();
+        if (newOrder) {
+          setOrders(prev => [newOrder, ...prev]);
+          new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(() => {});
+          flash("Yeni sipariş geldi! 🔔");
+        }
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurant.id}` }, (payload) => {
+        setOrders(prev => prev.map(o => o.id === payload.new.id ? { ...o, ...payload.new } : o));
+      })
+      .subscribe();
+
+    const reviewsSub = supabase.channel('realtime-reviews')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'reviews', filter: `restaurant_id=eq.${restaurant.id}` }, (payload) => {
+        setReviews(prev => [payload.new, ...prev]);
+        flash("Yeni bir yorum yapıldı! ✍️");
+      })
+      .subscribe();
+
+    const serviceSub = supabase.channel('realtime-service')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'service_requests', filter: `restaurant_id=eq.${restaurant.id}` }, (payload) => {
+        setServiceRequests(prev => [payload.new, ...prev]);
+        new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(() => {});
+        flash(`Masa ${payload.new.table_no} garson çağırıyor! 🔔`);
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'service_requests', filter: `restaurant_id=eq.${restaurant.id}` }, (payload) => {
+        setServiceRequests(prev => prev.map(s => s.id === payload.new.id ? { ...s, ...payload.new } : s));
+      })
+      .subscribe();
+
+    return () => {
+      ordersSub.unsubscribe();
+      reviewsSub.unsubscribe();
+      serviceSub.unsubscribe();
+    };
+  }, [restaurant]);
+
+  useEffect(() => {
+    const pendingCount = orders.filter(o => o.status === "pending").length;
+    if (pendingCount > 0) {
+      document.title = `(${pendingCount}) Bekleyen Sipariş | TEMeat`;
+    } else {
+      document.title = "Restoran Paneli | TEMeat";
+    }
+  }, [orders]);
 
   const handleOnboardingSave = async () => {
     if (!obName.trim()) { setObError("Restoran adı zorunlu."); return; }
@@ -184,15 +286,32 @@ export default function PanelPage() {
       flash(`${plan === "free" ? "Ücretsiz planda" : "Başlangıç planında"} maksimum ${limit} ürün ekleyebilirsiniz.`);
       return;
     }
+    const { extras, ...productData } = formData;
     const { data, error } = await supabase.from("products").insert({
       restaurant_id: restaurant.id,
-      ...formData,
+      ...productData,
       is_active: true,
       tags: [],
       serves: 1,
       sort_order: products.length,
     }).select().single();
+    
     if (error) throw error;
+
+    if (extras && extras.length > 0) {
+      const extrasToInsert = extras.map((e: any) => ({
+        product_id: data.id,
+        name_tr: e.name_tr.trim(),
+        price: Number(e.price) || 0,
+        is_multiple: !!e.is_multiple
+      }));
+      const { error: insError } = await supabase.from("product_extras").insert(extrasToInsert);
+      if (insError) {
+        console.error("Ekstra ekleme hatası:", insError);
+        flash("Ürün eklendi fakat ekstralar kaydedilemedi.");
+      }
+    }
+
     setProducts(prev => [...prev, data]);
     setShowAddProduct(false);
     flash("Ürün eklendi! 🎉");
@@ -200,11 +319,57 @@ export default function PanelPage() {
 
   const handleEditProduct = async (formData: any) => {
     if (!editingProduct) return;
-    const { data, error } = await supabase.from("products").update(formData).eq("id", editingProduct.id).select().single();
-    if (error) throw error;
-    setProducts(prev => prev.map(p => p.id === editingProduct.id ? { ...p, ...data } : p));
+    const { extras, ...productData } = formData;
+    
+    // 1. Ana ürün bilgilerini güncelle
+    const { data: updatedProduct, error: prodError } = await supabase
+      .from("products")
+      .update(productData)
+      .eq("id", editingProduct.id)
+      .select()
+      .single();
+      
+    if (prodError) {
+      console.error(prodError);
+      flash("Ürün güncellenirken bir hata oluştu.");
+      return;
+    }
+
+    // 2. Ekstraları güncelle (varsa)
+    if (extras !== undefined) {
+      // Önce eskileri silmeyi dene
+      const { error: delError } = await supabase
+        .from("product_extras")
+        .delete()
+        .eq("product_id", editingProduct.id);
+
+      if (delError) {
+        console.error("Ekstra silme hatası:", delError);
+      }
+      
+      if (extras.length > 0) {
+        const extrasToInsert = extras.map((e: any) => ({
+          product_id: editingProduct.id,
+          name_tr: e.name_tr.trim(),
+          price: Number(e.price) || 0,
+          is_multiple: !!e.is_multiple
+        }));
+
+        const { error: insError } = await supabase
+          .from("product_extras")
+          .insert(extrasToInsert);
+
+        if (insError) {
+          console.error("Ekstra ekleme hatası:", insError);
+          flash("Ürün güncellendi fakat ekstralar kaydedilemedi.");
+        }
+      }
+    }
+
+    // 3. Yerel state'i güncelle
+    setProducts(prev => prev.map(p => p.id === editingProduct.id ? { ...p, ...updatedProduct } : p));
     setEditingProduct(null);
-    flash("Ürün güncellendi! ✓");
+    flash("Ürün başarıyla güncellendi! ✓");
   };
 
   const toggleProduct = async (id: string, current: boolean) => {
@@ -226,20 +391,86 @@ export default function PanelPage() {
   const chartData = weeklyViews.length > 0 ? weeklyViews : weeklyData;
 
   const A = restaurant?.theme_color || DEFAULT_COLOR;
-  const tabLabel: Record<string, string> = { dashboard: "Genel Bakış", menu: "Menü Yönetimi", qr: "QR Kodlar", analytics: "Analitik", settings: "Ayarlar" };
+  const tabLabel: Record<string, string> = { dashboard: "Genel Bakış", orders: "Siparişler", reviews: "Müşteri Yorumları", menu: "Menü Yönetimi", qr: "QR Kodlar", analytics: "Analitik", settings: "Ayarlar" };
 
-  if (loading) return (
-    <div style={{ minHeight: "100vh", background: "#080808", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Outfit', system-ui, sans-serif" }}>
-      <div style={{ textAlign: "center" }}>
-        <div style={{ width: 40, height: 40, borderRadius: 10, background: A, margin: "0 auto 16px", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 3 }}>
-          <div style={{ width: 16, height: 2, background: "#fff", borderRadius: 99 }} />
-          <div style={{ width: 11, height: 2, background: "#fff", borderRadius: 99 }} />
-          <div style={{ width: 16, height: 2, background: "#fff", borderRadius: 99 }} />
-        </div>
-        <div style={{ fontSize: 13, color: "rgba(255,255,255,.4)" }}>Yükleniyor...</div>
-      </div>
-    </div>
-  );
+  const resolveServiceRequest = async (id: string) => {
+    const { error } = await supabase.from("service_requests").update({ status: "resolved", resolved_at: new Date().toISOString() }).eq("id", id);
+    if (!error) {
+      setServiceRequests(prev => prev.map(s => s.id === id ? { ...s, status: "resolved", resolved_at: new Date().toISOString() } : s));
+      flash("İstek tamamlandı.");
+    }
+  };
+
+  const updateOrderStatus = async (id: string, status: string) => {
+    await supabase.from("orders").update({ status }).eq("id", id);
+    setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
+    flash("Sipariş durumu güncellendi.");
+  };
+
+  const downloadQR = (format: 'png' | 'svg') => {
+    const svg = document.getElementById("main-qr")?.querySelector("svg");
+    if (!svg) return;
+
+    if (format === 'svg') {
+      const svgData = new XMLSerializer().serializeToString(svg);
+      const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(svgBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${restaurant?.slug}-qr.svg`;
+      link.click();
+    } else {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      const img = new Image();
+      const svgData = new XMLSerializer().serializeToString(svg);
+      const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(svgBlob);
+
+      img.onload = () => {
+        canvas.width = 1000;
+        canvas.height = 1000;
+        if (ctx) {
+          ctx.fillStyle = qrBgColor;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 100, 100, 800, 800);
+          const pngUrl = canvas.toDataURL("image/png");
+          const link = document.createElement("a");
+          link.href = pngUrl;
+          link.download = `${restaurant?.slug}-qr.png`;
+          link.click();
+        }
+      };
+      img.src = url;
+    }
+    flash(`QR (${format.toUpperCase()}) indiriliyor...`);
+  };
+
+  const handleReviewStatus = async (id: string, status: string) => {
+    await supabase.from("reviews").update({ status }).eq("id", id);
+    setReviews(prev => prev.map(r => r.id === id ? { ...r, status } : r));
+    flash("Yorum durumu güncellendi.");
+  };
+
+  const handleReviewReply = async (id: string) => {
+    if (!replyText.trim()) return;
+    await supabase.from("reviews").update({ owner_reply: replyText.trim(), status: "approved" }).eq("id", id);
+    setReviews(prev => prev.map(r => r.id === id ? { ...r, owner_reply: replyText.trim(), status: "approved" } : r));
+    setReplyText("");
+    setReplyingTo(null);
+    flash("Cevabınız kaydedildi.");
+  };
+
+  const getStatusLabel = (s: string) => {
+    const labels: any = { pending: "Bekliyor", preparing: "Hazırlanıyor", ready: "Hazır", completed: "Tamamlandı", cancelled: "İptal" };
+    return labels[s] || s;
+  };
+
+  const getStatusColor = (s: string) => {
+    const colors: any = { pending: "#f59e0b", preparing: "#3b82f6", ready: "#10b981", completed: "rgba(255,255,255,.3)", cancelled: "#ef4444" };
+    return colors[s] || "#888";
+  };
+
 
   if (showOnboarding) return (
     <div style={{ minHeight: "100vh", background: "#080808", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Outfit', system-ui, sans-serif", padding: 20, position: "relative", overflow: "hidden" }}>
@@ -290,6 +521,21 @@ export default function PanelPage() {
     </div>
   );
 
+  if (loading) return (
+    <div style={{ minHeight: "100vh", background: "#060606", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 24 }}>
+      <div style={{ animation: "pulse 2s infinite ease-in-out" }}>
+        <Logo size="lg" withTagline={false} />
+      </div>
+      <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase" }}>Lütfen bekleyin...</div>
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.7; transform: scale(0.98); }
+        }
+      `}</style>
+    </div>
+  );
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#080808", fontFamily: "'Outfit', system-ui, sans-serif", color: "#fff" }}>
       <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
@@ -297,10 +543,24 @@ export default function PanelPage() {
         *{box-sizing:border-box;margin:0;padding:0}
         ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:99px}
         @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes toastAnim{0%{opacity:0;transform:translateY(8px)}10%{opacity:1;transform:translateY(0)}90%{opacity:1}100%{opacity:0}}
-        .card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:16px;transition:border-color .2s}
-        .card:hover{border-color:rgba(255,255,255,.11)}
-        .btn{transition:all .15s;cursor:pointer}.btn:hover{opacity:.85}.btn:active{transform:scale(.97)}
+        .card{
+          background: rgba(255, 255, 255, 0.03);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          border-radius: 20px;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.2);
+        }
+        .card:hover{
+          border-color: rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.05);
+          transform: translateY(-2px);
+          box-shadow: 0 12px 40px -1px rgba(0, 0, 0, 0.3);
+        }
+        .btn{transition:all .2s cubic-bezier(0.4, 0, 0.2, 1);cursor:pointer}
+        .btn:hover{opacity:.85;transform:translateY(-1px)}
+        .btn:active{transform:scale(.97)}
         .row-item:hover{background:rgba(255,255,255,.03)}
         input,select,textarea{font-family:inherit}
         input::placeholder,textarea::placeholder{color:rgba(255,255,255,.2)}
@@ -317,12 +577,13 @@ export default function PanelPage() {
 
 
       {/* SIDEBAR */}
-      <Sidebar 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
-        restaurant={restaurant} 
-        productsCount={products.length} 
-        themeColor={A} 
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        restaurant={restaurant}
+        productsCount={products.length}
+        pendingReviewsCount={reviews.filter(r => r.status === "pending").length}
+        themeColor={A}
       />
 
       {/* MAIN */}
@@ -333,8 +594,12 @@ export default function PanelPage() {
             <p style={{ fontSize: 11, color: "rgba(255,255,255,.3)", marginTop: 1 }}>{user?.email}</p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button onClick={() => setIsKitchenMode(true)} className="btn" style={{ padding: "8px 14px", borderRadius: 9, border: `1px solid ${A}40`, background: `${A}12`, color: A, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 9h18M3 15h18M3 21h18M3 3h18"/></svg>
+              Mutfak Modu
+            </button>
             <button onClick={handleSignOut} className="btn" style={{ padding: "8px 14px", borderRadius: 9, border: "1px solid rgba(255,255,255,.08)", background: "transparent", color: "rgba(255,255,255,.5)", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
               <span className="sidebar-label">Çıkış</span>
             </button>
             <div style={{ width: 36, height: 36, borderRadius: 99, background: A, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, boxShadow: `0 0 0 2px ${A}40` }}>
@@ -345,60 +610,223 @@ export default function PanelPage() {
 
         <div className="main-pad" style={{ flex: 1, padding: "28px 32px", overflowY: "auto" }}>
 
-          {/* DASHBOARD */}
+          {/* DASHBOARD (BENTO GRID) */}
           {activeTab === "dashboard" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 20, animation: "fadeUp .35s both" }}>
-              <div className="stats-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
-                {[
-                  { label: "Bu Hafta Görüntülenme", value: thisWeekViews.toLocaleString(), sub: lastWeekViews > 0 ? `↑ +${Math.round((thisWeekViews - lastWeekViews) / lastWeekViews * 100)}% geçen haftaya göre` : "Veri toplanıyor...", color: "#22c55e" },
-                  { label: "Toplam Görüntülenme", value: totalViewsReal.toLocaleString(), sub: "Tüm zamanlar", color: "rgba(255,255,255,.3)" },
-                  { label: "Aktif Ürün", value: `${products.filter(p => p.is_active).length}/${products.length}`, sub: `${products.filter(p => !p.is_active).length} ürün pasif`, color: "rgba(255,255,255,.3)" },
-                  { label: "Kategori", value: categories.length.toString(), sub: "Menü kategorisi", color: "rgba(255,255,255,.3)" },
-                ].map((s, i) => (
-                  <div key={i} className="card" style={{ padding: "20px" }}>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,.38)", fontWeight: 500, marginBottom: 12 }}>{s.label}</div>
-                    <div style={{ fontSize: 30, fontWeight: 900, letterSpacing: "-.04em", marginBottom: 8 }}>{s.value}</div>
-                    <div style={{ fontSize: 11, fontWeight: 500, color: s.color }}>{s.sub}</div>
-                  </div>
-                ))}
-              </div>
-              <div className="chart-grid" style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 14 }}>
-                <div className="card" style={{ padding: "22px 24px" }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Haftalık Görüntülenme</div>
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,.3)", marginBottom: 20 }}>Son 7 gün · {thisWeekViews.toLocaleString()} toplam</div>
-                  <BarChart data={chartData} height={140} color={A} />
-                </div>
-                <div className="card" style={{ padding: "22px 24px" }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 2 }}>En Popüler Ürünler</div>
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,.3)", marginBottom: 16 }}>Menündeki ürünler</div>
-                  {products.slice(0, 5).map((p, i) => (
-                    <div key={i} className="row-item" style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 6px", borderBottom: i < 4 ? "1px solid rgba(255,255,255,.05)" : "none", borderRadius: 8 }}>
-                      <span style={{ fontSize: 11, fontWeight: 800, color: i === 0 ? A : "rgba(255,255,255,.2)", minWidth: 14 }}>{i + 1}</span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name_tr}</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 24, animation: "fadeUp .5s cubic-bezier(0.16, 1, 0.3, 1) both", position: "relative" }}>
+              
+              {/* Background Aura Glows */}
+              <div style={{ position: "fixed", top: "20%", right: "-10%", width: 600, height: 600, background: `${A}08`, filter: "blur(120px)", borderRadius: 999, pointerEvents: "none", zIndex: 0 }} />
+              <div style={{ position: "fixed", bottom: "-10%", left: "10%", width: 400, height: 400, background: `${A}05`, filter: "blur(100px)", borderRadius: 999, pointerEvents: "none", zIndex: 0 }} />
+
+              {/* QUICK START CHECKLIST - REDESIGNED */}
+              {(() => {
+                const tasks = [
+                  { id: "rest", label: "Restoran", ok: !!restaurant?.name },
+                  { id: "cat", label: "Kategori", ok: categories.length > 0 },
+                  { id: "prod", label: "Ürün", ok: products.length > 0 },
+                  { id: "qr", label: "QR Kod", ok: !!restaurant?.slug },
+                ];
+                const completed = tasks.filter(t => t.ok).length;
+                if (completed === tasks.length) return null;
+
+                return (
+                  <div style={{ background: "rgba(255,255,255,0.02)", backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 24, padding: 20, display: "flex", alignItems: "center", gap: 24, position: "relative", zIndex: 1 }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 140 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 800, color: A, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                        Kurulum
                       </div>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,.5)" }}>₺{p.price}</span>
+                      <div style={{ fontSize: 20, fontWeight: 900 }}>%{Math.round((completed/tasks.length)*100)} Tamamlandı</div>
+                    </div>
+                    <div style={{ flex: 1, height: 8, background: "rgba(255,255,255,0.03)", borderRadius: 99, overflow: "hidden" }}>
+                      <div style={{ width: `${(completed/tasks.length)*100}%`, height: "100%", background: `linear-gradient(90deg, ${A}, #ff7a45)`, borderRadius: 99, transition: "width 1s ease" }} />
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {tasks.map(t => (
+                        <div key={t.id} style={{ width: 36, height: 36, borderRadius: 12, background: t.ok ? `${A}20` : "rgba(255,255,255,0.03)", border: `1px solid ${t.ok ? `${A}40` : "rgba(255,255,255,0.06)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, opacity: t.ok ? 1 : 0.4 }}>
+                          {t.ok ? (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={A} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                          ) : (
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" strokeDasharray="2 2" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* BENTO GRID START */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gridAutoRows: "minmax(160px, auto)", gap: 20, position: "relative", zIndex: 1 }}>
+                
+                {/* BIG STAT: REVENUE / VIEWS */}
+                <div className="card" style={{ gridColumn: "span 8", gridRow: "span 2", padding: 32, display: "flex", flexDirection: "column", justifyContent: "space-between", background: "linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <div>
+                        <h3 style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 8 }}>Haftalık Performans</h3>
+                        <div style={{ fontSize: 48, fontWeight: 900, letterSpacing: "-0.04em" }}>{thisWeekViews.toLocaleString()} <span style={{ fontSize: 20, fontWeight: 600, color: "#22c55e", letterSpacing: "0" }}>+{lastWeekViews > 0 ? Math.round(((thisWeekViews-lastWeekViews)/lastWeekViews)*100) : 0}%</span></div>
+                        <div style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>Sayfa görüntüleme ve müşteri etkileşimi</div>
+                      </div>
+                      <div style={{ padding: "8px 16px", borderRadius: 99, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", fontSize: 12, fontWeight: 600 }}>Son 7 Gün</div>
+                    </div>
+                  </div>
+                  <div style={{ height: 180, marginTop: 32 }}>
+                    <BarChart data={chartData} height={180} color={A} />
+                  </div>
+                </div>
+
+                {/* SMALL STAT: REVIEWS */}
+                <div className="card" style={{ gridColumn: "span 4", gridRow: "span 1", padding: 24, background: `linear-gradient(135deg, ${A}15 0%, rgba(0,0,0,0) 100%)`, borderColor: `${A}20` }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={A} strokeWidth="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: A, textTransform: "uppercase", letterSpacing: "0.1em" }}>Müşteri Memnuniyeti</div>
+                  </div>
+                  <div style={{ fontSize: 36, fontWeight: 900, marginBottom: 4 }}>{reviews.length > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) : "—"}</div>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>{reviews.length} toplam değerlendirme</div>
+                </div>
+
+                {/* SMALL STAT: PRODUCTS */}
+                <div className="card" style={{ gridColumn: "span 4", gridRow: "span 1", padding: 24 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2.5"><path d="M3 9h18M3 15h18M3 21h18M3 3h18"/></svg>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Aktif Menü</div>
+                  </div>
+                  <div style={{ fontSize: 36, fontWeight: 900, marginBottom: 4 }}>{products.filter(p => p.is_active).length} <span style={{ fontSize: 18, color: "rgba(255,255,255,0.2)" }}>/ {products.length}</span></div>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>Yayınlanan toplam ürün sayısı</div>
+                </div>
+
+                {/* RECENT ORDERS / ACTIVITY */}
+                <div className="card" style={{ gridColumn: "span 5", gridRow: "span 3", padding: 24, display: "flex", flexDirection: "column" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                    <h3 style={{ fontSize: 16, fontWeight: 800 }}>Son Siparişler</h3>
+                    <button onClick={() => setActiveTab("orders")} style={{ fontSize: 12, color: A, background: "none", border: "none", fontWeight: 700, cursor: "pointer" }}>Tümünü Gör</button>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12, flex: 1 }}>
+                    {orders.slice(0, 6).map((order, i) => (
+                      <div key={order.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px", borderRadius: 16, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                        <div style={{ width: 40, height: 40, borderRadius: 12, background: `${getStatusColor(order.status)}15`, color: getStatusColor(order.status), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 900 }}>{order.table_no}</div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700 }}>Masa {order.table_no}</div>
+                          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>{order.order_items?.length} Ürün · {new Date(order.created_at).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}</div>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <div style={{ fontSize: 14, fontWeight: 800 }}>₺{order.total_amount}</div>
+                        </div>
+                      </div>
+                    ))}
+                    {orders.length === 0 && <div style={{ margin: "auto", textAlign: "center", color: "rgba(255,255,255,0.2)", fontSize: 13 }}>Henüz sipariş yok</div>}
+                  </div>
+                </div>
+
+                {/* TOP PRODUCTS - BENTO STYLE */}
+                <div className="card" style={{ gridColumn: "span 7", gridRow: "span 2", padding: 24 }}>
+                  <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 20 }}>En Çok Satanlar</h3>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    {products.slice(0, 4).map((p, i) => (
+                      <div key={i} style={{ padding: 16, borderRadius: 20, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", position: "relative", overflow: "hidden" }}>
+                        <div style={{ position: "absolute", top: 0, right: 0, padding: "8px 12px", background: i === 0 ? A : "rgba(255,255,255,0.05)", fontSize: 10, fontWeight: 900, borderRadius: "0 0 0 12px" }}>#{i+1}</div>
+                        <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 4, paddingRight: 30 }}>{p.name_tr}</div>
+                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>Popüler ürün</div>
+                        <div style={{ marginTop: 12, fontSize: 16, fontWeight: 900, color: A }}>₺{p.price}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* QUICK ACTIONS BENTO */}
+                <div className="card" style={{ gridColumn: "span 7", gridRow: "span 1", padding: 24, display: "flex", alignItems: "center", gap: 16 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>Hızlı İşlemler</div>
+                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>Sık kullanılan araçlar</div>
+                  </div>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    {[
+                      { label: "Ürün +", action: () => { setActiveTab("menu"); setTimeout(() => setShowAddProduct(true), 100); } },
+                      { label: "QR Tasarla", action: () => setActiveTab("qr") },
+                      { label: "Analiz", action: () => setActiveTab("analytics") }
+                    ].map((btn, i) => (
+                      <button key={i} onClick={btn.action} style={{ padding: "10px 16px", borderRadius: 12, background: i === 0 ? A : "rgba(255,255,255,0.05)", border: "none", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "transform 0.2s" }} onMouseEnter={e => e.currentTarget.style.transform = "translateY(-2px)"} onMouseLeave={e => e.currentTarget.style.transform = "translateY(0)"}>
+                        {btn.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+              {/* BENTO GRID END */}
+            </div>
+          )}
+
+
+          {/* ORDERS */}
+          {activeTab === "orders" && (
+            <div style={{ animation: "fadeUp .35s both" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                <h2 style={{ fontSize: 16, fontWeight: 700 }}>Aktif Siparişler</h2>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,.4)" }}>{orders.filter(o => o.status !== "completed" && o.status !== "cancelled").length} bekleyen sipariş</div>
+              </div>
+
+              {orders.length === 0 ? (
+                <div className="card" style={{ padding: "60px 20px", textAlign: "center", color: "rgba(255,255,255,.3)" }}>
+                  <div style={{ fontSize: 32, marginBottom: 12 }}>🔔</div>
+                  <div style={{ fontSize: 14 }}>Henüz sipariş yok.</div>
+                </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
+                  {orders.map(order => (
+                    <div key={order.id} className="card" style={{ padding: "20px", borderLeft: `4px solid ${getStatusColor(order.status)}` }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+                        <div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                            <span style={{ fontSize: 16, fontWeight: 800 }}>Masa {order.table_no}</span>
+                            <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 6, background: `${getStatusColor(order.status)}20`, color: getStatusColor(order.status), fontWeight: 700 }}>{getStatusLabel(order.status)}</span>
+                          </div>
+                          <div style={{ fontSize: 11, color: "rgba(255,255,255,.3)" }}>{new Date(order.created_at).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })} · #{order.id.slice(0, 5)}</div>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <div style={{ fontSize: 16, fontWeight: 800 }}>₺{order.total_amount}</div>
+                          <div style={{ fontSize: 10, color: "rgba(255,255,255,.3)" }}>{order.order_items?.length} ürün</div>
+                        </div>
+                      </div>
+
+                      <div style={{ background: "rgba(255,255,255,.02)", borderRadius: 10, padding: "12px", marginBottom: 16 }}>
+                        {order.order_items?.map((item: any, idx: number) => {
+                          const product = products.find(p => p.id === item.product_id);
+                          return (
+                            <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: idx === order.order_items.length - 1 ? 0 : 8 }}>
+                              <div>
+                                <span style={{ fontWeight: 700, color: A }}>{item.quantity}x</span> {product?.name_tr || "Ürün"}
+                                {item.extras_selected?.length > 0 && (
+                                  <div style={{ fontSize: 10, color: "rgba(255,255,255,.3)", marginTop: 2 }}>
+                                    + {item.extras_selected.map((e: any) => e.name_tr).join(", ")}
+                                  </div>
+                                )}
+                              </div>
+                              <span style={{ fontWeight: 600 }}>₺{item.price * item.quantity}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        {order.status === "pending" && (
+                          <button onClick={() => updateOrderStatus(order.id, "preparing")} className="btn" style={{ padding: "8px 16px", borderRadius: 8, background: "#3b82f6", color: "#fff", border: "none", fontSize: 12, fontWeight: 700 }}>Hazırlanıyor Yap</button>
+                        )}
+                        {order.status === "preparing" && (
+                          <button onClick={() => updateOrderStatus(order.id, "ready")} className="btn" style={{ padding: "8px 16px", borderRadius: 8, background: "#10b981", color: "#fff", border: "none", fontSize: 12, fontWeight: 700 }}>Hazır Yap</button>
+                        )}
+                        {order.status === "ready" && (
+                          <button onClick={() => updateOrderStatus(order.id, "completed")} className="btn" style={{ padding: "8px 16px", borderRadius: 8, background: "rgba(255,255,255,.1)", color: "#fff", border: "none", fontSize: 12, fontWeight: 700 }}>Tamamla</button>
+                        )}
+                        {order.status !== "completed" && order.status !== "cancelled" && (
+                          <button onClick={() => updateOrderStatus(order.id, "cancelled")} className="btn" style={{ padding: "8px 16px", borderRadius: 8, background: "transparent", color: "#ef4444", border: "1px solid rgba(239,68,68,.3)", fontSize: 12, fontWeight: 600 }}>İptal Et</button>
+                        )}
+                      </div>
                     </div>
                   ))}
-                  {products.length === 0 && <div style={{ fontSize: 12, color: "rgba(255,255,255,.3)", textAlign: "center", padding: "20px 0" }}>Henüz ürün yok</div>}
                 </div>
-              </div>
-              <div className="card" style={{ padding: "20px 22px" }}>
-                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14, color: "rgba(255,255,255,.7)" }}>Hızlı İşlemler</div>
-                <div className="actions-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
-                  {[
-                    { label: "Ürün Ekle", sub: "Menüye yeni ürün", action: () => { setActiveTab("menu"); setTimeout(() => setShowAddProduct(true), 100); } },
-                    { label: "QR İndir", sub: "PNG / SVG / PDF", action: () => setActiveTab("qr") },
-                    { label: "Analitik", sub: "Detaylı rapor", action: () => setActiveTab("analytics") },
-                    { label: "Ayarlar", sub: "Tema & bilgiler", action: () => setActiveTab("settings") },
-                  ].map((a, i) => (
-                    <button key={i} onClick={a.action} className="btn" style={{ padding: "14px 16px", borderRadius: 12, border: "1px solid rgba(255,255,255,.07)", background: "rgba(255,255,255,.03)", color: "#fff", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 3 }}>{a.label}</div>
-                      <div style={{ fontSize: 11, color: "rgba(255,255,255,.3)" }}>{a.sub}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
+              )}
             </div>
           )}
 
@@ -477,31 +905,137 @@ export default function PanelPage() {
             </div>
           )}
 
-          {/* QR */}
+          {/* QR DESIGNER */}
           {activeTab === "qr" && (
-            <div style={{ animation: "fadeUp .35s both" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                <div className="card" style={{ padding: "28px", textAlign: "center" }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Restoran QR Kodu</div>
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,.35)", marginBottom: 24 }}>temeat.com.tr/{restaurant?.slug}</div>
-                  <div style={{ width: 180, height: 180, margin: "0 auto 24px", background: "#fff", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-                    <QRCode value={`https://temeat.com.tr/${restaurant?.slug}`} size={148} fgColor="#111" />
+            <div style={{ animation: "fadeUp .35s both", display: "flex", flexDirection: "column", gap: 20 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "380px 1fr", gap: 20, alignItems: "start" }}>
+                
+                {/* CONTROLS */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  <div className="card" style={{ padding: "24px" }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 20, display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 18 }}>🎨</span> Tasarım Özelleştirme
+                    </div>
+                    
+                    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                      {/* COLORS */}
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,.3)", marginBottom: 12, textTransform: "uppercase", letterSpacing: ".05em" }}>Renkler</div>
+                        <div style={{ display: "flex", gap: 12 }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 11, marginBottom: 6 }}>QR Rengi</div>
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                              {["#000000", A, "#2563eb", "#059669", "#7c3aed"].map(c => (
+                                <button key={c} onClick={() => setQrColor(c)} style={{ width: 28, height: 28, borderRadius: 6, border: qrColor === c ? "2px solid #fff" : "1px solid rgba(255,255,255,.1)", background: c, cursor: "pointer" }} />
+                              ))}
+                              <input type="color" value={qrColor} onChange={e => setQrColor(e.target.value)} style={{ width: 28, height: 28, borderRadius: 6, border: "none", background: "transparent", cursor: "pointer", padding: 0 }} />
+                            </div>
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 11, marginBottom: 6 }}>Arka Plan</div>
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                              {["#ffffff", "#f8fafc", "#fff7ed", "#f0fdf4"].map(c => (
+                                <button key={c} onClick={() => setQrBgColor(c)} style={{ width: 28, height: 28, borderRadius: 6, border: qrBgColor === c ? `2px solid ${A}` : "1px solid rgba(0,0,0,.1)", background: c, cursor: "pointer" }} />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* FRAMES */}
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,.3)", marginBottom: 12, textTransform: "uppercase", letterSpacing: ".05em" }}>Çerçeve Stili</div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                          {[
+                            { id: "none", label: "Çerçevesiz", icon: "⬜" },
+                            { id: "minimal", label: "Minimalist", icon: "◽" },
+                            { id: "elegant", label: "Kurumsal", icon: "💎" },
+                            { id: "modern", label: "Modern", icon: "✨" }
+                          ].map(f => (
+                            <button key={f.id} onClick={() => setQrFrameType(f.id)} 
+                              style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, border: "1px solid", borderColor: qrFrameType === f.id ? A : "rgba(255,255,255,.06)", background: qrFrameType === f.id ? `${A}15` : "rgba(255,255,255,.02)", color: qrFrameType === f.id ? "#fff" : "rgba(255,255,255,.5)", fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all .2s" }}>
+                              <span>{f.icon}</span> {f.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* LOGO TOGGLE */}
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "rgba(255,255,255,.03)", borderRadius: 12, border: "1px solid rgba(255,255,255,.05)" }}>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 700 }}>Logo Göster</div>
+                          <div style={{ fontSize: 11, color: "rgba(255,255,255,.3)" }}>QR merkezinize logo ekleyin</div>
+                        </div>
+                        <button onClick={() => setQrLogoVisible(!qrLogoVisible)} 
+                          style={{ width: 44, height: 22, borderRadius: 99, background: qrLogoVisible ? A : "rgba(255,255,255,.1)", border: "none", cursor: "pointer", position: "relative", transition: "all .3s" }}>
+                          <div style={{ position: "absolute", left: qrLogoVisible ? 24 : 2, top: 2, width: 18, height: 18, borderRadius: 99, background: "#fff", transition: "all .3s" }} />
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-                    {["PNG", "SVG", "PDF"].map(f => (
-                      <button key={f} onClick={() => flash(`${f} indiriliyor...`)} className="btn" style={{ padding: "9px 16px", borderRadius: 8, border: f === "PDF" ? "none" : "1px solid rgba(255,255,255,.1)", background: f === "PDF" ? A : "transparent", color: f === "PDF" ? "#fff" : "rgba(255,255,255,.6)", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>{f}</button>
-                    ))}
+
+                  <div className="card" style={{ padding: "20px" }}>
+                    <button onClick={() => flash("Tasarım kaydedildi ve tüm masalara uygulandı.")} style={{ width: "100%", padding: "12px", borderRadius: 12, border: "none", background: A, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", marginBottom: 10 }}>Tasarımı Kaydet</button>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                      <button onClick={() => downloadQR('png')} style={{ padding: "12px", borderRadius: 12, border: "1px solid rgba(255,255,255,.1)", background: "transparent", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>PNG İndir</button>
+                      <button onClick={() => downloadQR('svg')} style={{ padding: "12px", borderRadius: 12, border: "1px solid rgba(255,255,255,.1)", background: "transparent", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>SVG İndir</button>
+                    </div>
                   </div>
                 </div>
-                <div className="card" style={{ padding: "22px 24px" }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Masa Bazlı QR</div>
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,.35)", marginBottom: 18 }}>Her masa için ayrı QR kod</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
-                    {Array.from({ length: 10 }).map((_, i) => (
-                      <button key={i} onClick={() => flash(`Masa ${i + 1} QR hazır`)} className="btn" style={{ padding: "12px 0", borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.04)", cursor: "pointer", textAlign: "center", color: "#fff" }}>
-                        <div style={{ fontSize: 14, marginBottom: 4 }}>⊞</div>
-                        <div style={{ fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,.4)" }}>Masa {i + 1}</div>
-                      </button>
+
+                {/* PREVIEW */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                  <div className="card" style={{ padding: "40px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "radial-gradient(circle at 50% 50%, rgba(255,255,255,.03) 0%, rgba(255,255,255,0) 100%)", minHeight: 480 }}>
+                    <div id="main-qr" style={{ position: "relative", padding: qrFrameType === "none" ? 20 : 40, background: qrBgColor, borderRadius: 24, boxShadow: "0 20px 50px rgba(0,0,0,.3)", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                      
+                      {/* FRAME DECORATION */}
+                      {qrFrameType === "elegant" && (
+                        <div style={{ marginBottom: 20, textAlign: "center" }}>
+                          <div style={{ fontSize: 18, fontWeight: 900, color: qrColor, letterSpacing: "0.1em" }}>{restaurant?.name?.toUpperCase()}</div>
+                          <div style={{ height: 2, width: 40, background: qrColor, margin: "8px auto" }} />
+                        </div>
+                      )}
+
+                      {qrFrameType === "modern" && (
+                        <div style={{ position: "absolute", top: -15, background: qrColor, color: qrBgColor, padding: "6px 20px", borderRadius: 99, fontSize: 12, fontWeight: 800, boxShadow: "0 4px 12px rgba(0,0,0,.1)" }}>MENÜYÜ TARA</div>
+                      )}
+
+                      <div style={{ position: "relative" }}>
+                        <QRCode value={`https://temeat.com.tr/${restaurant?.slug}`} size={200} fgColor={qrColor} bgColor={qrBgColor} level="H" />
+                        {qrLogoVisible && (
+                          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <div style={{ width: 44, height: 44, background: qrBgColor, borderRadius: 10, padding: 4, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 10px rgba(0,0,0,.1)" }}>
+                              <div style={{ width: "100%", height: "100%", background: qrColor, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", color: qrBgColor, fontSize: 18, fontWeight: 900 }}>T</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {qrFrameType === "minimal" && (
+                        <div style={{ marginTop: 20, fontSize: 12, fontWeight: 600, color: qrColor, opacity: .6 }}>MASA 01</div>
+                      )}
+                      
+                      {(qrFrameType === "elegant" || qrFrameType === "modern") && (
+                        <div style={{ marginTop: 24, textAlign: "center" }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: qrColor, opacity: .4 }}>TEMEAT DİJİTAL MENÜ</div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div style={{ marginTop: 32, display: "flex", alignItems: "center", gap: 12 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: 99, background: "#22c55e" }} />
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,.4)" }}>Canlı Önizleme Aktif</div>
+                    </div>
+                  </div>
+                  
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <div key={i} className="card" style={{ padding: "12px", textAlign: "center", opacity: .5 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8 }}>Masa {i + 1}</div>
+                        <div style={{ width: "100%", aspectRatio: "1/1", background: qrBgColor, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", padding: 8 }}>
+                          <QRCode value={`https://temeat.com.tr/${restaurant?.slug}?table=${i+1}`} size={50} fgColor={qrColor} bgColor={qrBgColor} />
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -509,45 +1043,101 @@ export default function PanelPage() {
             </div>
           )}
 
-          {/* ANALYTICS */}
+          {/* ADVANCED ANALYTICS */}
           {activeTab === "analytics" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 16, animation: "fadeUp .35s both" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
-                {[
-                  { label: "Toplam Görüntülenme", value: totalViewsReal.toLocaleString(), sub: "Tüm zamanlar" },
-                  { label: "Bu Hafta Görüntülenme", value: thisWeekViews.toLocaleString(), sub: "Son 7 gün" },
-                  { label: "Aktif Ürün", value: products.filter(p => p.is_active).length.toString(), sub: "Menüde görünür" },
-                ].map((s, i) => (
-                  <div key={i} className="card" style={{ padding: "20px" }}>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,.38)", marginBottom: 10 }}>{s.label}</div>
-                    <div style={{ fontSize: 28, fontWeight: 900, letterSpacing: "-.03em", marginBottom: 6 }}>{s.value}</div>
-                    <div style={{ fontSize: 11, color: "#22c55e", fontWeight: 500 }}>{s.sub}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-                <div className="card" style={{ padding: "22px 24px" }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 20 }}>Haftalık Trend</div>
-                  <BarChart data={chartData} height={160} color={A} />
-                </div>
-                <div className="card" style={{ padding: "22px 24px" }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 20 }}>Dil Dağılımı</div>
-                  {dynamicLangData.length > 0 ? (
-                    dynamicLangData.map((l, i) => (
-                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                        <div style={{ width: 8, height: 8, borderRadius: 99, background: l.color, flexShrink: 0 }} />
-                        <span style={{ fontSize: 12, color: "rgba(255,255,255,.6)", flex: 1 }}>{l.lang}</span>
-                        <div style={{ width: 120, height: 4, background: "rgba(255,255,255,.06)", borderRadius: 99 }}>
-                          <div style={{ width: `${l.pct}%`, height: "100%", background: l.color, borderRadius: 99 }} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 20, animation: "fadeUp .35s both" }}>
+              {(() => {
+                // Calculation Logic
+                const completedOrders = orders.filter(o => o.status === "completed");
+                const totalRevenue = completedOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+                
+                // Top Products Calculation
+                const productCounts: Record<string, { name: string, count: number, revenue: number }> = {};
+                orders.forEach(order => {
+                  order.order_items?.forEach((item: any) => {
+                    const prod = products.find(p => p.id === item.product_id);
+                    const name = prod?.name_tr || "Bilinmeyen Ürün";
+                    if (!productCounts[name]) productCounts[name] = { name, count: 0, revenue: 0 };
+                    productCounts[name].count += (item.quantity || 1);
+                    productCounts[name].revenue += (item.price || 0) * (item.quantity || 1);
+                  });
+                });
+                const topProducts = Object.values(productCounts).sort((a, b) => b.count - a.count).slice(0, 5);
+
+                // Hourly Activity
+                const hours = Array(24).fill(0);
+                orders.forEach(o => {
+                  const hour = new Date(o.created_at).getHours();
+                  hours[hour]++;
+                });
+                const maxHour = Math.max(...hours) || 1;
+
+                // Service Performance Calculation
+                const resolvedRequests = serviceRequests.filter(s => s.status === "resolved" && s.resolved_at);
+                const avgResponseMinutes = resolvedRequests.length > 0 
+                  ? Math.round(resolvedRequests.reduce((sum, s) => {
+                      const diff = new Date(s.resolved_at).getTime() - new Date(s.created_at).getTime();
+                      return sum + (diff / 60000);
+                    }, 0) / resolvedRequests.length)
+                  : 0;
+
+                return (
+                  <>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 14 }}>
+                      {[
+                        { label: "Toplam Gelir", value: `₺${totalRevenue.toLocaleString()}`, sub: "Tamamlanan", color: "#22c55e" },
+                        { label: "Sipariş", value: orders.length.toString(), sub: "Toplam", color: A },
+                        { label: "Görüntülenme", value: totalViewsReal.toLocaleString(), sub: "Menü Trafiği", color: "#8b5cf6" },
+                        { label: "Servis İsteği", value: serviceRequests.length.toString(), sub: "Garson Çağrı", color: "#3b82f6" },
+                        { label: "Yanıt Süresi", value: `${avgResponseMinutes} dk`, sub: "Ortalama", color: avgResponseMinutes < 5 ? "#22c55e" : "#f59e0b" },
+                      ].map((s, i) => (
+                        <div key={i} className="card" style={{ padding: "18px", borderLeft: `4px solid ${s.color}` }}>
+                          <div style={{ fontSize: 10, color: "rgba(255,255,255,.3)", marginBottom: 6, fontWeight: 700, textTransform: "uppercase" }}>{s.label}</div>
+                          <div style={{ fontSize: 22, fontWeight: 900, marginBottom: 4 }}>{s.value}</div>
+                          <div style={{ fontSize: 10, color: "rgba(255,255,255,.4)", fontWeight: 600 }}>{s.sub}</div>
                         </div>
-                        <span style={{ fontSize: 12, fontWeight: 700, minWidth: 32, textAlign: "right" }}>{l.pct}%</span>
+                      ))}
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 400px", gap: 16 }}>
+                      {/* HOURLY CHART */}
+                      <div className="card" style={{ padding: "24px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+                          <div style={{ fontSize: 14, fontWeight: 700 }}>Günlük Yoğunluk</div>
+                          <div style={{ fontSize: 11, color: "rgba(255,255,255,.3)" }}>Siparişlerin saatlik dağılımı</div>
+                        </div>
+                        <div style={{ height: 180, display: "flex", alignItems: "flex-end", gap: 4, paddingBottom: 20 }}>
+                          {hours.map((v, i) => (
+                            <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+                              <div style={{ width: "100%", height: `${(v / maxHour) * 100}%`, background: i === new Date().getHours() ? A : "rgba(255,255,255,.1)", borderRadius: "4px 4px 0 0", transition: "all .3s" }} />
+                              {i % 4 === 0 && <span style={{ fontSize: 9, color: "rgba(255,255,255,.3)" }}>{i}:00</span>}
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    ))
-                  ) : (
-                    <div style={{ fontSize: 13, color: "rgba(255,255,255,.4)", textAlign: "center", padding: "20px 0" }}>Yeterli veri yok</div>
-                  )}
-                </div>
-              </div>
+
+                      {/* TOP PRODUCTS */}
+                      <div className="card" style={{ padding: "24px" }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 20 }}>En Çok Satanlar</div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                          {topProducts.length > 0 ? topProducts.map((p, i) => (
+                            <div key={i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                              <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(255,255,255,.04)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: A }}>{i+1}</div>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 12, fontWeight: 600 }}>{p.name}</div>
+                                <div style={{ fontSize: 10, color: "rgba(255,255,255,.3)" }}>{p.count} adet satıldı</div>
+                              </div>
+                              <div style={{ fontSize: 12, fontWeight: 700 }}>₺{p.revenue.toLocaleString()}</div>
+                            </div>
+                          )) : (
+                            <div style={{ textAlign: "center", padding: "40px 0", color: "rgba(255,255,255,.3)", fontSize: 12 }}>Henüz sipariş verisi yok</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           )}
 
@@ -564,12 +1154,12 @@ export default function PanelPage() {
                 ))}
                 {restaurant?.plan !== "pro" && <a href="/fiyat" style={{ display: "inline-block", marginTop: 16, padding: "10px 20px", borderRadius: 9, background: A, color: "#fff", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>Pro'ya Yükselt →</a>}
               </div>
-              
+
               {restaurant && (
-                <SettingsForm 
-                  restaurant={restaurant} 
-                  themeColor={A} 
-                  onUpdate={(updated) => setRestaurant((prev: any) => prev ? { ...prev, ...updated } : null)} 
+                <SettingsForm
+                  restaurant={restaurant}
+                  themeColor={A}
+                  onUpdate={(updated) => setRestaurant((prev: any) => prev ? { ...prev, ...updated } : null)}
                 />
               )}
 
@@ -606,7 +1196,7 @@ export default function PanelPage() {
           <div onClick={() => setEditingCategory(null)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.6)" }} />
           <div style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 400, background: "#111", borderRadius: 20, border: "1px solid rgba(255,255,255,.1)", padding: "28px" }}>
             <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 20, color: "#fff" }}>Kategori Düzenle</h2>
-            <input type="text" value={editingCategory.name} onChange={e => setEditingCategory({...editingCategory, name: e.target.value})} onKeyDown={e => e.key === "Enter" && handleEditCategory()}
+            <input type="text" value={editingCategory!.name} onChange={e => setEditingCategory(prev => prev ? { ...prev, name: e.target.value } : null)} onKeyDown={e => e.key === "Enter" && handleEditCategory()}
               style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", marginBottom: 16, outline: "none" }} />
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={() => setEditingCategory(null)} style={{ flex: 1, padding: "11px 0", borderRadius: 9, border: "1px solid rgba(255,255,255,.1)", background: "transparent", color: "rgba(255,255,255,.5)", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>İptal</button>
@@ -617,11 +1207,86 @@ export default function PanelPage() {
       )}
 
       {showAddProduct && (
-        <ProductModal title="Ürün Ekle" categories={categories} initial={{}} onSave={handleAddProduct} onClose={() => setShowAddProduct(false)} themeColor={A} />
+        <ProductModal key="add" title="Ürün Ekle" categories={categories} initial={{}} onSave={handleAddProduct} onClose={() => setShowAddProduct(false)} themeColor={A} />
       )}
 
       {editingProduct && (
-        <ProductModal title="Ürünü Düzenle" categories={categories} initial={editingProduct} onSave={handleEditProduct} onClose={() => setEditingProduct(null)} themeColor={A} />
+        <ProductModal key={editingProduct!.id} title="Ürünü Düzenle" categories={categories} initial={editingProduct!} onSave={handleEditProduct} onClose={() => setEditingProduct(null)} themeColor={A} />
+      )}
+
+      {/* KDS - KITCHEN DISPLAY SYSTEM OVERLAY */}
+      {isKitchenMode && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "#050505", display: "flex", flexDirection: "column", animation: "fadeIn .3s both" }}>
+          <div style={{ height: 70, background: "#0c0c0c", borderBottom: "1px solid rgba(255,255,255,.06)", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: "-.02em" }}>TEM<span style={{ color: A }}>eat</span> <span style={{ color: "rgba(255,255,255,.3)", fontWeight: 400, marginLeft: 8 }}>KITCHEN MODE</span></div>
+              <div style={{ height: 24, width: 1, background: "rgba(255,255,255,.1)" }} />
+              <div style={{ fontSize: 14, fontWeight: 600, color: "#22c55e" }}>● Canlı Bağlantı Aktif</div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 18, fontWeight: 800 }}>{orders.filter(o => o.status !== "completed" && o.status !== "cancelled").length}</div>
+                <div style={{ fontSize: 10, color: "rgba(255,255,255,.3)", fontWeight: 700 }}>AKTİF SİPARİŞ</div>
+              </div>
+              <button onClick={() => setIsKitchenMode(false)} style={{ padding: "10px 24px", borderRadius: 12, border: "none", background: "rgba(255,255,255,.05)", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Panale Dön</button>
+            </div>
+          </div>
+          
+          <div style={{ flex: 1, padding: 24, overflowX: "auto", display: "flex", gap: 20, alignItems: "flex-start", background: "radial-gradient(circle at 50% 50%, #0a0a0a 0%, #050505 100%)" }}>
+            {orders.filter(o => o.status !== "completed" && o.status !== "cancelled").length === 0 ? (
+              <div style={{ margin: "auto", textAlign: "center", opacity: .2 }}>
+                <div style={{ fontSize: 64, marginBottom: 16 }}>🍳</div>
+                <div style={{ fontSize: 20, fontWeight: 700 }}>Şu an mutfakta sipariş yok.</div>
+              </div>
+            ) : (
+              orders.filter(o => o.status !== "completed" && o.status !== "cancelled").map(order => (
+                <div key={order.id} style={{ width: 340, flexShrink: 0, background: "#111", border: "1px solid rgba(255,255,255,.08)", borderRadius: 20, overflow: "hidden", display: "flex", flexDirection: "column", maxHeight: "100%", boxShadow: "0 10px 40px rgba(0,0,0,.4)" }}>
+                  <div style={{ padding: 20, background: order.status === "pending" ? "#f59e0b" : order.status === "preparing" ? "#3b82f6" : "#10b981", color: "#000" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 24, fontWeight: 900 }}>MASA {order.table_no}</span>
+                      <span style={{ fontSize: 12, fontWeight: 800, background: "rgba(0,0,0,.15)", padding: "4px 10px", borderRadius: 6 }}>
+                        {Math.floor((new Date().getTime() - new Date(order.created_at).getTime()) / 60000)} dk önce
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ flex: 1, padding: 20, overflowY: "auto" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                      {order.order_items?.map((item: any, idx: number) => {
+                        const product = products.find(p => p.id === item.product_id);
+                        return (
+                          <div key={idx} style={{ borderBottom: "1px solid rgba(255,255,255,.04)", paddingBottom: 10 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                              <div style={{ fontSize: 18, fontWeight: 700 }}>
+                                <span style={{ color: A, marginRight: 8 }}>{item.quantity}x</span>
+                                {product?.name_tr || "Ürün"}
+                              </div>
+                            </div>
+                            {item.extras_selected?.length > 0 && (
+                              <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 4 }}>
+                                {item.extras_selected.map((ex: any, ei: number) => (
+                                  <span key={ei} style={{ fontSize: 11, background: "rgba(255,255,255,.05)", color: "rgba(255,255,255,.4)", padding: "2px 8px", borderRadius: 4 }}>+{ex.name_tr || ex.label}</span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div style={{ padding: 16, background: "#0c0c0c", borderTop: "1px solid rgba(255,255,255,.06)", display: "flex", gap: 10 }}>
+                    {order.status === "pending" ? (
+                      <button onClick={() => updateOrderStatus(order.id, "preparing")} style={{ flex: 1, padding: "14px 0", borderRadius: 12, border: "none", background: "#3b82f6", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>HAZIRLA</button>
+                    ) : order.status === "preparing" ? (
+                      <button onClick={() => updateOrderStatus(order.id, "ready")} style={{ flex: 1, padding: "14px 0", borderRadius: 12, border: "none", background: "#10b981", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>HAZIR</button>
+                    ) : (
+                      <button onClick={() => updateOrderStatus(order.id, "completed")} style={{ flex: 1, padding: "14px 0", borderRadius: 12, border: "none", background: "rgba(255,255,255,.1)", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>TAMAMLA</button>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

@@ -14,6 +14,7 @@ export function SettingsForm({
   const [wifi, setWifi] = useState(restaurant.wifi_password || "");
   const [hours, setHours] = useState(restaurant.hours || "");
   const [color, setColor] = useState(restaurant.theme_color || "#D4470A");
+  const [showReviews, setShowReviews] = useState(restaurant.show_reviews ?? true);
   
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(restaurant.logo_url || null);
@@ -54,7 +55,8 @@ export function SettingsForm({
       wifi_password: wifi.trim() || null,
       hours: hours.trim() || null,
       theme_color: color,
-      logo_url: finalLogoUrl
+      logo_url: finalLogoUrl,
+      show_reviews: showReviews
     };
 
     const { error: updateError } = await supabase
@@ -119,6 +121,16 @@ export function SettingsForm({
             <input type="text" value={color} onChange={e => setColor(e.target.value)} placeholder="#D4470A"
               style={{ flex: 1, padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
           </div>
+        </div>
+
+        <div style={{ padding: "12px 14px", borderRadius: 10, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.05)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700 }}>Müşteri Yorumları</div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,.3)", marginTop: 2 }}>Menüde yorumları ve puanları göster</div>
+          </div>
+          <button onClick={() => setShowReviews(!showReviews)} style={{ width: 44, height: 24, borderRadius: 99, background: showReviews ? themeColor : "rgba(255,255,255,.1)", position: "relative", border: "none", cursor: "pointer", transition: "all .2s" }}>
+            <div style={{ position: "absolute", top: 3, left: showReviews ? 23 : 3, width: 18, height: 18, borderRadius: 99, background: "#fff", transition: "all .2s" }} />
+          </button>
         </div>
 
         {error && <div style={{ padding: "10px 14px", borderRadius: 9, background: "rgba(239,68,68,.1)", border: "1px solid rgba(239,68,68,.2)", fontSize: 13, color: "#f87171" }}>{error}</div>}

@@ -44,5 +44,55 @@ export type Restaurant = {
   wifi_password: string | null;
   theme_color: string | null;
   logo_url: string | null;
+  show_reviews?: boolean;
   created_at: string;
+};
+
+export type ProductExtra = {
+  id: string;
+  product_id: string;
+  name_tr: string;
+  price: number;
+  is_multiple: boolean;
+};
+
+export type Order = {
+  id: string;
+  restaurant_id: string;
+  table_no: string;
+  status: "pending" | "preparing" | "ready" | "completed" | "cancelled";
+  total_amount: number;
+  created_at: string;
+};
+
+export type OrderItem = {
+  id: string;
+  order_id: string;
+  product_id: string;
+  quantity: number;
+  price: number;
+  extras_selected: any;
+};
+
+export type Review = {
+  id: string;
+  restaurant_id: string;
+  product_id?: string | null;
+  customer_name: string;
+  rating: number;
+  comment: string | null;
+  status: "pending" | "approved" | "rejected";
+  owner_reply: string | null;
+  is_public: boolean;
+  created_at: string;
+};
+
+export type ServiceRequest = {
+  id: string;
+  restaurant_id: string;
+  table_no: string;
+  type: string;
+  status: "pending" | "resolved";
+  created_at: string;
+  resolved_at: string | null;
 };

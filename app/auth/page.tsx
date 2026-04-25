@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
+import Logo from "../components/Logo";
 
 const A = "#D4470A";
 
@@ -68,17 +69,8 @@ export default function AuthPage() {
       <div style={{ width: "100%", maxWidth: 420, animation: "fadeUp .5s cubic-bezier(.25,1,.5,1) both", position: "relative", zIndex: 1 }}>
 
         {/* Logo */}
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <a href="/" style={{ display: "inline-flex", alignItems: "center", gap: 9, textDecoration: "none" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              <div style={{ width: 18, height: 2.5, background: A, borderRadius: 99 }} />
-              <div style={{ width: 12, height: 2.5, background: A, borderRadius: 99 }} />
-              <div style={{ width: 18, height: 2.5, background: A, borderRadius: 99 }} />
-            </div>
-            <span style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-.03em", color: "#fff" }}>
-              TEM<span style={{ color: A }}>eat</span>
-            </span>
-          </a>
+        <div style={{ textAlign: "center", marginBottom: 32, display: "flex", justifyContent: "center" }}>
+          <Logo withTagline={false} />
         </div>
 
         {/* Card */}

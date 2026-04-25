@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { Restaurant, Category, Product } from "@/types";
 import { DEFAULT_COLOR, LANGS, LangKey } from "@/lib/constants";
@@ -8,6 +8,10 @@ import { getProductName, getProductDesc } from "@/lib/utils";
 import { ProductCard } from "@/components/menu/ProductCard";
 import { CartModal } from "@/components/menu/CartModal";
 import { DetailModal } from "@/components/menu/DetailModal";
+import Logo from "../components/Logo";
+import { ReviewModal } from "@/components/menu/ReviewModal";
+import { SkeletonCard } from "@/components/menu/SkeletonCard";
+import { Review } from "@/types";
 
 export default function MenuPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = React.use(params);
@@ -19,11 +23,18 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
   const [lang, setLang] = useState<LangKey>("tr");
   const [dark, setDark] = useState(false);
   const [activeCat, setActiveCat] = useState<string | null>(null);
-  const [cart, setCart] = useState<Record<string, number>>({});
+  const [cart, setCart] = useState<{ id: string; product: Product; qty: number; extras: any[] }[]>([]);
   const [showCart, setShowCart] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [detailProduct, setDetailProduct] = useState<Product | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  const catRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const catNavRef = useRef<HTMLDivElement>(null);
+  const isAutoScrolling = useRef(false);
 
   const A = restaurant?.theme_color || DEFAULT_COLOR;
   const o = dark ? 1 : 0;
@@ -37,6 +48,123 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
 
   useEffect(() => { loadMenu(); }, [slug]);
 
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    if (loading || categories.length === 0 || search) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (isAutoScrolling.current) return;
+        
+        const visibleEntry = entries.find((e) => e.isIntersecting);
+        if (visibleEntry) {
+          const catId = visibleEntry.target.id.replace("cat-", "");
+          setActiveCat(catId);
+          
+          // Center active cat in nav
+          const navItem = document.getElementById(`nav-${catId}`);
+          if (navItem && catNavRef.current) {
+            const container = catNavRef.current;
+            const scrollLeft = navItem.offsetLeft - container.offsetWidth / 2 + navItem.offsetWidth / 2;
+            container.scrollTo({ left: scrollLeft, behavior: "smooth" });
+          }
+        }
+      },
+      { threshold: 0.1, rootMargin: "-100px 0px -70% 0px" }
+    );
+
+    categories.forEach((cat) => {
+      const el = document.getElementById(`cat-${cat.id}`);
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, [loading, categories, search]);
+
+  const flash = useCallback((msg: string) => {
+    setToast(msg); setTimeout(() => setToast(null), 1400);
+  }, []);
+
+  const addToCart = (p: Product, extras: any[] = []) => {
+    setCart(prev => {
+      const existing = prev.find(item => item.product.id === p.id && JSON.stringify(item.extras) === JSON.stringify(extras));
+      if (existing) {
+        return prev.map(item => item === existing ? { ...item, qty: item.qty + 1 } : item);
+      }
+      return [...prev, { id: Math.random().toString(36).substr(2, 9), product: p, qty: 1, extras }];
+    });
+    flash(getProductName(p, lang) + " ✓");
+  };
+  const removeFromCart = (cartItemId: string) => {
+    setCart(prev => prev.map(item => item.id === cartItemId ? { ...item, qty: item.qty - 1 } : item).filter(item => item.qty > 0));
+  };
+
+  const cartItems = cart;
+  const cartTotal = cartItems.reduce((s, item) => { 
+    const p = item.product;
+    const price = p.discount_pct ? Math.round(p.price * (1 - p.discount_pct / 100)) : p.price; 
+    const extrasPrice = item.extras.reduce((sum, ex) => sum + ex.price, 0);
+    return s + (price + extrasPrice) * item.qty; 
+  }, 0);
+  const cartCount = cartItems.reduce((s, item) => s + item.qty, 0);
+
+  const handleCheckout = async (tableNo: string) => {
+    if (!restaurant) return;
+    const { data: order, error: orderError } = await supabase.from("orders").insert({
+      restaurant_id: restaurant.id,
+      table_no: tableNo,
+      status: "pending",
+      total_amount: cartTotal
+    }).select().single();
+    
+    if (orderError) { 
+      console.error("Sipariş hatası (orders):", orderError);
+      flash("Sipariş alınamadı: " + orderError.message); 
+      return; 
+    }
+    
+    const orderItems = cart.map(item => ({
+      order_id: order.id,
+      product_id: item.product.id,
+      quantity: item.qty,
+      price: item.product.price,
+      extras_selected: item.extras
+    }));
+    
+    const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
+    if (itemsError) {
+      console.error("Sipariş kalemleri hatası:", itemsError);
+      flash("Sipariş kalemleri kaydedilemedi.");
+      return;
+    }
+    
+    setCart([]);
+    setShowCart(false);
+    flash("Siparişiniz mutfağa iletildi! 🚀");
+  };
+  const filteredProducts = search
+    ? products.filter(p => getProductName(p, lang).toLowerCase().includes(search.toLowerCase()))
+    : activeCat ? products.filter(p => p.category_id === activeCat) : products;
+  const chefPicks = products.filter(p => p.is_chef_pick);
+
+  const scrollToCat = (catId: string) => {
+    isAutoScrolling.current = true;
+    setActiveCat(catId);
+    const el = document.getElementById(`cat-${catId}`);
+    if (el) {
+      const headerOffset = 130;
+      const elementPosition = el.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+      window.scrollTo({ top: offsetPosition, behavior: "smooth" });
+    }
+    setTimeout(() => { isAutoScrolling.current = false; }, 800);
+  };
+
   const loadMenu = async () => {
     const { data: rest } = await supabase.from("restaurants").select("*").eq("slug", slug).single();
     if (!rest) { setNotFound(true); setLoading(false); return; }
@@ -48,43 +176,36 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
     setCategories(cats || []);
     setProducts(prods || []);
     if (cats && cats.length > 0) setActiveCat(cats[0].id);
+
+    if (rest.show_reviews !== false) {
+      const { data: revs } = await supabase.from("reviews").select("*").eq("restaurant_id", rest.id).eq("status", "approved").order("created_at", { ascending: false });
+      setReviews(revs || []);
+    }
+
     setLoading(false);
   };
 
-  const flash = useCallback((msg: string) => {
-    setToast(msg); setTimeout(() => setToast(null), 1400);
-  }, []);
-
-  const addToCart = (p: Product) => {
-    setCart(prev => ({ ...prev, [p.id]: (prev[p.id] || 0) + 1 }));
-    flash(getProductName(p, lang) + " ✓");
-  };
-  const removeFromCart = (p: Product) => {
-    setCart(prev => { const n = { ...prev }; if (n[p.id] > 1) n[p.id]--; else delete n[p.id]; return n; });
-  };
-
-  const cartItems = Object.entries(cart).map(([id, qty]) => ({ product: products.find(p => p.id === id)!, qty })).filter(x => x.product);
-  const cartTotal = cartItems.reduce((s, { product: p, qty }) => { const price = p.discount_pct ? Math.round(p.price * (1 - p.discount_pct / 100)) : p.price; return s + price * qty; }, 0);
-  const cartCount = Object.values(cart).reduce((s, v) => s + v, 0);
-  const filteredProducts = search
-    ? products.filter(p => getProductName(p, lang).toLowerCase().includes(search.toLowerCase()))
-    : activeCat ? products.filter(p => p.category_id === activeCat) : products;
-  const chefPicks = products.filter(p => p.is_chef_pick);
-
   if (loading) return (
-    <div style={{ minHeight: "100vh", background: "#FAFAFA", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', system-ui, sans-serif" }}>
-      <div style={{ textAlign: "center" }}>
-        <div style={{ width: 36, height: 36, borderRadius: 99, border: `3px solid ${DEFAULT_COLOR}`, borderTopColor: "transparent", animation: "spin 1s linear infinite", margin: "0 auto 12px" }} />
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-        <div style={{ fontSize: 13, color: "#999" }}>Menü yükleniyor...</div>
+    <div style={{ minHeight: "100vh", background: "#050505", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 24 }}>
+      <div style={{ animation: "pulse 2s infinite ease-in-out" }}>
+        <Logo size="lg" withTagline={false} />
       </div>
+      <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase" }}>Lütfen bekleyin...</div>
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.7; transform: scale(0.98); }
+        }
+      `}</style>
     </div>
   );
 
   if (notFound) return (
     <div style={{ minHeight: "100vh", background: "#FAFAFA", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', system-ui, sans-serif", textAlign: "center", padding: 20 }}>
       <div>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>🍽</div>
+        <div style={{ marginBottom: 24, display: "flex", justifyContent: "center", color: "#ddd" }}>
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        </div>
         <h1 style={{ fontSize: 20, fontWeight: 700, color: "#111", marginBottom: 8 }}>Menü bulunamadı</h1>
         <p style={{ fontSize: 14, color: "#999" }}>Bu adrese ait bir restoran yok.</p>
       </div>
@@ -123,11 +244,19 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
       )}
 
       {/* Header */}
-      <div style={{ background: dark ? "#1E1E1E" : "#fff", borderBottom: `1px solid ${C.bd}`, position: "sticky", top: 0, zIndex: 30 }}>
+      <div style={{ background: dark ? "#1E1E1E" : "#fff", borderBottom: `1px solid ${C.bd}`, position: "sticky", top: 0, zIndex: 30, boxShadow: scrolled ? "0 4px 12px rgba(0,0,0,.05)" : "none", transition: "all .3s" }}>
         <div className="header-inner">
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: "-.02em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{restaurant!.name}</div>
-            {restaurant!.hours && <div style={{ fontSize: 10, color: "#22c55e", fontWeight: 600, marginTop: 1 }}>● {restaurant!.hours}</div>}
+            <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: "-.02em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{restaurant!.name}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 1 }}>
+              {restaurant!.hours && <div style={{ fontSize: 10, color: "#22c55e", fontWeight: 600 }}>● {restaurant!.hours}</div>}
+              {restaurant!.show_reviews !== false && reviews.length > 0 && (
+                <div style={{ fontSize: 10, fontWeight: 700, color: "#f59e0b", display: "flex", alignItems: "center", gap: 3 }}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+                  { (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1) }
+                </div>
+              )}
+            </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0, marginLeft: 8 }}>
             <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: `1px solid ${C.bd}` }}>
@@ -196,63 +325,109 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
           </div>
         </div>
 
-        {/* Kategoriler */}
+        {/* Kategoriler - Sticky */}
         {!search && categories.length > 0 && (
-          <div className="cat-section">
-            <div className="cat-bar" style={{ display: "flex", borderBottom: `1px solid ${C.bd}`, overflowX: "auto", overflowY: "hidden", WebkitOverflowScrolling: "touch", msOverflowStyle: "none", scrollbarWidth: "none" } as React.CSSProperties}>
+          <div className="cat-section" style={{ position: "sticky", top: 60, zIndex: 25, background: C.bg, borderBottom: `1px solid ${C.bd}` }}>
+            <div className="cat-bar" ref={catNavRef} style={{ display: "flex", overflowX: "auto", overflowY: "hidden", WebkitOverflowScrolling: "touch", msOverflowStyle: "none", scrollbarWidth: "none" } as React.CSSProperties}>
               {categories.map(cat => (
-                <button key={cat.id} onClick={() => setActiveCat(cat.id)}
-                  style={{ flexShrink: 0, padding: "10px 16px", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: activeCat === cat.id ? 700 : 400, color: activeCat === cat.id ? C.tx : C.mt, background: "transparent", borderBottom: activeCat === cat.id ? `2px solid ${C.tx}` : "2px solid transparent", whiteSpace: "nowrap" }}>
+                <button key={cat.id} id={`nav-${cat.id}`} onClick={() => scrollToCat(cat.id)}
+                  style={{ flexShrink: 0, padding: "14px 16px", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: activeCat === cat.id ? 700 : 500, color: activeCat === cat.id ? A : C.mt, background: "transparent", borderBottom: activeCat === cat.id ? `3px solid ${A}` : "3px solid transparent", transition: "all .2s" }}>
                   {cat.name}
-                  <span style={{ fontSize: 10, color: C.dm, marginLeft: 4 }}>({products.filter(p => p.category_id === cat.id).length})</span>
                 </button>
               ))}
             </div>
           </div>
         )}
 
-        {/* Ürünler — responsive grid */}
-        {filteredProducts.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "60px 20px", color: C.mt }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>🍽</div>
-            <div style={{ fontSize: 14, fontWeight: 600 }}>{search ? "Ürün bulunamadı" : "Bu kategoride ürün yok"}</div>
-          </div>
-        ) : (
-          <div className="product-grid" style={{ paddingBottom: cartCount > 0 ? 100 : 40 }}>
-            {filteredProducts.map((p, i) => (
-              <ProductCard
-                key={p.id}
-                p={p}
-                i={i}
-                lang={lang}
-                cartQty={cart[p.id] || 0}
-                themeColor={A}
-                C={C}
-                onAdd={addToCart}
-                onRemove={removeFromCart}
-                onClick={setDetailProduct}
-              />
-            ))}
+        {/* Ürün Listesi */}
+        <div style={{ paddingBottom: cartCount > 0 ? 120 : 40 }}>
+          {search ? (
+            <div className="product-grid">
+              {filteredProducts.map((p, i) => (
+                <ProductCard key={p.id} p={p} i={i} lang={lang} cartQty={cart.filter(item => item.product.id === p.id).reduce((s, item) => s + item.qty, 0)} themeColor={A} C={C} onAdd={addToCart} onRemove={(prod) => { const item = cart.find(c => c.product.id === prod.id); if (item) removeFromCart(item.id); }} onClick={setDetailProduct} />
+              ))}
+              {filteredProducts.length === 0 && (
+                <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "60px 20px", color: C.mt }}>Sonuç bulunamadı</div>
+              )}
+            </div>
+          ) : (
+            categories.map((cat) => (
+              <div key={cat.id} id={`cat-${cat.id}`} style={{ paddingBottom: 20 }}>
+                <div style={{ padding: "20px 20px 8px", fontSize: 17, fontWeight: 800, letterSpacing: "-.02em", color: C.tx }}>{cat.name}</div>
+                <div className="product-grid" style={{ paddingTop: 0 }}>
+                  {products.filter(p => p.category_id === cat.id).map((p, i) => (
+                    <ProductCard key={p.id} p={p} i={i} lang={lang} cartQty={cart.filter(item => item.product.id === p.id).reduce((s, item) => s + item.qty, 0)} themeColor={A} C={C} onAdd={addToCart} onRemove={(prod) => { const item = cart.find(c => c.product.id === prod.id); if (item) removeFromCart(item.id); }} onClick={setDetailProduct} />
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Yorumlar Bölümü */}
+        {restaurant!.show_reviews !== false && (
+          <div style={{ padding: "30px 20px", borderTop: `1px solid ${C.bd}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 800 }}>Yorumlar</h3>
+                <p style={{ fontSize: 12, color: C.mt }}>Müşterilerimizin deneyimleri</p>
+              </div>
+              <button onClick={() => setShowReviewModal(true)} style={{ padding: "8px 16px", borderRadius: 10, border: `1.5px solid ${A}`, background: "transparent", color: A, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                Yorum Yap
+              </button>
+            </div>
+
+            {reviews.length === 0 ? (
+              <div style={{ padding: "40px 0", textAlign: "center", background: C.cd, borderRadius: 16, border: `1px dashed ${C.bd}` }}>
+                <div style={{ fontSize: 24, marginBottom: 8 }}>✍️</div>
+                <div style={{ fontSize: 13, color: C.mt }}>Henüz yorum yapılmamış. İlk yorumu siz yapın!</div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {reviews.slice(0, 5).map(rev => (
+                  <div key={rev.id} style={{ padding: 16, borderRadius: 16, background: C.cd, border: `1px solid ${C.bd}` }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700 }}>{rev.customer_name}</div>
+                      <div style={{ color: "#f59e0b", fontSize: 12 }}>{"⭐".repeat(rev.rating)}</div>
+                    </div>
+                    {rev.comment && <div style={{ fontSize: 13, color: C.s2, lineHeight: "1.5" }}>{rev.comment}</div>}
+                    {rev.owner_reply && (
+                      <div style={{ marginTop: 10, padding: "10px 12px", background: `${A}08`, borderLeft: `2px solid ${A}`, borderRadius: 8 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: A, marginBottom: 4 }}>İşletme Cevabı:</div>
+                        <div style={{ fontSize: 12, color: C.s2 }}>{rev.owner_reply}</div>
+                      </div>
+                    )}
+                    <div style={{ fontSize: 10, color: C.dm, marginTop: 8 }}>{new Date(rev.created_at).toLocaleDateString("tr-TR")}</div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
         {/* Footer */}
         <div style={{ textAlign: "center", padding: "20px 0 80px", borderTop: `1px solid ${C.bd}` }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              <div style={{ width: 12, height: 1.5, background: A, borderRadius: 99 }} />
-              <div style={{ width: 8, height: 1.5, background: A, borderRadius: 99 }} />
-              <div style={{ width: 12, height: 1.5, background: A, borderRadius: 99 }} />
-            </div>
-            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".04em" }}><span style={{ color: C.dm }}>TEM</span><span style={{ color: A }}>EAT</span></span>
-          </div>
+          <Logo size="sm" light={!dark} />
         </div>
       </div>
 
       {/* Bottom bar */}
       <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, borderTop: `1px solid ${C.bd}`, background: C.bg, zIndex: 20 }}>
         <div className="bottom-bar-inner">
-          <button onClick={() => flash("Garson çağrıldı!")}
+          <button onClick={async () => {
+            const tableNo = new URLSearchParams(window.location.search).get("table") || "—";
+            const { error } = await supabase.from("service_requests").insert({
+              restaurant_id: restaurant!.id,
+              table_no: tableNo,
+              type: "waiter",
+              status: "pending"
+            });
+            if (!error) {
+              flash("Garson çağrıldı! Bekleyiniz... 🔔");
+            } else {
+              flash("İstek iletilemedi, lütfen tekrar deneyin.");
+            }
+          }}
             style={{ flex: 1, padding: 11, borderRadius: 11, border: `1.5px solid ${C.bd}`, background: C.cd, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", color: C.tx }}>
             {isRTL ? "اطلب النادل" : "Garson Çağır"}
           </button>
@@ -291,6 +466,19 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
           onClose={() => setShowCart(false)}
           onAdd={addToCart}
           onRemove={removeFromCart}
+          onCheckout={handleCheckout}
+        />
+      )}
+
+      {/* Yorum Yap Modal */}
+      {showReviewModal && restaurant && (
+        <ReviewModal
+          restaurant={restaurant}
+          onClose={() => setShowReviewModal(false)}
+          onSuccess={() => {
+            flash("Yorumunuz için teşekkürler! ❤️");
+            loadMenu();
+          }}
         />
       )}
     </div>

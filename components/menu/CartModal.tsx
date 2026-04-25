@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Product, Restaurant } from "@/types";
 import { LangKey } from "@/lib/constants";
 import { getProductName } from "@/lib/utils";
@@ -14,9 +14,10 @@ export function CartModal({
   isRTL,
   onClose,
   onAdd,
-  onRemove
+  onRemove,
+  onCheckout
 }: {
-  cartItems: { product: Product; qty: number }[];
+  cartItems: { id: string; product: Product; qty: number; extras: any[] }[];
   cartTotal: number;
   restaurant: Restaurant | null;
   lang: LangKey;
@@ -24,9 +25,19 @@ export function CartModal({
   C: any;
   isRTL: boolean;
   onClose: () => void;
-  onAdd: (p: Product) => void;
-  onRemove: (p: Product) => void;
+  onAdd: (p: Product, extras?: any[]) => void;
+  onRemove: (id: string) => void;
+  onCheckout: (tableNo: string) => Promise<void>;
 }) {
+  const [tableNo, setTableNo] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleCheckout = async () => {
+    if (!tableNo.trim()) return;
+    setIsSubmitting(true);
+    await onCheckout(tableNo.trim());
+    setIsSubmitting(false);
+  };
   return (
     <ModalWrapper onClick={onClose} zIndex={40}>
       <div className="modal-inner" onClick={e => e.stopPropagation()}
@@ -37,21 +48,29 @@ export function CartModal({
           <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${C.bd}`, background: "transparent", cursor: "pointer", fontSize: 14, color: C.mt }}>×</button>
         </div>
         <div style={{ flex: 1, overflowY: "auto", padding: "0 20px" }}>
-          {cartItems.map(({ product: p, qty }) => {
-            const price = p.discount_pct ? Math.round(p.price * (1 - p.discount_pct / 100)) : p.price;
+          {cartItems.map(({ id, product: p, qty, extras }) => {
+            const basePrice = p.discount_pct ? Math.round(p.price * (1 - p.discount_pct / 100)) : p.price;
+            const extrasPrice = extras.reduce((s, e) => s + e.price, 0);
+            const price = basePrice + extrasPrice;
+            
             return (
-              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 0", borderBottom: `1px solid ${C.bd}` }}>
+              <div key={id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 0", borderBottom: `1px solid ${C.bd}` }}>
                 <div style={{ width: 44, height: 44, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: `${themeColor}15` }}>
                   {p.image_url && <img src={p.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 600, fontSize: 13 }}>{getProductName(p, lang)}</div>
-                  <div style={{ fontSize: 12, color: C.mt }}>₺{price}</div>
+                  {extras.length > 0 && (
+                    <div style={{ fontSize: 11, color: C.mt, marginTop: 2 }}>
+                      {extras.map(e => e.name_tr).join(", ")}
+                    </div>
+                  )}
+                  <div style={{ fontSize: 12, color: C.mt, marginTop: 2 }}>₺{price}</div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", border: `1px solid ${C.bd}`, borderRadius: 8 }}>
-                  <button onClick={() => onRemove(p)} style={{ width: 28, height: 28, border: "none", background: "none", cursor: "pointer", color: C.mt, fontSize: 14 }}>−</button>
+                  <button onClick={() => onRemove(id)} style={{ width: 28, height: 28, border: "none", background: "none", cursor: "pointer", color: C.mt, fontSize: 14 }}>−</button>
                   <span style={{ minWidth: 16, textAlign: "center", fontSize: 12, fontWeight: 700 }}>{qty}</span>
-                  <button onClick={() => onAdd(p)} style={{ width: 28, height: 28, border: "none", background: "none", cursor: "pointer", color: C.mt, fontSize: 14 }}>+</button>
+                  <button onClick={() => onAdd(p, extras)} style={{ width: 28, height: 28, border: "none", background: "none", cursor: "pointer", color: C.mt, fontSize: 14 }}>+</button>
                 </div>
                 <span style={{ fontWeight: 700, fontSize: 14, minWidth: 52, textAlign: "right" }}>₺{price * qty}</span>
               </div>
@@ -60,21 +79,23 @@ export function CartModal({
         </div>
         <div style={{ padding: "14px 20px 28px", borderTop: `1px solid ${C.bd}` }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14 }}>
-            <span style={{ fontSize: 13, color: C.mt }}>Toplam</span>
+            <span style={{ fontSize: 13, color: C.mt }}>Toplam Tutar</span>
             <span style={{ fontSize: 24, fontWeight: 800 }}>₺{cartTotal}</span>
           </div>
-          <button onClick={() => {
-            if (!restaurant) return;
-            let msg = `🍽️ *${restaurant.name}*\n\n`;
-            cartItems.forEach(({ product: p, qty }) => {
-              const price = p.discount_pct ? Math.round(p.price * (1 - p.discount_pct / 100)) : p.price;
-              msg += `${qty}× ${getProductName(p, lang)}  ₺${price * qty}\n`;
-            });
-            msg += `\nToplam: ₺${cartTotal}`;
-            window.open(`https://wa.me/${restaurant.phone?.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`, "_blank");
-          }} style={{ width: "100%", padding: 14, borderRadius: 12, border: "none", background: "#25D366", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-            WhatsApp ile Sipariş Ver
-          </button>
+          
+          <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+            <input 
+              type="text" 
+              value={tableNo} 
+              onChange={e => setTableNo(e.target.value)} 
+              placeholder="Masa No (Örn: 12)" 
+              style={{ width: "100px", padding: "14px", borderRadius: 12, border: `1.5px solid ${C.bd}`, background: C.cd, color: C.tx, fontSize: 14, fontWeight: 600, outline: "none", textAlign: "center" }} 
+            />
+            <button onClick={handleCheckout} disabled={!tableNo.trim() || isSubmitting} 
+              style={{ flex: 1, padding: 14, borderRadius: 12, border: "none", background: themeColor, color: "#fff", fontSize: 14, fontWeight: 700, cursor: (!tableNo.trim() || isSubmitting) ? "not-allowed" : "pointer", opacity: (!tableNo.trim() || isSubmitting) ? 0.6 : 1, fontFamily: "inherit" }}>
+              {isSubmitting ? "Gönderiliyor..." : "Siparişi Gönder"}
+            </button>
+          </div>
         </div>
       </div>
     </ModalWrapper>

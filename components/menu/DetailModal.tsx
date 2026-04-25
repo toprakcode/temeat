@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Product } from "@/types";
 import { ALLERGENS, LangKey } from "@/lib/constants";
 import { getProductName, getProductDesc } from "@/lib/utils";
 import { ModalWrapper } from "./ModalWrapper";
+import { supabase } from "@/lib/supabase";
 
 export function DetailModal({
   product,
@@ -17,8 +18,29 @@ export function DetailModal({
   themeColor: string;
   C: any;
   onClose: () => void;
-  onAdd: (p: Product) => void;
+  onAdd: (p: Product, extras?: any[]) => void;
 }) {
+  const [extras, setExtras] = useState<any[]>([]);
+  const [selectedExtras, setSelectedExtras] = useState<any[]>([]);
+
+  useEffect(() => {
+    supabase.from("product_extras").select("*").eq("product_id", product.id).then(({ data }) => {
+      if (data) setExtras(data);
+    });
+  }, [product.id]);
+
+  const toggleExtra = (extra: any) => {
+    setSelectedExtras(prev => 
+      prev.find(e => e.id === extra.id) 
+        ? prev.filter(e => e.id !== extra.id) 
+        : [...prev, extra]
+    );
+  };
+
+  const discountPrice = product.discount_pct > 0 ? Math.round(product.price * (1 - product.discount_pct / 100)) : product.price;
+  const extrasTotal = selectedExtras.reduce((sum, e) => sum + e.price, 0);
+  const totalPrice = discountPrice + extrasTotal;
+
   return (
     <ModalWrapper onClick={onClose} zIndex={60}>
       <div className="modal-inner" onClick={e => e.stopPropagation()}
@@ -59,17 +81,41 @@ export function DetailModal({
               </div>
             </div>
           )}
+
+          {extras.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.tx, marginBottom: 8 }}>Ekstralar & Seçenekler</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {extras.map(ex => {
+                  const isSelected = selectedExtras.some(e => e.id === ex.id);
+                  return (
+                    <button key={ex.id} onClick={() => toggleExtra(ex)}
+                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 14px", borderRadius: 10, border: `1.5px solid ${isSelected ? themeColor : C.bd}`, background: isSelected ? `${themeColor}10` : C.cd, cursor: "pointer", fontFamily: "inherit", transition: "all .2s" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ width: 18, height: 18, borderRadius: 6, border: `2px solid ${isSelected ? themeColor : C.dm}`, background: isSelected ? themeColor : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          {isSelected && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                        </div>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: C.tx }}>{ex.name_tr}</span>
+                      </div>
+                      {ex.price > 0 && <span style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>+₺{ex.price}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 16, borderTop: `1px solid ${C.bd}` }}>
             <div>
-              {product.discount_pct > 0
+              {product.discount_pct > 0 || extrasTotal > 0
                 ? <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                    <span style={{ fontSize: 26, fontWeight: 800 }}>₺{Math.round(product.price * (1 - product.discount_pct / 100))}</span>
+                    <span style={{ fontSize: 26, fontWeight: 800 }}>₺{totalPrice}</span>
                     <span style={{ fontSize: 14, color: C.dm, textDecoration: "line-through" }}>₺{product.price}</span>
                   </div>
-                : <span style={{ fontSize: 26, fontWeight: 800 }}>₺{product.price}</span>
+                : <span style={{ fontSize: 26, fontWeight: 800 }}>₺{totalPrice}</span>
               }
             </div>
-            <button onClick={() => { onAdd(product); onClose(); }}
+            <button onClick={() => { onAdd(product, selectedExtras); onClose(); }}
               style={{ padding: "12px 28px", borderRadius: 12, border: "none", background: themeColor, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: `0 4px 16px ${themeColor}30` }}>
               + Sepete Ekle
             </button>
