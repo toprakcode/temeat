@@ -404,10 +404,13 @@ export default function PanelPage() {
   };
 
   const updateOrderStatus = async (id: string, status: string) => {
-    const { error } = await supabase.from("orders").update({ status }).eq("id", id);
+    const { data, error } = await supabase.from("orders").update({ status }).eq("id", id).select();
+    
     if (error) {
       console.error("Sipariş güncelleme hatası:", error);
-      alert("Sipariş güncellenemedi: " + error.message);
+      flash("Sipariş güncellenemedi.");
+    } else if (!data || data.length === 0) {
+      flash("Güncelleme yetkisi yok.");
     } else {
       setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
       flash("Sipariş durumu güncellendi.");

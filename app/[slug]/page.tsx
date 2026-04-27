@@ -527,16 +527,15 @@ function MenuContent({ params }: { params: Promise<{ slug: string }> }) {
                       type: "payment",
                       status: "pending"
                     };
-                    // EĞER tablo yoksa hata vermemesi için güvenli gönderim
                     if (m.id) payload.payment_method = m.id;
 
-                    const { data, error } = await supabase.from("service_requests").insert(payload).select();
+                    const { error } = await supabase.from("service_requests").insert(payload);
                     
                     setShowPaymentSelect(false);
                     if (!error) {
                       flash(lang === "tr" ? "Hesap istendi!" : "Bill requested!");
                     } else {
-                      alert("Hata: " + error.message);
+                      flash("Hata!");
                     }
                   }}
                   style={{ width: "100%", padding: "16px", borderRadius: 16, border: `1.5px solid ${C.bd}`, background: C.cd, color: C.tx, fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontFamily: "inherit" }}
