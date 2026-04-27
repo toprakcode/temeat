@@ -404,9 +404,14 @@ export default function PanelPage() {
   };
 
   const updateOrderStatus = async (id: string, status: string) => {
-    await supabase.from("orders").update({ status }).eq("id", id);
-    setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
-    flash("Sipariş durumu güncellendi.");
+    const { error } = await supabase.from("orders").update({ status }).eq("id", id);
+    if (error) {
+      console.error("Sipariş güncelleme hatası:", error);
+      alert("Sipariş güncellenemedi: " + error.message);
+    } else {
+      setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
+      flash("Sipariş durumu güncellendi.");
+    }
   };
 
   const downloadQR = (format: 'png' | 'svg') => {
@@ -1103,7 +1108,7 @@ export default function PanelPage() {
                       )}
 
                       <div style={{ position: "relative" }}>
-                        <QRCode value={`https://temeat.com.tr/${restaurant?.slug}`} size={200} fgColor={qrColor} bgColor={qrBgColor} level="H" />
+                        <QRCode value={`${typeof window !== 'undefined' ? window.location.origin : 'https://temeat.com.tr'}/${restaurant?.slug}`} size={200} fgColor={qrColor} bgColor={qrBgColor} level="H" />
                         {qrLogoVisible && (
                           <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
                             <div style={{ width: 44, height: 44, background: qrBgColor, borderRadius: 10, padding: 4, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 10px rgba(0,0,0,.1)" }}>
@@ -1135,7 +1140,7 @@ export default function PanelPage() {
                       <div key={i} className="card" style={{ padding: "12px", textAlign: "center", opacity: .5 }}>
                         <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8 }}>Masa {i + 1}</div>
                         <div style={{ width: "100%", aspectRatio: "1/1", background: qrBgColor, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", padding: 8 }}>
-                          <QRCode value={`https://temeat.com.tr/${restaurant?.slug}?table=${i+1}`} size={50} fgColor={qrColor} bgColor={qrBgColor} />
+                          <QRCode value={`${typeof window !== 'undefined' ? window.location.origin : 'https://temeat.com.tr'}/${restaurant?.slug}?table=${i+1}`} size={50} fgColor={qrColor} bgColor={qrBgColor} />
                         </div>
                       </div>
                     ))}

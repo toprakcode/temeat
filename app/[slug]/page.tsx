@@ -9,12 +9,21 @@ import { ProductCard } from "@/components/menu/ProductCard";
 import { CartModal } from "@/components/menu/CartModal";
 import { DetailModal } from "@/components/menu/DetailModal";
 import { useSearchParams, useRouter } from "next/navigation";
+import { Suspense } from "react";
 import Logo from "../components/Logo";
 import { ReviewModal } from "@/components/menu/ReviewModal";
 import { SkeletonCard } from "@/components/menu/SkeletonCard";
 import { Review } from "@/types";
 
-export default function MenuPage({ params }: { params: Promise<{ slug: string }> }) {
+export default function MenuPage(props: any) {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#050505", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>Yükleniyor...</div>}>
+      <MenuContent {...props} />
+    </Suspense>
+  );
+}
+
+function MenuContent({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = React.use(params);
   const searchParams = useSearchParams();
   const tableNo = searchParams.get("table") || "";
