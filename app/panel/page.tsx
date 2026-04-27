@@ -449,18 +449,33 @@ export default function PanelPage() {
         canvas.height = 1000;
         if (ctx) {
           ctx.fillStyle = qrBgColor;
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(img, 100, 100, 800, 800);
+          ctx.fillRect(0, 0, 1000, 1000);
+          ctx.drawImage(img, 50, 50, 900, 900);
           const pngUrl = canvas.toDataURL("image/png");
-          const link = document.createElement("a");
-          link.href = pngUrl;
-          link.download = `${restaurant?.slug}-qr.png`;
-          link.click();
+          const downloadLink = document.createElement("a");
+          downloadLink.href = pngUrl;
+          downloadLink.download = `${restaurant?.slug}-qr.png`;
+          downloadLink.click();
         }
       };
       img.src = url;
     }
     flash(`QR (${format.toUpperCase()}) indiriliyor...`);
+  };
+
+  const downloadTableQR = (index: number) => {
+    const svg = document.getElementById(`table-qr-${index}`)?.querySelector("svg");
+    if (!svg) return;
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(svgBlob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${restaurant?.slug}-masa-${index + 1}.svg`;
+    link.click();
+  };
+  const downloadReviewExcel = () => {
+    flash("Excel indirme özelliği yakında aktif olacak.");
   };
 
   const handleReviewStatus = async (id: string, status: string) => {
@@ -616,8 +631,12 @@ export default function PanelPage() {
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
               <span className="sidebar-label">Çıkış</span>
             </button>
-            <div style={{ width: 36, height: 36, borderRadius: 99, background: A, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, boxShadow: `0 0 0 2px ${A}40` }}>
-              {(user?.email?.[0] || "U").toUpperCase()}
+            <div style={{ width: 36, height: 36, borderRadius: 99, background: A, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, boxShadow: `0 0 0 2px ${A}40`, overflow: "hidden" }}>
+              {restaurant?.logo_url ? (
+                <img src={restaurant.logo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                (user?.email?.[0] || "U").toUpperCase()
+              )}
             </div>
           </div>
         </header>
@@ -1163,8 +1182,12 @@ export default function PanelPage() {
                         <QRCode value={`${typeof window !== 'undefined' ? window.location.origin : 'https://temeat.com.tr'}/${restaurant?.slug}`} size={200} fgColor={qrColor} bgColor={qrBgColor} level="H" />
                         {qrLogoVisible && (
                           <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <div style={{ width: 44, height: 44, background: qrBgColor, borderRadius: 10, padding: 4, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 10px rgba(0,0,0,.1)" }}>
-                              <div style={{ width: "100%", height: "100%", background: qrColor, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", color: qrBgColor, fontSize: 18, fontWeight: 900 }}>T</div>
+                            <div style={{ width: 44, height: 44, background: qrBgColor, borderRadius: 10, padding: 4, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 10px rgba(0,0,0,.1)", overflow: "hidden" }}>
+                              {restaurant?.logo_url ? (
+                                <img src={restaurant.logo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 4 }} />
+                              ) : (
+                                <div style={{ width: "100%", height: "100%", background: qrColor, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", color: qrBgColor, fontSize: 18, fontWeight: 900 }}>T</div>
+                              )}
                             </div>
                           </div>
                         )}
@@ -1198,9 +1221,20 @@ export default function PanelPage() {
                       return Array.from({ length: count }).map((_, i) => (
                         <div key={i} className="card" style={{ padding: "12px", textAlign: "center" }}>
                           <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8 }}>{count === 1 ? "Genel Menü" : `Masa ${i + 1}`}</div>
-                          <div style={{ width: "100%", aspectRatio: "1/1", background: qrBgColor, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", padding: 8 }}>
-                            <QRCode value={`${typeof window !== 'undefined' ? window.location.origin : 'https://temeat.com.tr'}/${restaurant?.slug}${count === 1 ? "" : `?table=${i+1}`}`} size={50} fgColor={qrColor} bgColor={qrBgColor} />
+                          <div id={`table-qr-${i}`} style={{ width: "100%", aspectRatio: "1/1", background: qrBgColor, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", padding: 8, position: "relative" }}>
+                            <QRCode value={`${typeof window !== 'undefined' ? window.location.origin : 'https://temeat.com.tr'}/${restaurant?.slug}${count === 1 ? "" : `?table=${i+1}`}`} size={50} fgColor={qrColor} bgColor={qrBgColor} level="H" />
+                            {qrLogoVisible && restaurant?.logo_url && (
+                              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                <div style={{ width: 14, height: 14, background: qrBgColor, borderRadius: 3, padding: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                  <img src={restaurant.logo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 1 }} />
+                                </div>
+                              </div>
+                            )}
                           </div>
+                          <button onClick={() => downloadTableQR(i)} style={{ width: "100%", marginTop: 8, padding: "6px", borderRadius: 6, border: "1px solid rgba(255,255,255,.05)", background: "rgba(255,255,255,.03)", color: "rgba(255,255,255,.4)", fontSize: 10, fontWeight: 700, cursor: "pointer", transition: "all .2s" }}
+                            onMouseEnter={e => { e.currentTarget.style.color = "#fff"; e.currentTarget.style.background = "rgba(255,255,255,.08)"; }}>
+                            İndir (SVG)
+                          </button>
                         </div>
                       ));
                     })()}

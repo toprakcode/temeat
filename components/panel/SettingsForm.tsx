@@ -24,6 +24,7 @@ export function SettingsForm({
   const [acceptOrders, setAcceptOrders] = useState(restaurant.accept_orders ?? true);
   const [orderSound, setOrderSound] = useState(restaurant.order_sound ?? true);
   const [tableCount, setTableCount] = useState(restaurant.table_count || 10);
+  const [manualHours, setManualHours] = useState(false);
   
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(restaurant.logo_url || null);
@@ -138,29 +139,52 @@ export function SettingsForm({
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 8 }}>Açılış Saati</label>
-              <div style={{ display: "flex", gap: 4 }}>
-                <select value={openHour} onChange={e => setOpenHour(e.target.value)} style={{ flex: 1, padding: "10px", borderRadius: 8, background: "#1a1a1a", border: "1px solid rgba(255,255,255,.1)", color: "#fff", outline: "none" }}>
-                  {hoursList.map(h => <option key={h} value={h}>{h}</option>)}
-                </select>
-                <div style={{ display: "flex", alignItems: "center", color: "rgba(255,255,255,.3)" }}>:</div>
-                <select value={openMin} onChange={e => setOpenMin(e.target.value)} style={{ flex: 1, padding: "10px", borderRadius: 8, background: "#1a1a1a", border: "1px solid rgba(255,255,255,.1)", color: "#fff", outline: "none" }}>
-                  {minsList.map(m => <option key={m} value={m}>{m}</option>)}
-                </select>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                {!manualHours ? (
+                  <>
+                    <select value={openHour} onChange={e => setOpenHour(e.target.value)} style={{ flex: 1, padding: "10px", borderRadius: 8, background: "#1a1a1a", border: "1px solid rgba(255,255,255,.1)", color: "#fff", outline: "none", fontSize: 13 }}>
+                      {hoursList.map(h => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                    <div style={{ color: "rgba(255,255,255,.3)" }}>:</div>
+                    <select value={openMin} onChange={e => setOpenMin(e.target.value)} style={{ flex: 1, padding: "10px", borderRadius: 8, background: "#1a1a1a", border: "1px solid rgba(255,255,255,.1)", color: "#fff", outline: "none", fontSize: 13 }}>
+                      {minsList.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  </>
+                ) : (
+                  <>
+                    <input value={openHour} onChange={e => setOpenHour(e.target.value.slice(0,2))} placeholder="09" style={{ width: 64, padding: "10px", borderRadius: 8, background: "#1a1a1a", border: "1px solid rgba(255,255,255,.1)", color: "#fff", outline: "none", textAlign: "center", fontSize: 14 }} />
+                    <div style={{ color: "rgba(255,255,255,.3)" }}>:</div>
+                    <input value={openMin} onChange={e => setOpenMin(e.target.value.slice(0,2))} placeholder="00" style={{ width: 64, padding: "10px", borderRadius: 8, background: "#1a1a1a", border: "1px solid rgba(255,255,255,.1)", color: "#fff", outline: "none", textAlign: "center", fontSize: 14 }} />
+                  </>
+                )}
               </div>
             </div>
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 8 }}>Kapanış Saati</label>
-              <div style={{ display: "flex", gap: 4 }}>
-                <select value={closeHour} onChange={e => setCloseHour(e.target.value)} style={{ flex: 1, padding: "10px", borderRadius: 8, background: "#1a1a1a", border: "1px solid rgba(255,255,255,.1)", color: "#fff", outline: "none" }}>
-                  {hoursList.map(h => <option key={h} value={h}>{h}</option>)}
-                </select>
-                <div style={{ display: "flex", alignItems: "center", color: "rgba(255,255,255,.3)" }}>:</div>
-                <select value={closeMin} onChange={e => setCloseMin(e.target.value)} style={{ flex: 1, padding: "10px", borderRadius: 8, background: "#1a1a1a", border: "1px solid rgba(255,255,255,.1)", color: "#fff", outline: "none" }}>
-                  {minsList.map(m => <option key={m} value={m}>{m}</option>)}
-                </select>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                {!manualHours ? (
+                  <>
+                    <select value={closeHour} onChange={e => setCloseHour(e.target.value)} style={{ flex: 1, padding: "10px", borderRadius: 8, background: "#1a1a1a", border: "1px solid rgba(255,255,255,.1)", color: "#fff", outline: "none", fontSize: 13 }}>
+                      {hoursList.map(h => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                    <div style={{ color: "rgba(255,255,255,.3)" }}>:</div>
+                    <select value={closeMin} onChange={e => setCloseMin(e.target.value)} style={{ flex: 1, padding: "10px", borderRadius: 8, background: "#1a1a1a", border: "1px solid rgba(255,255,255,.1)", color: "#fff", outline: "none", fontSize: 13 }}>
+                      {minsList.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  </>
+                ) : (
+                  <>
+                    <input value={closeHour} onChange={e => setCloseHour(e.target.value.slice(0,2))} placeholder="22" style={{ width: 64, padding: "10px", borderRadius: 8, background: "#1a1a1a", border: "1px solid rgba(255,255,255,.1)", color: "#fff", outline: "none", textAlign: "center", fontSize: 14 }} />
+                    <div style={{ color: "rgba(255,255,255,.3)" }}>:</div>
+                    <input value={closeMin} onChange={e => setCloseMin(e.target.value.slice(0,2))} placeholder="00" style={{ width: 64, padding: "10px", borderRadius: 8, background: "#1a1a1a", border: "1px solid rgba(255,255,255,.1)", color: "#fff", outline: "none", textAlign: "center", fontSize: 14 }} />
+                  </>
+                )}
               </div>
             </div>
           </div>
+          <button onClick={() => setManualHours(!manualHours)} style={{ background: "none", border: "none", padding: 0, color: themeColor, fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
+            {manualHours ? " Seçerek Belirle" : " Elle Saat Gir"}
+          </button>
         </div>
 
         <div>

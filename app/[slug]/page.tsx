@@ -276,8 +276,10 @@ function MenuContent({ params }: { params: Promise<{ slug: string }> }) {
       <div style={{ background: dark ? "#1E1E1E" : "#fff", borderBottom: `1px solid ${C.bd}`, position: "sticky", top: 0, zIndex: 30, boxShadow: scrolled ? "0 4px 12px rgba(0,0,0,.05)" : "none", transition: "all .3s" }}>
         <div className="header-inner">
           <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 10 }}>
-            {hasFeature("white_label") && restaurant!.logo_url && (
+            {hasFeature("white_label") && restaurant!.logo_url ? (
               <img src={restaurant!.logo_url} alt="" style={{ width: 32, height: 32, borderRadius: 8, objectFit: "cover" }} />
+            ) : (
+              <Logo size="sm" withTagline={false} isDark={dark} />
             )}
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: "-.02em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{restaurant!.name}</div>
@@ -446,7 +448,7 @@ function MenuContent({ params }: { params: Promise<{ slug: string }> }) {
         {/* Footer */}
         {!hasFeature("white_label") && (
           <div style={{ textAlign: "center", padding: "20px 0 80px", borderTop: `1px solid ${C.bd}` }}>
-            <Logo size="sm" light={!dark} />
+            <Logo size="sm" isDark={dark} />
           </div>
         )}
         {hasFeature("white_label") && <div style={{ height: 80 }} />}

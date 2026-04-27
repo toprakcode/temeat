@@ -323,28 +323,66 @@ export default function FiyatPage() {
 
           {/* Compare Table */}
           {showCompare && (
-            <div className="compare-table" style={{ marginTop: 24, borderRadius: 16, border: "1px solid rgba(255,255,255,.08)", overflow: "hidden", animation: "fadeUp .3s both" }}>
-              {/* Header */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 120px 120px 140px", background: "rgba(255,255,255,.04)", borderBottom: "1px solid rgba(255,255,255,.08)", padding: "14px 24px" }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,.3)", letterSpacing: ".08em" }}>ÖZELLİK</span>
-                {["Ücretsiz", "Başlangıç", "Profesyonel"].map((h, i) => (
-                  <span key={i} style={{ fontSize: 11, fontWeight: 700, color: i === 2 ? A : "rgba(255,255,255,.4)", textAlign: "center" }}>{h}</span>
-                ))}
-              </div>
-              {compareRows.map((row, i) => (
-                <div key={i} className="compare-row" style={{ display: "grid", gridTemplateColumns: "1fr 120px 120px 140px", padding: "11px 24px", borderBottom: i < compareRows.length - 1 ? "1px solid rgba(255,255,255,.05)" : "none", background: i % 2 ? "rgba(255,255,255,.015)" : "transparent" }}>
-                  <span style={{ fontSize: 12, color: "rgba(255,255,255,.6)", fontWeight: 500 }}>{row[0]}</span>
-                  {[row[1], row[2], row[3]].map((val, j) => (
-                    <span key={j} style={{ fontSize: 12, textAlign: "center", fontWeight: val === true ? 700 : val === false ? 400 : 600, color: val === false ? "rgba(255,255,255,.15)" : val === true ? "#22c55e" : j === 2 ? "#fff" : "rgba(255,255,255,.6)" }}>
-                      {val === true ? (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline-block" }}><polyline points="20 6 9 17 4 12"/></svg>
-                      ) : val === false ? (
-                        <span style={{ color: "rgba(255,255,255,.15)" }}>—</span>
-                      ) : val}
-                    </span>
+            <div style={{ marginTop: 32, animation: "fadeUp .4s both" }}>
+              <div style={{ 
+                overflowX: "auto", 
+                borderRadius: 20, 
+                border: "1px solid rgba(255,255,255,.08)", 
+                background: "rgba(255,255,255,.02)",
+                WebkitOverflowScrolling: "touch"
+              }}>
+                <div style={{ minWidth: 800 }}>
+                  {/* Table Header */}
+                  <div style={{ 
+                    display: "grid", 
+                    gridTemplateColumns: "240px repeat(4, 1fr)", 
+                    background: "rgba(255,255,255,.03)", 
+                    borderBottom: "1px solid rgba(255,255,255,.08)", 
+                    padding: "20px 24px" 
+                  }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,.25)", letterSpacing: ".1em" }}>ÖZELLİK</span>
+                    {plans.map((p, i) => (
+                      <div key={p.id} style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: p.highlight ? A : "#fff", marginBottom: 2 }}>{p.name}</div>
+                        <div style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,.3)" }}>{p.price === 0 ? "Ücretsiz" : `₺${p.price}/ay`}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Table Body */}
+                  {compareRows.map((row, i) => (
+                    <div key={i} className="compare-row" style={{ 
+                      display: "grid", 
+                      gridTemplateColumns: "240px repeat(4, 1fr)", 
+                      padding: "16px 24px", 
+                      borderBottom: i < compareRows.length - 1 ? "1px solid rgba(255,255,255,.04)" : "none",
+                      background: i % 2 ? "rgba(255,255,255,.01)" : "transparent",
+                      transition: "background .2s"
+                    }}>
+                      <span style={{ fontSize: 13, color: "rgba(255,255,255,.7)", fontWeight: 500 }}>{row[0]}</span>
+                      {row.slice(1).map((val, j) => (
+                        <div key={j} style={{ textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          {typeof val === 'boolean' ? (
+                            val ? (
+                              <div style={{ width: 22, height: 22, borderRadius: 99, background: "rgba(34,197,94,.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                              </div>
+                            ) : (
+                              <span style={{ color: "rgba(255,255,255,.1)", fontSize: 14 }}>—</span>
+                            )
+                          ) : (
+                            <span style={{ 
+                              fontSize: 13, 
+                              fontWeight: 600, 
+                              color: j === 2 ? "#fff" : "rgba(255,255,255,.5)" 
+                            }}>{val}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   ))}
                 </div>
-              ))}
+              </div>
             </div>
           )}
         </div>
