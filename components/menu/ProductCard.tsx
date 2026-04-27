@@ -32,7 +32,9 @@ export function ProductCard({
         <div style={{ position: "absolute", inset: 0 }}>
           {p.image_url
             ? <img src={p.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            : <div style={{ width: "100%", height: "100%", background: `${themeColor}12`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🍽</div>
+            : <div style={{ width: "100%", height: "100%", background: `${themeColor}12`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={themeColor} strokeWidth="1.5" style={{ opacity: 0.3 }}><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
+              </div>
           }
         </div>
         {p.discount_pct > 0 && (
@@ -51,19 +53,23 @@ export function ProductCard({
             {p.allergens.map(a => {
               const allergen = ALLERGENS.find(al => al.key === a);
               return allergen ? (
-                <span key={a} style={{ fontSize: 9, background: C.bg, border: `1px solid ${C.bd}`, borderRadius: 4, padding: "1px 4px", color: C.mt, display: "flex", alignItems: "center", gap: 2 }}>
-                  {allergen.icon} {allergen.label}
+                <span key={a} style={{ fontSize: 9, background: C.bg, border: `1px solid ${C.bd}`, borderRadius: 4, padding: "1px 6px", color: C.mt, fontWeight: 600 }}>
+                  {allergen.label}
                 </span>
               ) : null;
             })}
           </div>
         )}
-        {(p.prep_time || p.calories) && (
           <div style={{ display: "flex", gap: 8, fontSize: 10, color: C.mt }}>
-            {p.prep_time && <span>⏱ {p.prep_time}dk</span>}
-            {p.calories && <span>🔥 {p.calories}kal</span>}
+            {p.prep_time && <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              {p.prep_time}dk
+            </span>}
+            {p.calories && <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 2c0 1.5-1 2.5-1 4s1 2.5 1 4c0 1.5-1 2.5-1 4s1 2.5 1 4"/></svg>
+              {p.calories}kal
+            </span>}
           </div>
-        )}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto", paddingTop: 8 }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
             <span style={{ fontSize: 16, fontWeight: 800 }}>₺{discPrice || p.price}</span>

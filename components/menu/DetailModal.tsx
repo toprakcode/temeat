@@ -49,7 +49,9 @@ export function DetailModal({
         <div style={{ position: "relative", width: "100%", height: 240 }}>
           {product.image_url
             ? <img src={product.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            : <div style={{ width: "100%", height: "100%", background: `${themeColor}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48 }}>🍽</div>
+            : <div style={{ width: "100%", height: "100%", background: `${themeColor}15`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke={themeColor} strokeWidth="1.5" style={{ opacity: 0.3 }}><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
+              </div>
           }
           {product.discount_pct > 0 && (
             <div style={{ position: "absolute", top: 12, left: 12, background: themeColor, color: "#fff", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 6 }}>-{product.discount_pct}%</div>
@@ -60,9 +62,18 @@ export function DetailModal({
           <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>{getProductName(product, lang)}</h2>
           {(product.prep_time || product.calories || product.serves) && (
             <div style={{ display: "flex", gap: 12, marginBottom: 12, fontSize: 12, color: C.mt }}>
-              {product.prep_time && <span>⏱ {product.prep_time} dk</span>}
-              {product.serves > 1 && <span>👤 {product.serves} kişilik</span>}
-              {product.calories && <span>🔥 {product.calories} kal</span>}
+              {product.prep_time && <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                {product.prep_time} dk
+              </span>}
+              {product.serves > 1 && <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                {product.serves} kişilik
+              </span>}
+              {product.calories && <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 2c0 1.5-1 2.5-1 4s1 2.5 1 4c0 1.5-1 2.5-1 4s1 2.5 1 4"/></svg>
+                {product.calories} kal
+              </span>}
             </div>
           )}
           <p style={{ fontSize: 14, color: C.s2, lineHeight: 1.65, marginBottom: 16 }}>{getProductDesc(product, lang)}</p>
@@ -73,8 +84,8 @@ export function DetailModal({
                 {product.allergens.map(a => {
                   const allergen = ALLERGENS.find(al => al.key === a);
                   return allergen ? (
-                    <span key={a} style={{ fontSize: 12, background: C.bg, border: `1px solid ${C.bd}`, borderRadius: 8, padding: "4px 10px", color: C.tx, display: "flex", alignItems: "center", gap: 4 }}>
-                      {allergen.icon} {allergen.label}
+                    <span key={a} style={{ fontSize: 12, background: C.bg, border: `1px solid ${C.bd}`, borderRadius: 8, padding: "4px 10px", color: C.tx, fontWeight: 600 }}>
+                      {allergen.label}
                     </span>
                   ) : null;
                 })}

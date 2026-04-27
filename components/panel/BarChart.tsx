@@ -47,6 +47,9 @@ export function BarChart({
                     borderRadius: "inherit"
                   }} />
                 )}
+                {d.views > 0 && (
+                  <div style={{ position: "absolute", top: -20, left: "50%", transform: "translateX(-50%)", fontSize: 9, fontWeight: 700, color: isToday ? color : "rgba(255,255,255,.3)" }}>{d.views}</div>
+                )}
               </div>
             </div>
             <span style={{ 

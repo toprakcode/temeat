@@ -55,6 +55,31 @@ export function ProductModal({
     }
   }, [initial.id]);
 
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const generateWithAI = async () => {
+    if (!name.trim()) { setError("Önce ürün adını yazmalısınız."); return; }
+    setAiLoading(true);
+    
+    // AI Description Simulation (Turkish localized)
+    const prompts: Record<string, string> = {
+      "Adana Kebap": "Zırh kıyması ile hazırlanan, közlenmiş biber ve domates eşliğinde sunulan geleneksel lezzet.",
+      "Lahmacun": "İncecik çıtır hamur üzerinde bol malzemeli, taş fırında pişmiş eşsiz bir klasik.",
+      "Mercimek Çorbası": "Süzme mercimeğin tereyağlı sos ve taze limon ile buluştuğu sıcacık bir başlangıç.",
+      "İskender": "Döner etinin pide parçaları üzerinde, bol tereyağı ve özel domates sosuyla efsanevi buluşması.",
+      "Künefe": "Sıcak peynirin tel kadayıf ile dansı, bol antep fıstığı eşliğinde çıtır çıtır servis edilir.",
+      "Hamburger": "Özel ev yapımı köfte, karamelize soğan ve cheddar peynirinin muhteşem uyumu.",
+      "Pizza": "İnce hamur üzerine bol mozzarella peyniri ve taze malzemelerle hazırlanan İtalyan esintisi.",
+    };
+
+    // Generic fallback for unknown names
+    const generic = `${name}, taze malzemelerle özenle hazırlanan, işletmemizin en özel lezzetlerinden biridir.`;
+    
+    await new Promise(r => setTimeout(r, 1200)); // Simulate AI delay
+    setDesc(prompts[name] || generic);
+    setAiLoading(false);
+  };
+
   const handleSave = async () => {
     if (!name.trim()) { setError("Ürün adı zorunlu."); return; }
     if (!price || isNaN(Number(price))) { setError("Geçerli bir fiyat girin."); return; }
@@ -163,7 +188,18 @@ export function ProductModal({
           </div>
 
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Açıklama (TR)</label>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)" }}>Açıklama (TR)</label>
+              <button type="button" onClick={generateWithAI} disabled={aiLoading} 
+                style={{ fontSize: 11, fontWeight: 700, color: "#fff", background: `linear-gradient(90deg, ${themeColor}, #ff7a45)`, border: "none", borderRadius: 6, padding: "4px 10px", cursor: aiLoading ? "wait" : "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                {aiLoading ? "Yazılıyor..." : (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    AI ile Yaz
+                  </>
+                )}
+              </button>
+            </div>
             <textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="El kıyması kuzu, pul biber, lavaş..." rows={2}
               style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", resize: "none", outline: "none" }} />
           </div>
@@ -232,7 +268,7 @@ export function ProductModal({
                   <button key={a.key} type="button"
                     onClick={() => setAllergens(prev => selected ? prev.filter(x => x !== a.key) : [...prev, a.key])}
                     style={{ padding: "6px 10px", borderRadius: 8, border: `1.5px solid ${selected ? themeColor : "rgba(255,255,255,.1)"}`, background: selected ? `${themeColor}20` : "transparent", color: selected ? "#fff" : "rgba(255,255,255,.4)", fontSize: 11, fontWeight: selected ? 700 : 400, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4 }}>
-                    {a.icon} {a.label}
+                    {a.label}
                   </button>
                 );
               })}

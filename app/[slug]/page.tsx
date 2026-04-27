@@ -8,6 +8,7 @@ import { getProductName, getProductDesc } from "@/lib/utils";
 import { ProductCard } from "@/components/menu/ProductCard";
 import { CartModal } from "@/components/menu/CartModal";
 import { DetailModal } from "@/components/menu/DetailModal";
+import { useSearchParams, useRouter } from "next/navigation";
 import Logo from "../components/Logo";
 import { ReviewModal } from "@/components/menu/ReviewModal";
 import { SkeletonCard } from "@/components/menu/SkeletonCard";
@@ -15,6 +16,9 @@ import { Review } from "@/types";
 
 export default function MenuPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = React.use(params);
+  const searchParams = useSearchParams();
+  const tableNo = searchParams.get("table") || "";
+  
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -31,6 +35,7 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
   const [reviews, setReviews] = useState<Review[]>([]);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [showPaymentSelect, setShowPaymentSelect] = useState(false);
 
   const catRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const catNavRef = useRef<HTMLDivElement>(null);
@@ -98,7 +103,7 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
       }
       return [...prev, { id: Math.random().toString(36).substr(2, 9), product: p, qty: 1, extras }];
     });
-    flash(getProductName(p, lang) + " ✓");
+    flash(getProductName(p, lang) + " eklendi");
   };
   const removeFromCart = (cartItemId: string) => {
     setCart(prev => prev.map(item => item.id === cartItemId ? { ...item, qty: item.qty - 1 } : item).filter(item => item.qty > 0));
@@ -145,7 +150,7 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
     
     setCart([]);
     setShowCart(false);
-    flash("Siparişiniz mutfağa iletildi! 🚀");
+    flash("Siparişiniz mutfağa iletildi!");
   };
   const filteredProducts = search
     ? products.filter(p => getProductName(p, lang).toLowerCase().includes(search.toLowerCase()))
@@ -196,6 +201,8 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.7; transform: scale(0.98); }
         }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
       `}</style>
     </div>
   );
@@ -415,26 +422,32 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
       <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, borderTop: `1px solid ${C.bd}`, background: C.bg, zIndex: 20 }}>
         <div className="bottom-bar-inner">
           <button onClick={async () => {
-            const tableNo = new URLSearchParams(window.location.search).get("table") || "—";
             const { error } = await supabase.from("service_requests").insert({
               restaurant_id: restaurant!.id,
-              table_no: tableNo,
+              table_no: tableNo || "—",
               type: "waiter",
               status: "pending"
             });
             if (!error) {
-              flash("Garson çağrıldı! Bekleyiniz... 🔔");
+              flash(lang === "tr" ? "Garson çağrıldı!" : lang === "en" ? "Waiter called!" : "تم استدعاء النادل!");
             } else {
-              flash("İstek iletilemedi, lütfen tekrar deneyin.");
+              flash("Error!");
             }
           }}
-            style={{ flex: 1, padding: 11, borderRadius: 11, border: `1.5px solid ${C.bd}`, background: C.cd, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", color: C.tx }}>
-            {isRTL ? "اطلب النادل" : "Garson Çağır"}
+            style={{ flex: 1, padding: 11, borderRadius: 11, border: `1.5px solid ${C.bd}`, background: C.cd, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", color: C.tx, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            {lang === "tr" ? "Garson" : lang === "en" ? "Waiter" : "النادل"}
           </button>
-          {cartCount > 0 && (
+
+          <button onClick={() => setShowPaymentSelect(true)}
+            style={{ flex: 1, padding: 11, borderRadius: 11, border: `1.5px solid ${C.bd}`, background: C.cd, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", color: C.tx, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            {lang === "tr" ? "Hesap" : lang === "en" ? "Bill" : "الحساب"}
+          </button>
+
+          {restaurant?.accept_orders !== false && cartCount > 0 && (
             <button onClick={() => setShowCart(true)}
-              style={{ flex: 2, padding: "11px 16px", borderRadius: 11, border: "none", background: A, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: `0 4px 16px ${A}30` }}>
-              <span>{isRTL ? "سلة" : "Sepetim"} · {cartCount}</span>
+              style={{ flex: 1.5, padding: "11px 16px", borderRadius: 11, border: "none", background: A, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: `0 4px 16px ${A}30` }}>
               <span style={{ fontWeight: 800 }}>₺{cartTotal}</span>
             </button>
           )}
@@ -467,6 +480,7 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
           onAdd={addToCart}
           onRemove={removeFromCart}
           onCheckout={handleCheckout}
+          initialTableNo={tableNo}
         />
       )}
 
@@ -476,11 +490,57 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
           restaurant={restaurant}
           onClose={() => setShowReviewModal(false)}
           onSuccess={() => {
-            flash("Yorumunuz için teşekkürler! ❤️");
+            flash("Yorumunuz için teşekkürler!");
             loadMenu();
           }}
         />
       )}
+      {/* Ödeme Yöntemi Seçimi */}
+      {showPaymentSelect && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", background: "rgba(0,0,0,.6)", animation: "fadeIn .3s" }}>
+          <div onClick={() => setShowPaymentSelect(false)} style={{ position: "absolute", inset: 0 }} />
+          <div style={{ position: "relative", width: "100%", maxWidth: 500, background: C.bg, borderTop: `1px solid ${C.bd}`, borderRadius: "24px 24px 0 0", padding: "24px 20px 40px", animation: "slideUp .4s cubic-bezier(0.16, 1, 0.3, 1)" }}>
+            <div style={{ width: 40, height: 4, background: C.dm, borderRadius: 99, margin: "0 auto 20px" }} />
+            <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8, textAlign: "center" }}>{lang === "tr" ? "Ödeme Yöntemi" : "Payment Method"}</h3>
+            <p style={{ fontSize: 13, color: C.mt, marginBottom: 24, textAlign: "center" }}>{lang === "tr" ? "Lütfen ödeme yapacağınız yöntemi seçin." : "Please select your payment method."}</p>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {[
+                { id: "cash", label: lang === "tr" ? "Nakit" : "Cash", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg> },
+                { id: "card", label: lang === "tr" ? "Kredi Kartı" : "Credit Card", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg> }
+              ].map((m) => (
+                <button 
+                  key={m.id}
+                  onClick={async () => {
+                    const payload: any = {
+                      restaurant_id: restaurant!.id,
+                      table_no: tableNo || "—",
+                      type: "payment",
+                      status: "pending"
+                    };
+                    // EĞER tablo yoksa hata vermemesi için güvenli gönderim
+                    if (m.id) payload.payment_method = m.id;
+
+                    const { data, error } = await supabase.from("service_requests").insert(payload).select();
+                    
+                    setShowPaymentSelect(false);
+                    if (!error) {
+                      flash(lang === "tr" ? "Hesap istendi!" : "Bill requested!");
+                    } else {
+                      alert("Hata: " + error.message);
+                    }
+                  }}
+                  style={{ width: "100%", padding: "16px", borderRadius: 16, border: `1.5px solid ${C.bd}`, background: C.cd, color: C.tx, fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontFamily: "inherit" }}
+                >
+                  <span style={{ display: "flex", alignItems: "center", justifyContent: "center", color: A }}>{m.icon}</span>
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setShowPaymentSelect(false)} style={{ width: "100%", marginTop: 16, padding: "14px", border: "none", background: "transparent", color: C.mt, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>{lang === "tr" ? "Vazgeç" : "Cancel"}</button>
+          </div>
+        </div>
+      )}
     </div>
   );
-}
+}

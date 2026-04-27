@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Product, Restaurant } from "@/types";
 import { LangKey } from "@/lib/constants";
 import { getProductName } from "@/lib/utils";
@@ -15,7 +15,8 @@ export function CartModal({
   onClose,
   onAdd,
   onRemove,
-  onCheckout
+  onCheckout,
+  initialTableNo = ""
 }: {
   cartItems: { id: string; product: Product; qty: number; extras: any[] }[];
   cartTotal: number;
@@ -28,9 +29,14 @@ export function CartModal({
   onAdd: (p: Product, extras?: any[]) => void;
   onRemove: (id: string) => void;
   onCheckout: (tableNo: string) => Promise<void>;
+  initialTableNo?: string;
 }) {
-  const [tableNo, setTableNo] = useState("");
+  const [tableNo, setTableNo] = useState(initialTableNo);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (initialTableNo) setTableNo(initialTableNo);
+  }, [initialTableNo]);
 
   const handleCheckout = async () => {
     if (!tableNo.trim()) return;
@@ -84,13 +90,15 @@ export function CartModal({
           </div>
           
           <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-            <input 
-              type="text" 
-              value={tableNo} 
-              onChange={e => setTableNo(e.target.value)} 
-              placeholder="Masa No (Örn: 12)" 
-              style={{ width: "100px", padding: "14px", borderRadius: 12, border: `1.5px solid ${C.bd}`, background: C.cd, color: C.tx, fontSize: 14, fontWeight: 600, outline: "none", textAlign: "center" }} 
-            />
+            {!initialTableNo && (
+              <input 
+                type="text" 
+                value={tableNo} 
+                onChange={e => setTableNo(e.target.value)} 
+                placeholder="Masa No (Örn: 12)" 
+                style={{ width: "100px", padding: "14px", borderRadius: 12, border: `1.5px solid ${C.bd}`, background: C.cd, color: C.tx, fontSize: 14, fontWeight: 600, outline: "none", textAlign: "center" }} 
+              />
+            )}
             <button onClick={handleCheckout} disabled={!tableNo.trim() || isSubmitting} 
               style={{ flex: 1, padding: 14, borderRadius: 12, border: "none", background: themeColor, color: "#fff", fontSize: 14, fontWeight: 700, cursor: (!tableNo.trim() || isSubmitting) ? "not-allowed" : "pointer", opacity: (!tableNo.trim() || isSubmitting) ? 0.6 : 1, fontFamily: "inherit" }}>
               {isSubmitting ? "Gönderiliyor..." : "Siparişi Gönder"}

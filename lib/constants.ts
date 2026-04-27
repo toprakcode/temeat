@@ -1,14 +1,14 @@
 export const DEFAULT_COLOR = "#D4470A";
 
 export const ALLERGENS = [
-  { key: "gluten", label: "Gluten", icon: "🌾" },
-  { key: "sut", label: "Süt", icon: "🥛" },
-  { key: "yumurta", label: "Yumurta", icon: "🥚" },
-  { key: "findik", label: "Fındık", icon: "🥜" },
-  { key: "balik", label: "Balık", icon: "🐟" },
-  { key: "kabuklu", label: "Kabuklu", icon: "🦐" },
-  { key: "soya", label: "Soya", icon: "🫘" },
-  { key: "susam", label: "Susam", icon: "🌱" },
+  { key: "gluten", label: "Gluten" },
+  { key: "sut", label: "Süt" },
+  { key: "yumurta", label: "Yumurta" },
+  { key: "findik", label: "Fındık" },
+  { key: "balik", label: "Balık" },
+  { key: "kabuklu", label: "Kabuklu" },
+  { key: "soya", label: "Soya" },
+  { key: "susam", label: "Susam" },
 ];
 
 export const LANGS = [

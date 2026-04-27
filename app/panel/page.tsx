@@ -10,6 +10,7 @@ import { BarChart } from "@/components/panel/BarChart";
 import { ProductModal } from "@/components/panel/ProductModal";
 import { Sidebar } from "@/components/panel/Sidebar";
 import { SettingsForm } from "@/components/panel/SettingsForm";
+import { TableGrid } from "@/components/panel/TableGrid";
 import QRCode from "react-qr-code";
 import { useRouter } from "next/navigation";
 
@@ -195,8 +196,10 @@ export default function PanelPage() {
         const { data: newOrder } = await supabase.from("orders").select("*, order_items(*)").eq("id", payload.new.id).single();
         if (newOrder) {
           setOrders(prev => [newOrder, ...prev]);
-          new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(() => {});
-          flash("Yeni sipariş geldi! 🔔");
+          if (restaurant.order_sound !== false) {
+            new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(() => {});
+          }
+          flash("Yeni sipariş geldi!");
         }
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurant.id}` }, (payload) => {
@@ -207,15 +210,20 @@ export default function PanelPage() {
     const reviewsSub = supabase.channel('realtime-reviews')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'reviews', filter: `restaurant_id=eq.${restaurant.id}` }, (payload) => {
         setReviews(prev => [payload.new, ...prev]);
-        flash("Yeni bir yorum yapıldı! ✍️");
+        flash("Yeni bir yorum yapıldı!");
       })
       .subscribe();
 
     const serviceSub = supabase.channel('realtime-service')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'service_requests', filter: `restaurant_id=eq.${restaurant.id}` }, (payload) => {
         setServiceRequests(prev => [payload.new, ...prev]);
-        new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(() => {});
-        flash(`Masa ${payload.new.table_no} garson çağırıyor! 🔔`);
+        if (restaurant?.order_sound !== false) {
+          new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(() => {});
+        }
+        const msg = payload.new.type === "payment" 
+          ? `Masa ${payload.new.table_no} Ödeme Bekliyor (${payload.new.payment_method === 'card' ? 'Kart' : 'Nakit'})`
+          : `Masa ${payload.new.table_no} Garson Bekliyor`;
+        flash(msg);
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'service_requests', filter: `restaurant_id=eq.${restaurant.id}` }, (payload) => {
         setServiceRequests(prev => prev.map(s => s.id === payload.new.id ? { ...s, ...payload.new } : s));
@@ -307,14 +315,13 @@ export default function PanelPage() {
       }));
       const { error: insError } = await supabase.from("product_extras").insert(extrasToInsert);
       if (insError) {
-        console.error("Ekstra ekleme hatası:", insError);
         flash("Ürün eklendi fakat ekstralar kaydedilemedi.");
       }
     }
 
     setProducts(prev => [...prev, data]);
     setShowAddProduct(false);
-    flash("Ürün eklendi! 🎉");
+    flash("Ürün eklendi!");
   };
 
   const handleEditProduct = async (formData: any) => {
@@ -330,7 +337,6 @@ export default function PanelPage() {
       .single();
       
     if (prodError) {
-      console.error(prodError);
       flash("Ürün güncellenirken bir hata oluştu.");
       return;
     }
@@ -343,9 +349,6 @@ export default function PanelPage() {
         .delete()
         .eq("product_id", editingProduct.id);
 
-      if (delError) {
-        console.error("Ekstra silme hatası:", delError);
-      }
       
       if (extras.length > 0) {
         const extrasToInsert = extras.map((e: any) => ({
@@ -360,7 +363,6 @@ export default function PanelPage() {
           .insert(extrasToInsert);
 
         if (insError) {
-          console.error("Ekstra ekleme hatası:", insError);
           flash("Ürün güncellendi fakat ekstralar kaydedilemedi.");
         }
       }
@@ -391,7 +393,7 @@ export default function PanelPage() {
   const chartData = weeklyViews.length > 0 ? weeklyViews : weeklyData;
 
   const A = restaurant?.theme_color || DEFAULT_COLOR;
-  const tabLabel: Record<string, string> = { dashboard: "Genel Bakış", orders: "Siparişler", reviews: "Müşteri Yorumları", menu: "Menü Yönetimi", qr: "QR Kodlar", analytics: "Analitik", settings: "Ayarlar" };
+  const tabLabel: Record<string, string> = { dashboard: "Genel Bakış", tables: "Masalar", orders: "Siparişler", payments: "Ödemeler", reviews: "Müşteri Yorumları", menu: "Menü Yönetimi", qr: "QR Kodlar", analytics: "Analitik", settings: "Ayarlar" };
 
   const resolveServiceRequest = async (id: string) => {
     const { error } = await supabase.from("service_requests").update({ status: "resolved", resolved_at: new Date().toISOString() }).eq("id", id);
@@ -583,6 +585,7 @@ export default function PanelPage() {
         restaurant={restaurant}
         productsCount={products.length}
         pendingReviewsCount={reviews.filter(r => r.status === "pending").length}
+        pendingPaymentsCount={serviceRequests.filter(s => s.type === "payment" && s.status === "pending").length}
         themeColor={A}
       />
 
@@ -613,6 +616,40 @@ export default function PanelPage() {
           {/* DASHBOARD (BENTO GRID) */}
           {activeTab === "dashboard" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 24, animation: "fadeUp .5s cubic-bezier(0.16, 1, 0.3, 1) both", position: "relative" }}>
+              
+              {/* SUMMARY CARDS */}
+              {(() => {
+                const todayRevenue = orders
+                  .filter(o => o.status === "completed" && new Date(o.created_at).toDateString() === new Date().toDateString())
+                  .reduce((sum, o) => sum + o.total_amount, 0);
+
+                const activeTablesCount = Array.from(new Set([
+                  ...orders.filter(o => o.status !== "completed" && o.status !== "cancelled").map(o => o.table_no),
+                  ...serviceRequests.filter(s => s.status === "pending").map(s => s.table_no)
+                ])).length;
+
+                const pendingOrders = orders.filter(o => o.status === "pending").length;
+                const pendingRequests = serviceRequests.filter(s => s.status === "pending").length;
+
+                return (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
+                    {[
+                      { label: "Günün Cirosu", val: `₺${todayRevenue.toLocaleString()}`, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>, color: "#22c55e" },
+                      { label: "Aktif Masalar", val: activeTablesCount, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={A} strokeWidth="2.5"><path d="M4 18v3M20 18v3M4 7v11h16V7M4 7h16M4 7V4a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v3"/></svg>, color: A },
+                      { label: "Bekleyen Sipariş", val: pendingOrders, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>, color: "#f59e0b" },
+                      { label: "Servis İsteği", val: pendingRequests, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a855f7" strokeWidth="2.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>, color: "#a855f7" }
+                    ].map((stat, i) => (
+                      <div key={i} className="card" style={{ padding: "20px 24px", display: "flex", alignItems: "center", gap: 16 }}>
+                        <div style={{ width: 48, height: 48, borderRadius: 14, background: `${stat.color}15`, display: "flex", alignItems: "center", justifyContent: "center" }}>{stat.icon}</div>
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,.3)", textTransform: "uppercase", letterSpacing: ".05em" }}>{stat.label}</div>
+                          <div style={{ fontSize: 22, fontWeight: 900 }}>{stat.val}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
               
               {/* Background Aura Glows */}
               <div style={{ position: "fixed", top: "20%", right: "-10%", width: 600, height: 600, background: `${A}08`, filter: "blur(120px)", borderRadius: 999, pointerEvents: "none", zIndex: 0 }} />
@@ -647,7 +684,9 @@ export default function PanelPage() {
                           {t.ok ? (
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={A} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                           ) : (
-                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" strokeDasharray="2 2" />
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" strokeDasharray="2 2" />
+                            </svg>
                           )}
                         </div>
                       ))}
@@ -759,17 +798,76 @@ export default function PanelPage() {
           )}
 
 
-          {/* ORDERS */}
+          {/* TABLES VIEW */}
+          {activeTab === "tables" && (
+            <div style={{ animation: "fadeUp .35s both", display: "flex", flexDirection: "column", gap: 24 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <h2 style={{ fontSize: 18, fontWeight: 800 }}>Masalar</h2>
+                  <p style={{ fontSize: 13, color: "rgba(255,255,255,.3)" }}>Restoranınızın anlık masa durumu</p>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 16px", borderRadius: 10, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.06)", fontSize: 11, color: "rgba(255,255,255,.4)" }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 8, height: 8, borderRadius: 99, background: "#22c55e" }} /> Boş</span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 8, height: 8, borderRadius: 99, background: "#ef4444" }} /> Sipariş</span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 8, height: 8, borderRadius: 99, background: "#3b82f6" }} /> Hazır</span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 8, height: 8, borderRadius: 99, background: "#a855f7" }} /> İstek</span>
+                  </div>
+                </div>
+              </div>
+
+              <TableGrid 
+                tableCount={restaurant?.table_count || 12}
+                orders={orders}
+                serviceRequests={serviceRequests}
+                themeColor={A}
+                onTableClick={(no) => {
+                  setActiveTab("orders");
+                  // Buraya belki o masanın siparişlerini filtreleyen bir state eklenebilir
+                  flash(`Masa ${no} detayları Siparişler sekmesinde görüntülenebilir.`);
+                }}
+              />
+            </div>
+          )}
+
+          {/* ORDERS & SERVICE REQUESTS */}
           {activeTab === "orders" && (
-            <div style={{ animation: "fadeUp .35s both" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <div style={{ animation: "fadeUp .35s both", display: "flex", flexDirection: "column", gap: 20 }}>
+              
+              {/* LIVE SERVICE REQUESTS */}
+              {serviceRequests.filter(s => s.status === "pending").length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: "#f59e0b", display: "flex", alignItems: "center", gap: 6, textTransform: "uppercase", letterSpacing: ".05em" }}>
+                    <div style={{ width: 8, height: 8, borderRadius: 99, background: "#f59e0b", boxShadow: "0 0 10px #f59e0b" }} />
+                    Canlı Servis İstekleri
+                  </div>
+                  <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 10 }}>
+                    {serviceRequests.filter(s => s.status === "pending").map(req => (
+                      <div key={req.id} className="card" style={{ minWidth: 220, padding: "16px", borderLeft: "4px solid #f59e0b", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 900 }}>MASA {req.table_no}</div>
+                          <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)", marginTop: 2 }}>{req.type === "waiter" ? "🔔 Garson Çağırıyor" : "💳 Hesap İstiyor"}</div>
+                        </div>
+                        <button onClick={async () => {
+                          const { error } = await supabase.from("service_requests").update({ status: "resolved", resolved_at: new Date().toISOString() }).eq("id", req.id);
+                          if (!error) setServiceRequests(prev => prev.filter(p => p.id !== req.id));
+                        }} style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(245,158,11,.15)", color: "#f59e0b", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>✓</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 0 }}>
                 <h2 style={{ fontSize: 16, fontWeight: 700 }}>Aktif Siparişler</h2>
                 <div style={{ fontSize: 12, color: "rgba(255,255,255,.4)" }}>{orders.filter(o => o.status !== "completed" && o.status !== "cancelled").length} bekleyen sipariş</div>
               </div>
 
               {orders.length === 0 ? (
-                <div className="card" style={{ padding: "60px 20px", textAlign: "center", color: "rgba(255,255,255,.3)" }}>
-                  <div style={{ fontSize: 32, marginBottom: 12 }}>🔔</div>
+                <div className="card" style={{ padding: "60px 20px", textAlign: "center", color: "rgba(255,255,255,.2)" }}>
+                  <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}>
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.2 }}><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                  </div>
                   <div style={{ fontSize: 14 }}>Henüz sipariş yok.</div>
                 </div>
               ) : (
@@ -873,13 +971,17 @@ export default function PanelPage() {
                         {item.image_url ? (
                           <img src={item.image_url} alt="" style={{ width: 40, height: 40, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
                         ) : (
-                          <div style={{ width: 40, height: 40, borderRadius: 10, background: `${A}15`, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🍽</div>
+                          <div style={{ width: 40, height: 40, borderRadius: 10, background: `${A}15`, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={A} strokeWidth="2" style={{ opacity: 0.5 }}><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
+                          </div>
                         )}
                         <div>
                           <div style={{ fontSize: 13, fontWeight: 600 }}>{item.name_tr}</div>
                           <div style={{ display: "flex", gap: 3, marginTop: 2 }}>
                             {item.allergens?.slice(0, 3).map(a => (
-                              <span key={a} style={{ fontSize: 10 }}>{ALLERGENS.find(al => al.key === a)?.icon}</span>
+                              <span key={a} style={{ fontSize: 9, background: "rgba(255,255,255,.05)", padding: "2px 6px", borderRadius: 4, color: "rgba(255,255,255,.4)" }}>
+                                {ALLERGENS.find(al => al.key === a)?.label}
+                              </span>
                             ))}
                             {item.allergens?.length > 3 && <span style={{ fontSize: 9, color: "rgba(255,255,255,.3)" }}>+{item.allergens.length - 3}</span>}
                           </div>
@@ -1138,6 +1240,157 @@ export default function PanelPage() {
                   </>
                 );
               })()}
+            </div>
+          )}
+          {/* PAYMENTS TAB */}
+          {activeTab === "payments" && (
+            <div style={{ animation: "fadeUp .35s both", display: "flex", flexDirection: "column", gap: 20 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <h2 style={{ fontSize: 16, fontWeight: 700 }}>Ödeme Bekleyen Masalar</h2>
+                  <p style={{ fontSize: 12, color: "rgba(255,255,255,.3)" }}>Hesap isteyen masalar ve ödeme yöntemleri</p>
+                </div>
+              </div>
+
+              {serviceRequests.filter(s => s.type === "payment").length === 0 ? (
+                <div className="card" style={{ padding: "60px 20px", textAlign: "center", color: "rgba(255,255,255,.2)" }}>
+                  <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}>
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.2 }}><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                  </div>
+                  <div style={{ fontSize: 14 }}>Henüz ödeme talebi yok.</div>
+                </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
+                  {serviceRequests.filter(s => s.type === "payment").map(req => {
+                    const tableOrder = orders.find(o => o.table_no === req.table_no && (o.status === "pending" || o.status === "preparing" || o.status === "ready"));
+                    return (
+                      <div key={req.id} className="card" style={{ padding: 20, borderLeft: `4px solid ${req.status === "pending" ? "#a855f7" : "rgba(255,255,255,.1)"}`, opacity: req.status === "resolved" ? 0.6 : 1 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+                          <div>
+                            <div style={{ fontSize: 18, fontWeight: 900 }}>MASA {req.table_no}</div>
+                            <div style={{ fontSize: 11, color: "rgba(255,255,255,.3)", marginTop: 2 }}>{new Date(req.created_at).toLocaleTimeString("tr-TR")}</div>
+                          </div>
+                          <div style={{ textAlign: "right" }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 8, background: req.payment_method === "card" ? "rgba(59, 130, 246, 0.1)" : "rgba(34, 197, 94, 0.1)", color: req.payment_method === "card" ? "#3b82f6" : "#22c55e", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                              {req.payment_method === "card" ? "💳 KART" : "💵 NAKİT"}
+                            </div>
+                          </div>
+                        </div>
+
+                        {tableOrder && (
+                          <div style={{ marginBottom: 20, padding: 12, background: "rgba(255,255,255,.02)", borderRadius: 12, border: "1px solid rgba(255,255,255,.05)" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                              <span style={{ fontSize: 11, color: "rgba(255,255,255,.4)" }}>Açık Sipariş Toplamı:</span>
+                              <span style={{ fontSize: 13, fontWeight: 800 }}>₺{tableOrder.total_amount}</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {req.status === "pending" ? (
+                          <button 
+                            onClick={() => resolveServiceRequest(req.id)}
+                            className="btn" 
+                            style={{ width: "100%", padding: "10px", borderRadius: 10, background: "#a855f7", color: "#fff", border: "none", fontSize: 13, fontWeight: 700 }}
+                          >
+                            Ödeme Alındı & Kapat
+                          </button>
+                        ) : (
+                          <div style={{ textAlign: "center", fontSize: 12, color: "#22c55e", fontWeight: 700 }}>✓ Tamamlandı</div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* REVIEWS MANAGEMENT */}
+          {activeTab === "reviews" && (
+            <div style={{ animation: "fadeUp .35s both", display: "flex", flexDirection: "column", gap: 20 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h2 style={{ fontSize: 16, fontWeight: 700 }}>Müşteri Değerlendirmeleri</h2>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {["pending", "approved", "rejected"].map(s => (
+                    <button key={s} onClick={() => flash("Filtreleme özelliği eklenecek...")} 
+                      style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.03)", color: "rgba(255,255,255,.5)", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+                      {s === "pending" ? "Bekleyen" : s === "approved" ? "Onaylı" : "Reddedilen"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {reviews.length === 0 ? (
+                <div className="card" style={{ padding: "60px 20px", textAlign: "center", color: "rgba(255,255,255,.3)" }}>
+                  <div style={{ fontSize: 32, marginBottom: 12 }}>✍️</div>
+                  <div style={{ fontSize: 14 }}>Henüz hiç yorum yapılmamış.</div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {reviews.map(rev => {
+                    const product = products.find(p => p.id === rev.product_id);
+                    return (
+                      <div key={rev.id} className="card" style={{ padding: 20, borderLeft: `4px solid ${rev.status === "pending" ? "#f59e0b" : rev.status === "approved" ? "#22c55e" : "#ef4444"}` }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+                          <div style={{ display: "flex", gap: 12 }}>
+                            <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(255,255,255,.05)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
+                              {rev.customer_name[0].toUpperCase()}
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 14, fontWeight: 700 }}>{rev.customer_name}</div>
+                              <div style={{ fontSize: 11, color: "rgba(255,255,255,.3)", marginTop: 2 }}>
+                                {new Date(rev.created_at).toLocaleDateString("tr-TR")} · {product ? product.name_tr : "Genel Değerlendirme"}
+                              </div>
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", gap: 2 }}>
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <span key={i} style={{ color: i < rev.rating ? "#f59e0b" : "rgba(255,255,255,.1)", fontSize: 14 }}>★</span>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div style={{ fontSize: 13, color: "rgba(255,255,255,.7)", lineHeight: 1.6, marginBottom: 20, padding: "12px", background: "rgba(255,255,255,.02)", borderRadius: 10 }}>
+                          {rev.comment || "Yorum bırakılmadı."}
+                        </div>
+
+                        {rev.owner_reply ? (
+                          <div style={{ marginBottom: 20, padding: "12px 16px", background: `${A}10`, borderLeft: `2px solid ${A}`, borderRadius: 10 }}>
+                            <div style={{ fontSize: 11, fontWeight: 800, color: A, marginBottom: 4, textTransform: "uppercase" }}>Cevabınız:</div>
+                            <div style={{ fontSize: 12, color: "rgba(255,255,255,.6)" }}>{rev.owner_reply}</div>
+                          </div>
+                        ) : replyingTo === rev.id ? (
+                          <div style={{ marginBottom: 20 }}>
+                            <textarea value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Müşteriye cevap yazın..." 
+                              style={{ width: "100%", padding: "12px", borderRadius: 10, background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.1)", color: "#fff", fontSize: 13, minHeight: 80, outline: "none", fontFamily: "inherit", resize: "none" }} />
+                            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                              <button onClick={() => setReplyingTo(null)} style={{ flex: 1, padding: "8px", borderRadius: 8, border: "1px solid rgba(255,255,255,.1)", background: "transparent", color: "rgba(255,255,255,.5)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>İptal</button>
+                              <button onClick={() => handleReviewReply(rev.id)} style={{ flex: 2, padding: "8px", borderRadius: 8, border: "none", background: A, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Cevabı Gönder</button>
+                            </div>
+                          </div>
+                        ) : null}
+
+                        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                          {rev.status === "pending" && (
+                            <>
+                              <button onClick={() => handleReviewStatus(rev.id, "approved")} style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: "#22c55e", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Onayla</button>
+                              <button onClick={() => handleReviewStatus(rev.id, "rejected")} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid rgba(239,68,68,.3)", background: "transparent", color: "#ef4444", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Reddet</button>
+                            </>
+                          )}
+                          {!rev.owner_reply && !replyingTo && (
+                            <button onClick={() => setReplyingTo(rev.id)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid rgba(255,255,255,.1)", background: "transparent", color: "rgba(255,255,255,.5)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Cevapla</button>
+                          )}
+                          {rev.status !== "pending" && (
+                            <div style={{ marginLeft: "auto", fontSize: 11, color: "rgba(255,255,255,.2)" }}>
+                              Durum: <span style={{ color: rev.status === "approved" ? "#22c55e" : "#ef4444" }}>{rev.status === "approved" ? "Onaylandı" : "Reddedildi"}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 

@@ -15,6 +15,9 @@ export function SettingsForm({
   const [hours, setHours] = useState(restaurant.hours || "");
   const [color, setColor] = useState(restaurant.theme_color || "#D4470A");
   const [showReviews, setShowReviews] = useState(restaurant.show_reviews ?? true);
+  const [acceptOrders, setAcceptOrders] = useState(restaurant.accept_orders ?? true);
+  const [orderSound, setOrderSound] = useState(restaurant.order_sound ?? true);
+  const [tableCount, setTableCount] = useState(restaurant.table_count || 10);
   
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(restaurant.logo_url || null);
@@ -56,7 +59,10 @@ export function SettingsForm({
       hours: hours.trim() || null,
       theme_color: color,
       logo_url: finalLogoUrl,
-      show_reviews: showReviews
+      show_reviews: showReviews,
+      accept_orders: acceptOrders,
+      order_sound: orderSound,
+      table_count: Number(tableCount)
     };
 
     const { error: updateError } = await supabase
@@ -112,6 +118,11 @@ export function SettingsForm({
             <input type="text" value={hours} onChange={e => setHours(e.target.value)} placeholder="09:00 - 23:00"
               style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
           </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Masa Sayısı</label>
+            <input type="number" value={tableCount} onChange={e => setTableCount(Number(e.target.value))} placeholder="20"
+              style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
+          </div>
         </div>
 
         <div>
@@ -122,7 +133,6 @@ export function SettingsForm({
               style={{ flex: 1, padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
           </div>
         </div>
-
         <div style={{ padding: "12px 14px", borderRadius: 10, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.05)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <div style={{ fontSize: 13, fontWeight: 700 }}>Müşteri Yorumları</div>
@@ -130,6 +140,26 @@ export function SettingsForm({
           </div>
           <button onClick={() => setShowReviews(!showReviews)} style={{ width: 44, height: 24, borderRadius: 99, background: showReviews ? themeColor : "rgba(255,255,255,.1)", position: "relative", border: "none", cursor: "pointer", transition: "all .2s" }}>
             <div style={{ position: "absolute", top: 3, left: showReviews ? 23 : 3, width: 18, height: 18, borderRadius: 99, background: "#fff", transition: "all .2s" }} />
+          </button>
+        </div>
+
+        <div style={{ padding: "12px 14px", borderRadius: 10, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.05)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700 }}>Masadan Sipariş</div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,.3)", marginTop: 2 }}>Müşterilerin dijital menüden sipariş vermesini sağla</div>
+          </div>
+          <button onClick={() => setAcceptOrders(!acceptOrders)} style={{ width: 44, height: 24, borderRadius: 99, background: acceptOrders ? themeColor : "rgba(255,255,255,.1)", position: "relative", border: "none", cursor: "pointer", transition: "all .2s" }}>
+            <div style={{ position: "absolute", top: 3, left: acceptOrders ? 23 : 3, width: 18, height: 18, borderRadius: 99, background: "#fff", transition: "all .2s" }} />
+          </button>
+        </div>
+
+        <div style={{ padding: "12px 14px", borderRadius: 10, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.05)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700 }}>Sesli Bildirimler</div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,.3)", marginTop: 2 }}>Yeni sipariş geldiğinde sesli uyarı ver</div>
+          </div>
+          <button onClick={() => setOrderSound(!orderSound)} style={{ width: 44, height: 24, borderRadius: 99, background: orderSound ? themeColor : "rgba(255,255,255,.1)", position: "relative", border: "none", cursor: "pointer", transition: "all .2s" }}>
+            <div style={{ position: "absolute", top: 3, left: orderSound ? 23 : 3, width: 18, height: 18, borderRadius: 99, background: "#fff", transition: "all .2s" }} />
           </button>
         </div>
 

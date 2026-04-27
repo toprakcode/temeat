@@ -45,6 +45,9 @@ export type Restaurant = {
   theme_color: string | null;
   logo_url: string | null;
   show_reviews?: boolean;
+  accept_orders?: boolean;
+  order_sound?: boolean;
+  table_count?: number;
   created_at: string;
 };
 
@@ -92,6 +95,7 @@ export type ServiceRequest = {
   restaurant_id: string;
   table_no: string;
   type: string;
+  payment_method?: string | null;
   status: "pending" | "resolved";
   created_at: string;
   resolved_at: string | null;
