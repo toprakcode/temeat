@@ -5,7 +5,7 @@ import Link from "next/link";
 import Logo from "../components/Logo";
 import { supabase } from "@/lib/supabase";
 import { Category, Product } from "@/types";
-import { DEFAULT_COLOR, ALLERGENS } from "@/lib/constants";
+import { DEFAULT_COLOR, ALLERGENS, PLANS } from "@/lib/constants";
 import { BarChart } from "@/components/panel/BarChart";
 import { ProductModal } from "@/components/panel/ProductModal";
 import { Sidebar } from "@/components/panel/Sidebar";
@@ -186,6 +186,13 @@ export default function PanelPage() {
 
     const { data: serviceData } = await supabase.from("service_requests").select("*").eq("restaurant_id", restaurantId).order("created_at", { ascending: false });
     setServiceRequests(serviceData || []);
+
+    // FETCH MENU DATA (Categories and Products)
+    const { data: catsData } = await supabase.from("categories").select("*").eq("restaurant_id", restaurantId).order("sort_order");
+    setCategories(catsData || []);
+
+    const { data: prodsData } = await supabase.from("products").select("*").eq("restaurant_id", restaurantId).order("sort_order");
+    setProducts(prodsData || []);
   };
 
   useEffect(() => {
@@ -287,11 +294,11 @@ export default function PanelPage() {
   };
 
   const handleAddProduct = async (formData: any) => {
-    const plan = restaurant?.plan || "free";
-    const limits: Record<string, number> = { free: 15, starter: 50, pro: Infinity };
-    const limit = limits[plan] || 15;
+    const planKey = restaurant?.plan || "free";
+    const limit = (PLANS as any)[planKey]?.productLimit || 5;
+    
     if (products.length >= limit) {
-      flash(`${plan === "free" ? "Ücretsiz planda" : "Başlangıç planında"} maksimum ${limit} ürün ekleyebilirsiniz.`);
+      flash(`${(PLANS as any)[planKey]?.name} planda maksimum ${limit} ürün ekleyebilirsiniz.`);
       return;
     }
     const { extras, ...productData } = formData;
@@ -605,10 +612,6 @@ export default function PanelPage() {
             <p style={{ fontSize: 11, color: "rgba(255,255,255,.3)", marginTop: 1 }}>{user?.email}</p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <button onClick={() => setIsKitchenMode(true)} className="btn" style={{ padding: "8px 14px", borderRadius: 9, border: `1px solid ${A}40`, background: `${A}12`, color: A, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 9h18M3 15h18M3 21h18M3 3h18"/></svg>
-              Mutfak Modu
-            </button>
             <button onClick={handleSignOut} className="btn" style={{ padding: "8px 14px", borderRadius: 9, border: "1px solid rgba(255,255,255,.08)", background: "transparent", color: "rgba(255,255,255,.5)", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
               <span className="sidebar-label">Çıkış</span>
@@ -620,6 +623,35 @@ export default function PanelPage() {
         </header>
 
         <div className="main-pad" style={{ flex: 1, padding: "28px 32px", overflowY: "auto" }}>
+          
+          {(() => {
+            const planOrder = ["free", "yenimekan", "starter", "pro"];
+            const currentPlanIndex = planOrder.indexOf(restaurant?.plan || "free");
+            const navItem = (require("@/components/panel/Sidebar").navItems as any[]).find(i => i.id === activeTab);
+            const requiredPlanIndex = navItem?.minPlan ? planOrder.indexOf(navItem.minPlan) : -1;
+            const isLocked = currentPlanIndex < requiredPlanIndex;
+
+            if (isLocked) {
+              const reqPlan = (PLANS as any)[navItem.minPlan];
+              return (
+                <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", animation: "fadeUp .5s ease" }}>
+                  <div style={{ textAlign: "center", maxWidth: 400, padding: 40, borderRadius: 32, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                    <div style={{ width: 64, height: 64, borderRadius: 20, background: `${A}15`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px", color: A }}>
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    </div>
+                    <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 12 }}>{navItem.label} Özelliği Kilitli</h2>
+                    <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", lineHeight: 1.6, marginBottom: 32 }}>
+                      Bu özelliği kullanabilmek için en az <b>{reqPlan.name}</b> planına sahip olmalısınız.
+                    </p>
+                    <button onClick={() => window.location.href="/fiyat"} style={{ width: "100%", padding: "14px 0", borderRadius: 14, border: "none", background: A, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+                      Planı Yükselt
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+            return null;
+          })()}
 
           {/* DASHBOARD (BENTO GRID) */}
           {activeTab === "dashboard" && (
@@ -1022,7 +1054,24 @@ export default function PanelPage() {
                 
                 {/* CONTROLS */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                  <div className="card" style={{ padding: "24px" }}>
+                  <div className="card" style={{ padding: "24px", position: "relative", overflow: "hidden" }}>
+                    {(() => {
+                      const planOrder = ["free", "yenimekan", "starter", "pro"];
+                      const currentPlanIndex = planOrder.indexOf(restaurant?.plan || "free");
+                      const qrLocked = currentPlanIndex < planOrder.indexOf("starter");
+                      
+                      if (qrLocked) return (
+                        <div style={{ position: "absolute", inset: 0, zIndex: 10, background: "rgba(0,0,0,.6)", backdropFilter: "blur(4px)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: 20 }}>
+                          <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(255,255,255,.1)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                          </div>
+                          <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 4 }}>Tasarım Özelleştirme</div>
+                          <div style={{ fontSize: 11, color: "rgba(255,255,255,.6)", marginBottom: 16 }}>Bu özellik Başlangıç planı ile açılır.</div>
+                          <button onClick={() => setActiveTab("settings")} style={{ padding: "8px 16px", borderRadius: 8, background: A, color: "#fff", border: "none", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Planı Yükselt</button>
+                        </div>
+                      );
+                      return null;
+                    })()}
                     <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 20, display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ fontSize: 18 }}>🎨</span> Tasarım Özelleştirme
                     </div>
@@ -1139,14 +1188,22 @@ export default function PanelPage() {
                   </div>
                   
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <div key={i} className="card" style={{ padding: "12px", textAlign: "center", opacity: .5 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8 }}>Masa {i + 1}</div>
-                        <div style={{ width: "100%", aspectRatio: "1/1", background: qrBgColor, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", padding: 8 }}>
-                          <QRCode value={`${typeof window !== 'undefined' ? window.location.origin : 'https://temeat.com.tr'}/${restaurant?.slug}?table=${i+1}`} size={50} fgColor={qrColor} bgColor={qrBgColor} />
+                    {(() => {
+                      const planOrder = ["free", "yenimekan", "starter", "pro"];
+                      const currentPlanIndex = planOrder.indexOf(restaurant?.plan || "free");
+                      let count = 1;
+                      if (currentPlanIndex >= planOrder.indexOf("starter")) count = 10;
+                      if (currentPlanIndex >= planOrder.indexOf("pro")) count = restaurant?.table_count || 20;
+
+                      return Array.from({ length: count }).map((_, i) => (
+                        <div key={i} className="card" style={{ padding: "12px", textAlign: "center" }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8 }}>{count === 1 ? "Genel Menü" : `Masa ${i + 1}`}</div>
+                          <div style={{ width: "100%", aspectRatio: "1/1", background: qrBgColor, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", padding: 8 }}>
+                            <QRCode value={`${typeof window !== 'undefined' ? window.location.origin : 'https://temeat.com.tr'}/${restaurant?.slug}${count === 1 ? "" : `?table=${i+1}`}`} size={50} fgColor={qrColor} bgColor={qrBgColor} />
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ));
+                    })()}
                   </div>
                 </div>
               </div>
@@ -1303,7 +1360,10 @@ export default function PanelPage() {
                             Ödeme Alındı & Kapat
                           </button>
                         ) : (
-                          <div style={{ textAlign: "center", fontSize: 12, color: "#22c55e", fontWeight: 700 }}>✓ Tamamlandı</div>
+                          <div style={{ textAlign: "center", fontSize: 12, color: "#22c55e", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Tamamlandı
+                          </div>
                         )}
                       </div>
                     );
@@ -1329,8 +1389,10 @@ export default function PanelPage() {
               </div>
 
               {reviews.length === 0 ? (
-                <div className="card" style={{ padding: "60px 20px", textAlign: "center", color: "rgba(255,255,255,.3)" }}>
-                  <div style={{ fontSize: 32, marginBottom: 12 }}>✍️</div>
+                <div className="card" style={{ padding: "60px 20px", textAlign: "center", color: "rgba(255,255,255,.2)" }}>
+                  <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}>
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.2 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </div>
                   <div style={{ fontSize: 14 }}>Henüz hiç yorum yapılmamış.</div>
                 </div>
               ) : (
@@ -1413,7 +1475,15 @@ export default function PanelPage() {
                     <span style={{ fontSize: 13, fontWeight: 600 }}>{value}</span>
                   </div>
                 ))}
-                {restaurant?.plan !== "pro" && <a href="/fiyat" style={{ display: "inline-block", marginTop: 16, padding: "10px 20px", borderRadius: 9, background: A, color: "#fff", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>Pro'ya Yükselt →</a>}
+                {restaurant?.plan !== "pro" && (
+                  <div style={{ marginTop: 24, padding: "16px", borderRadius: 12, background: `${A}10`, border: `1.5px solid ${A}30` }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: A, marginBottom: 4 }}>Daha fazla özellik mi lazım?</div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,.5)", marginBottom: 16 }}>Yeni Mekan, Başlangıç ve Pro planları ile işinizi büyütün.</div>
+                    <button onClick={() => window.open("/fiyat", "_blank")} style={{ padding: "10px 20px", borderRadius: 9, background: A, color: "#fff", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                      Tüm Planları İncele →
+                    </button>
+                  </div>
+                )}
               </div>
 
               {restaurant && (
@@ -1468,11 +1538,11 @@ export default function PanelPage() {
       )}
 
       {showAddProduct && (
-        <ProductModal key="add" title="Ürün Ekle" categories={categories} initial={{}} onSave={handleAddProduct} onClose={() => setShowAddProduct(false)} themeColor={A} />
+        <ProductModal key="add" title="Ürün Ekle" categories={categories} initial={{}} onSave={handleAddProduct} onClose={() => setShowAddProduct(false)} themeColor={A} restaurantPlan={restaurant?.plan || "free"} />
       )}
 
       {editingProduct && (
-        <ProductModal key={editingProduct!.id} title="Ürünü Düzenle" categories={categories} initial={editingProduct!} onSave={handleEditProduct} onClose={() => setEditingProduct(null)} themeColor={A} />
+        <ProductModal key={editingProduct!.id} title="Ürünü Düzenle" categories={categories} initial={editingProduct!} onSave={handleEditProduct} onClose={() => setEditingProduct(null)} themeColor={A} restaurantPlan={restaurant?.plan || "free"} />
       )}
 
       {/* KDS - KITCHEN DISPLAY SYSTEM OVERLAY */}
@@ -1495,8 +1565,10 @@ export default function PanelPage() {
           
           <div style={{ flex: 1, padding: 24, overflowX: "auto", display: "flex", gap: 20, alignItems: "flex-start", background: "radial-gradient(circle at 50% 50%, #0a0a0a 0%, #050505 100%)" }}>
             {orders.filter(o => o.status !== "completed" && o.status !== "cancelled").length === 0 ? (
-              <div style={{ margin: "auto", textAlign: "center", opacity: .2 }}>
-                <div style={{ fontSize: 64, marginBottom: 16 }}>🍳</div>
+              <div style={{ margin: "auto", textAlign: "center", opacity: .15 }}>
+                <div style={{ marginBottom: 20, display: "flex", justifyContent: "center" }}>
+                  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2"><path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/><line x1="6" y1="17" x2="18" y2="17"/></svg>
+                </div>
                 <div style={{ fontSize: 20, fontWeight: 700 }}>Şu an mutfakta sipariş yok.</div>
               </div>
             ) : (

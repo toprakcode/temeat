@@ -3,8 +3,8 @@ import React from "react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { Restaurant, Category, Product } from "@/types";
-import { DEFAULT_COLOR, LANGS, LangKey } from "@/lib/constants";
-import { getProductName, getProductDesc } from "@/lib/utils";
+import { DEFAULT_COLOR, LANGS, LangKey, PLANS } from "@/lib/constants";
+import { getProductName, getProductDesc, getTranslatedName } from "@/lib/utils";
 import { ProductCard } from "@/components/menu/ProductCard";
 import { CartModal } from "@/components/menu/CartModal";
 import { DetailModal } from "@/components/menu/DetailModal";
@@ -14,10 +14,11 @@ import Logo from "../components/Logo";
 import { ReviewModal } from "@/components/menu/ReviewModal";
 import { SkeletonCard } from "@/components/menu/SkeletonCard";
 import { Review } from "@/types";
+import { UI_STRINGS } from "@/lib/translations";
 
 export default function MenuPage(props: any) {
   return (
-    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#050505", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>Yükleniyor...</div>}>
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#050505", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>Loading...</div>}>
       <MenuContent {...props} />
     </Suspense>
   );
@@ -50,15 +51,27 @@ function MenuContent({ params }: { params: Promise<{ slug: string }> }) {
   const catNavRef = useRef<HTMLDivElement>(null);
   const isAutoScrolling = useRef(false);
 
+  const hasFeature = (feat: string) => {
+    if (!restaurant) return false;
+    const plan = (PLANS as any)[restaurant.plan || "free"];
+    return plan?.features.includes(feat);
+  };
+
   const A = restaurant?.theme_color || DEFAULT_COLOR;
   const o = dark ? 1 : 0;
   const isRTL = lang === "ar";
   const C = {
-    bg: ["#FAFAFA", "#111111"][o], cd: ["#FFF", "#1E1E1E"][o],
-    bd: ["#EBEBEB", "#2E2E2E"][o], tx: ["#111", "#F5F5F5"][o],
-    mt: ["#777", "#888"][o], dm: ["#CCC", "#444"][o], al: ["#FFF5F0", "#2A1810"][o],
+    bg: ["#FAFAFA", "#111111"][o],
+    cd: ["#FFF", "#1E1E1E"][o],
+    bd: ["#EBEBEB", "#2E2E2E"][o],
+    tx: ["#111", "#F5F5F5"][o],
+    mt: ["#777", "#888"][o],
+    dm: ["#CCC", "#444"][o],
+    al: ["#FFF5F0", "#2A1810"][o],
     s2: ["#555", "#BBBBBB"][o],
   };
+
+  const t = UI_STRINGS[lang];
 
   useEffect(() => { loadMenu(); }, [slug]);
 
@@ -112,7 +125,7 @@ function MenuContent({ params }: { params: Promise<{ slug: string }> }) {
       }
       return [...prev, { id: Math.random().toString(36).substr(2, 9), product: p, qty: 1, extras }];
     });
-    flash(getProductName(p, lang) + " eklendi");
+    flash(getProductName(p, lang) + " " + t.added_to_cart);
   };
   const removeFromCart = (cartItemId: string) => {
     setCart(prev => prev.map(item => item.id === cartItemId ? { ...item, qty: item.qty - 1 } : item).filter(item => item.qty > 0));
@@ -159,7 +172,7 @@ function MenuContent({ params }: { params: Promise<{ slug: string }> }) {
     
     setCart([]);
     setShowCart(false);
-    flash("Siparişiniz mutfağa iletildi!");
+    flash(t.order_success);
   };
   const filteredProducts = search
     ? products.filter(p => getProductName(p, lang).toLowerCase().includes(search.toLowerCase()))
@@ -186,7 +199,7 @@ function MenuContent({ params }: { params: Promise<{ slug: string }> }) {
     document.title = `${rest.name} Menüsü | TEMeat`;
     supabase.from("page_views").insert({ restaurant_id: rest.id, lang: navigator.language?.slice(0, 2) || "tr" });
     const { data: cats } = await supabase.from("categories").select("*").eq("restaurant_id", rest.id).order("sort_order");
-    const { data: prods } = await supabase.from("products").select("*").eq("restaurant_id", rest.id).eq("is_active", true).order("sort_order");
+    const { data: prods } = await supabase.from("products").select("*, extras:product_extras(*)").eq("restaurant_id", rest.id).eq("is_active", true).order("sort_order");
     setCategories(cats || []);
     setProducts(prods || []);
     if (cats && cats.length > 0) setActiveCat(cats[0].id);
@@ -204,7 +217,7 @@ function MenuContent({ params }: { params: Promise<{ slug: string }> }) {
       <div style={{ animation: "pulse 2s infinite ease-in-out" }}>
         <Logo size="lg" withTagline={false} />
       </div>
-      <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase" }}>Lütfen bekleyin...</div>
+      <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase" }}>{t.waiting}</div>
       <style>{`
         @keyframes pulse {
           0%, 100% { opacity: 1; transform: scale(1); }
@@ -222,8 +235,8 @@ function MenuContent({ params }: { params: Promise<{ slug: string }> }) {
         <div style={{ marginBottom: 24, display: "flex", justifyContent: "center", color: "#ddd" }}>
           <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
         </div>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: "#111", marginBottom: 8 }}>Menü bulunamadı</h1>
-        <p style={{ fontSize: 14, color: "#999" }}>Bu adrese ait bir restoran yok.</p>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: "#111", marginBottom: 8 }}>{lang === "tr" ? "Menü bulunamadı" : "Menu not found"}</h1>
+        <p style={{ fontSize: 14, color: "#999" }}>{lang === "tr" ? "Bu adrese ait bir restoran yok." : "This restaurant could not be found."}</p>
       </div>
     </div>
   );
@@ -262,16 +275,21 @@ function MenuContent({ params }: { params: Promise<{ slug: string }> }) {
       {/* Header */}
       <div style={{ background: dark ? "#1E1E1E" : "#fff", borderBottom: `1px solid ${C.bd}`, position: "sticky", top: 0, zIndex: 30, boxShadow: scrolled ? "0 4px 12px rgba(0,0,0,.05)" : "none", transition: "all .3s" }}>
         <div className="header-inner">
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: "-.02em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{restaurant!.name}</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 1 }}>
-              {restaurant!.hours && <div style={{ fontSize: 10, color: "#22c55e", fontWeight: 600 }}>● {restaurant!.hours}</div>}
-              {restaurant!.show_reviews !== false && reviews.length > 0 && (
-                <div style={{ fontSize: 10, fontWeight: 700, color: "#f59e0b", display: "flex", alignItems: "center", gap: 3 }}>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
-                  { (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1) }
-                </div>
-              )}
+          <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 10 }}>
+            {hasFeature("white_label") && restaurant!.logo_url && (
+              <img src={restaurant!.logo_url} alt="" style={{ width: 32, height: 32, borderRadius: 8, objectFit: "cover" }} />
+            )}
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: "-.02em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{restaurant!.name}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 1 }}>
+                {restaurant!.hours && <div style={{ fontSize: 10, color: "#22c55e", fontWeight: 600 }}>● {restaurant!.hours.replace("-", " - ")}</div>}
+                {restaurant!.show_reviews !== false && reviews.length > 0 && (
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "#f59e0b", display: "flex", alignItems: "center", gap: 3 }}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+                    { (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1) }
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0, marginLeft: 8 }}>
@@ -285,7 +303,11 @@ function MenuContent({ params }: { params: Promise<{ slug: string }> }) {
             </div>
             <button onClick={() => setDark(!dark)}
               style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${C.bd}`, background: "transparent", cursor: "pointer", fontSize: 12, color: C.mt, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              {dark ? "◐" : "◑"}
+              {dark ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+              )}
             </button>
           </div>
         </div>
@@ -295,7 +317,7 @@ function MenuContent({ params }: { params: Promise<{ slug: string }> }) {
         {/* WiFi */}
         {restaurant!.wifi_password && (
           <div style={{ padding: "10px 20px", borderBottom: `1px solid ${C.bd}` }}>
-            <div onClick={() => { navigator.clipboard?.writeText(restaurant!.wifi_password!); flash("WiFi şifresi kopyalandı!"); }}
+            <div onClick={() => { navigator.clipboard?.writeText(restaurant!.wifi_password!); flash(t.wifi_copied); }}
               style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.mt} strokeWidth="2" strokeLinecap="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg>
               <span style={{ fontSize: 10, color: C.mt, fontWeight: 600 }}>WiFi:</span>
@@ -305,9 +327,9 @@ function MenuContent({ params }: { params: Promise<{ slug: string }> }) {
         )}
 
         {/* Chef's picks */}
-        {chefPicks.length > 0 && !search && (
+        {hasFeature("chef_picks") && chefPicks.length > 0 && !search && (
           <div className="chef-section">
-            <div style={{ fontSize: 11, fontWeight: 700, color: A, marginBottom: 10, letterSpacing: ".06em", textTransform: "uppercase" }}>Şefin Seçimi</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: A, marginBottom: 10, letterSpacing: ".06em", textTransform: "uppercase" }}>{t.chef}</div>
             <div style={{ display: "flex", gap: 12, overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 4 } as React.CSSProperties}>
               {chefPicks.map(p => {
                 const discPrice = p.discount_pct ? Math.round(p.price * (1 - p.discount_pct / 100)) : null;
@@ -332,7 +354,7 @@ function MenuContent({ params }: { params: Promise<{ slug: string }> }) {
         <div className="search-section">
           <div style={{ position: "relative" }}>
             <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-              placeholder={isRTL ? "ماذا تبحث؟" : "Ne arıyorsunuz?"}
+              placeholder={t.search}
               style={{ width: "100%", padding: isRTL ? "11px 36px 11px 16px" : "11px 16px 11px 36px", borderRadius: 12, border: `1.5px solid ${search ? A + "40" : C.bd}`, background: C.cd, color: C.tx, fontSize: 14, fontFamily: "inherit", outline: "none" }} />
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.mt} strokeWidth="2" strokeLinecap="round"
               style={{ position: "absolute", [isRTL ? "right" : "left"]: 13, top: "50%", transform: "translateY(-50%)" }}>
@@ -348,7 +370,7 @@ function MenuContent({ params }: { params: Promise<{ slug: string }> }) {
               {categories.map(cat => (
                 <button key={cat.id} id={`nav-${cat.id}`} onClick={() => scrollToCat(cat.id)}
                   style={{ flexShrink: 0, padding: "14px 16px", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: activeCat === cat.id ? 700 : 500, color: activeCat === cat.id ? A : C.mt, background: "transparent", borderBottom: activeCat === cat.id ? `3px solid ${A}` : "3px solid transparent", transition: "all .2s" }}>
-                  {cat.name}
+                  {getTranslatedName(cat, lang)}
                 </button>
               ))}
             </div>
@@ -360,7 +382,7 @@ function MenuContent({ params }: { params: Promise<{ slug: string }> }) {
           {search ? (
             <div className="product-grid">
               {filteredProducts.map((p, i) => (
-                <ProductCard key={p.id} p={p} i={i} lang={lang} cartQty={cart.filter(item => item.product.id === p.id).reduce((s, item) => s + item.qty, 0)} themeColor={A} C={C} onAdd={addToCart} onRemove={(prod) => { const item = cart.find(c => c.product.id === prod.id); if (item) removeFromCart(item.id); }} onClick={setDetailProduct} />
+                <ProductCard key={p.id} p={p} i={i} lang={lang} cartQty={cart.filter(item => item.product.id === p.id).reduce((s, item) => s + item.qty, 0)} themeColor={A} C={C} onAdd={addToCart} onRemove={(prod) => { const item = cart.find(c => c.product.id === prod.id); if (item) removeFromCart(item.id); }} onClick={setDetailProduct} hasPrepInfo={hasFeature("prep_info")} hasCart={hasFeature("cart")} />
               ))}
               {filteredProducts.length === 0 && (
                 <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "60px 20px", color: C.mt }}>Sonuç bulunamadı</div>
@@ -369,10 +391,10 @@ function MenuContent({ params }: { params: Promise<{ slug: string }> }) {
           ) : (
             categories.map((cat) => (
               <div key={cat.id} id={`cat-${cat.id}`} style={{ paddingBottom: 20 }}>
-                <div style={{ padding: "20px 20px 8px", fontSize: 17, fontWeight: 800, letterSpacing: "-.02em", color: C.tx }}>{cat.name}</div>
+                <div style={{ padding: "20px 20px 8px", fontSize: 17, fontWeight: 800, letterSpacing: "-.02em", color: C.tx }}>{getTranslatedName(cat, lang)}</div>
                 <div className="product-grid" style={{ paddingTop: 0 }}>
                   {products.filter(p => p.category_id === cat.id).map((p, i) => (
-                    <ProductCard key={p.id} p={p} i={i} lang={lang} cartQty={cart.filter(item => item.product.id === p.id).reduce((s, item) => s + item.qty, 0)} themeColor={A} C={C} onAdd={addToCart} onRemove={(prod) => { const item = cart.find(c => c.product.id === prod.id); if (item) removeFromCart(item.id); }} onClick={setDetailProduct} />
+                    <ProductCard key={p.id} p={p} i={i} lang={lang} cartQty={cart.filter(item => item.product.id === p.id).reduce((s, item) => s + item.qty, 0)} themeColor={A} C={C} onAdd={addToCart} onRemove={(prod) => { const item = cart.find(c => c.product.id === prod.id); if (item) removeFromCart(item.id); }} onClick={setDetailProduct} hasPrepInfo={hasFeature("prep_info")} hasCart={hasFeature("cart")} />
                   ))}
                 </div>
               </div>
@@ -381,22 +403,22 @@ function MenuContent({ params }: { params: Promise<{ slug: string }> }) {
         </div>
 
         {/* Yorumlar Bölümü */}
-        {restaurant!.show_reviews !== false && (
+        {hasFeature("reviews") && restaurant!.show_reviews !== false && (
           <div style={{ padding: "30px 20px", borderTop: `1px solid ${C.bd}` }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <div>
-                <h3 style={{ fontSize: 16, fontWeight: 800 }}>Yorumlar</h3>
-                <p style={{ fontSize: 12, color: C.mt }}>Müşterilerimizin deneyimleri</p>
+                <h3 style={{ fontSize: 16, fontWeight: 800 }}>{t.reviews}</h3>
+                <p style={{ fontSize: 12, color: C.mt }}>{t.review_desc}</p>
               </div>
               <button onClick={() => setShowReviewModal(true)} style={{ padding: "8px 16px", borderRadius: 10, border: `1.5px solid ${A}`, background: "transparent", color: A, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                Yorum Yap
+                {t.write_review}
               </button>
             </div>
 
             {reviews.length === 0 ? (
               <div style={{ padding: "40px 0", textAlign: "center", background: C.cd, borderRadius: 16, border: `1px dashed ${C.bd}` }}>
                 <div style={{ fontSize: 24, marginBottom: 8 }}>✍️</div>
-                <div style={{ fontSize: 13, color: C.mt }}>Henüz yorum yapılmamış. İlk yorumu siz yapın!</div>
+                <div style={{ fontSize: 13, color: C.mt }}>{t.no_reviews}</div>
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -409,7 +431,7 @@ function MenuContent({ params }: { params: Promise<{ slug: string }> }) {
                     {rev.comment && <div style={{ fontSize: 13, color: C.s2, lineHeight: "1.5" }}>{rev.comment}</div>}
                     {rev.owner_reply && (
                       <div style={{ marginTop: 10, padding: "10px 12px", background: `${A}08`, borderLeft: `2px solid ${A}`, borderRadius: 8 }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: A, marginBottom: 4 }}>İşletme Cevabı:</div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: A, marginBottom: 4 }}>{t.business_reply}:</div>
                         <div style={{ fontSize: 12, color: C.s2 }}>{rev.owner_reply}</div>
                       </div>
                     )}
@@ -422,9 +444,12 @@ function MenuContent({ params }: { params: Promise<{ slug: string }> }) {
         )}
 
         {/* Footer */}
-        <div style={{ textAlign: "center", padding: "20px 0 80px", borderTop: `1px solid ${C.bd}` }}>
-          <Logo size="sm" light={!dark} />
-        </div>
+        {!hasFeature("white_label") && (
+          <div style={{ textAlign: "center", padding: "20px 0 80px", borderTop: `1px solid ${C.bd}` }}>
+            <Logo size="sm" light={!dark} />
+          </div>
+        )}
+        {hasFeature("white_label") && <div style={{ height: 80 }} />}
       </div>
 
       {/* Bottom bar */}
@@ -438,23 +463,23 @@ function MenuContent({ params }: { params: Promise<{ slug: string }> }) {
               status: "pending"
             });
             if (!error) {
-              flash(lang === "tr" ? "Garson çağrıldı!" : lang === "en" ? "Waiter called!" : "تم استدعاء النادل!");
+              flash(t.waiter_notified);
             } else {
               flash("Error!");
             }
           }}
             style={{ flex: 1, padding: 11, borderRadius: 11, border: `1.5px solid ${C.bd}`, background: C.cd, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", color: C.tx, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-            {lang === "tr" ? "Garson" : lang === "en" ? "Waiter" : "النادل"}
+            {t.waiter}
           </button>
 
           <button onClick={() => setShowPaymentSelect(true)}
             style={{ flex: 1, padding: 11, borderRadius: 11, border: `1.5px solid ${C.bd}`, background: C.cd, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", color: C.tx, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-            {lang === "tr" ? "Hesap" : lang === "en" ? "Bill" : "الحساب"}
+            {t.bill}
           </button>
 
-          {restaurant?.accept_orders !== false && cartCount > 0 && (
+          {hasFeature("cart") && restaurant?.accept_orders !== false && cartCount > 0 && (
             <button onClick={() => setShowCart(true)}
               style={{ flex: 1.5, padding: "11px 16px", borderRadius: 11, border: "none", background: A, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: `0 4px 16px ${A}30` }}>
               <span style={{ fontWeight: 800 }}>₺{cartTotal}</span>
@@ -472,6 +497,8 @@ function MenuContent({ params }: { params: Promise<{ slug: string }> }) {
           C={C}
           onClose={() => setDetailProduct(null)}
           onAdd={addToCart}
+          hasPrepInfo={hasFeature("prep_info")}
+          hasCart={hasFeature("cart")}
         />
       )}
 
@@ -497,9 +524,10 @@ function MenuContent({ params }: { params: Promise<{ slug: string }> }) {
       {showReviewModal && restaurant && (
         <ReviewModal
           restaurant={restaurant}
+          lang={lang}
           onClose={() => setShowReviewModal(false)}
           onSuccess={() => {
-            flash("Yorumunuz için teşekkürler!");
+            flash(t.waiter_notified);
             loadMenu();
           }}
         />
@@ -510,13 +538,13 @@ function MenuContent({ params }: { params: Promise<{ slug: string }> }) {
           <div onClick={() => setShowPaymentSelect(false)} style={{ position: "absolute", inset: 0 }} />
           <div style={{ position: "relative", width: "100%", maxWidth: 500, background: C.bg, borderTop: `1px solid ${C.bd}`, borderRadius: "24px 24px 0 0", padding: "24px 20px 40px", animation: "slideUp .4s cubic-bezier(0.16, 1, 0.3, 1)" }}>
             <div style={{ width: 40, height: 4, background: C.dm, borderRadius: 99, margin: "0 auto 20px" }} />
-            <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8, textAlign: "center" }}>{lang === "tr" ? "Ödeme Yöntemi" : "Payment Method"}</h3>
-            <p style={{ fontSize: 13, color: C.mt, marginBottom: 24, textAlign: "center" }}>{lang === "tr" ? "Lütfen ödeme yapacağınız yöntemi seçin." : "Please select your payment method."}</p>
+            <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8, textAlign: "center" }}>{t.payment_method}</h3>
+            <p style={{ fontSize: 13, color: C.mt, marginBottom: 24, textAlign: "center" }}>{t.payment_desc}</p>
             
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {[
-                { id: "cash", label: lang === "tr" ? "Nakit" : "Cash", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg> },
-                { id: "card", label: lang === "tr" ? "Kredi Kartı" : "Credit Card", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg> }
+                { id: "cash", label: t.cash, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg> },
+                { id: "card", label: t.card, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg> }
               ].map((m) => (
                 <button 
                   key={m.id}
@@ -533,9 +561,9 @@ function MenuContent({ params }: { params: Promise<{ slug: string }> }) {
                     
                     setShowPaymentSelect(false);
                     if (!error) {
-                      flash(lang === "tr" ? "Hesap istendi!" : "Bill requested!");
+                      flash(t.bill_requested);
                     } else {
-                      flash("Hata!");
+                      flash("Error!");
                     }
                   }}
                   style={{ width: "100%", padding: "16px", borderRadius: 16, border: `1.5px solid ${C.bd}`, background: C.cd, color: C.tx, fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontFamily: "inherit" }}
@@ -545,10 +573,10 @@ function MenuContent({ params }: { params: Promise<{ slug: string }> }) {
                 </button>
               ))}
             </div>
-            <button onClick={() => setShowPaymentSelect(false)} style={{ width: "100%", marginTop: 16, padding: "14px", border: "none", background: "transparent", color: C.mt, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>{lang === "tr" ? "Vazgeç" : "Cancel"}</button>
+            <button onClick={() => setShowPaymentSelect(false)} style={{ width: "100%", marginTop: 16, padding: "14px", border: "none", background: "transparent", color: C.mt, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>{t.cancel}</button>
           </div>
         </div>
       )}
     </div>
   );
-}
+}

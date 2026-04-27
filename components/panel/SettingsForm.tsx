@@ -12,7 +12,13 @@ export function SettingsForm({
   onUpdate: (updated: Partial<Restaurant>) => void;
 }) {
   const [wifi, setWifi] = useState(restaurant.wifi_password || "");
-  const [hours, setHours] = useState(restaurant.hours || "");
+  const initialHours = restaurant.hours || "09:00-23:00";
+  const [hOpen, hClose] = initialHours.split("-");
+  const [openHour, setOpenHour] = useState(hOpen?.split(":")[0] || "09");
+  const [openMin, setOpenMin] = useState(hOpen?.split(":")[1] || "00");
+  const [closeHour, setCloseHour] = useState(hClose?.split(":")[0] || "23");
+  const [closeMin, setCloseMin] = useState(hClose?.split(":")[1] || "00");
+
   const [color, setColor] = useState(restaurant.theme_color || "#D4470A");
   const [showReviews, setShowReviews] = useState(restaurant.show_reviews ?? true);
   const [acceptOrders, setAcceptOrders] = useState(restaurant.accept_orders ?? true);
@@ -32,14 +38,14 @@ export function SettingsForm({
     setError(null);
     setSuccess(false);
 
-    let finalLogoUrl = restaurant.logo_url;
+    let finalLogoUrl = logoPreview; // Use current preview (might be null if removed)
 
     if (logoFile) {
       setLogoUploading(true);
       const ext = logoFile.name.split(".").pop();
       const path = `logos/${restaurant.id}-${Date.now()}.${ext}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from("product-images") // Reusing the same bucket for simplicity or use a 'logos' bucket
+        .from("product-images")
         .upload(path, logoFile, { upsert: true });
         
       if (uploadError) {
@@ -56,7 +62,7 @@ export function SettingsForm({
 
     const updates = {
       wifi_password: wifi.trim() || null,
-      hours: hours.trim() || null,
+      hours: `${openHour}:${openMin}-${closeHour}:${closeMin}`,
       theme_color: color,
       logo_url: finalLogoUrl,
       show_reviews: showReviews,
@@ -71,7 +77,8 @@ export function SettingsForm({
       .eq("id", restaurant.id);
 
     if (updateError) {
-      setError("Ayarlar kaydedilemedi.");
+      setError(`Hata: ${updateError.message}`);
+      console.error("Güncelleme hatası:", updateError);
     } else {
       setSuccess(true);
       onUpdate(updates);
@@ -79,6 +86,9 @@ export function SettingsForm({
     }
     setSaving(false);
   };
+
+  const hoursList = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
+  const minsList = ["00", "15", "30", "45"];
 
   return (
     <div className="card" style={{ padding: "22px 24px" }}>
@@ -89,7 +99,11 @@ export function SettingsForm({
           <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 8 }}>Logo</label>
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
             {logoPreview ? (
-              <img src={logoPreview} alt="Logo" style={{ width: 64, height: 64, borderRadius: 10, objectFit: "cover", flexShrink: 0, background: "#fff" }} />
+              <div style={{ position: "relative" }}>
+                <img src={logoPreview} alt="Logo" style={{ width: 64, height: 64, borderRadius: 10, objectFit: "cover", flexShrink: 0, background: "#fff" }} />
+                <button type="button" onClick={() => { setLogoPreview(null); setLogoFile(null); }}
+                  style={{ position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: 99, background: "#ef4444", color: "#fff", border: "2px solid #111", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 10 }}>✕</button>
+              </div>
             ) : (
               <div style={{ width: 64, height: 64, borderRadius: 10, background: "rgba(255,255,255,.04)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>🏢</div>
             )}
@@ -107,21 +121,45 @@ export function SettingsForm({
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>WiFi Şifresi</label>
-            <input type="text" value={wifi} onChange={e => setWifi(e.target.value)} placeholder="Müşterileriniz için"
-              style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>WiFi Şifresi</label>
+              <input type="text" value={wifi} onChange={e => setWifi(e.target.value)} placeholder="Müşterileriniz için"
+                style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Masa Sayısı</label>
+              <input type="number" value={tableCount} onChange={e => setTableCount(Number(e.target.value))} placeholder="20"
+                style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
+            </div>
           </div>
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Çalışma Saatleri</label>
-            <input type="text" value={hours} onChange={e => setHours(e.target.value)} placeholder="09:00 - 23:00"
-              style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
-          </div>
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Masa Sayısı</label>
-            <input type="number" value={tableCount} onChange={e => setTableCount(Number(e.target.value))} placeholder="20"
-              style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 8 }}>Açılış Saati</label>
+              <div style={{ display: "flex", gap: 4 }}>
+                <select value={openHour} onChange={e => setOpenHour(e.target.value)} style={{ flex: 1, padding: "10px", borderRadius: 8, background: "#1a1a1a", border: "1px solid rgba(255,255,255,.1)", color: "#fff", outline: "none" }}>
+                  {hoursList.map(h => <option key={h} value={h}>{h}</option>)}
+                </select>
+                <div style={{ display: "flex", alignItems: "center", color: "rgba(255,255,255,.3)" }}>:</div>
+                <select value={openMin} onChange={e => setOpenMin(e.target.value)} style={{ flex: 1, padding: "10px", borderRadius: 8, background: "#1a1a1a", border: "1px solid rgba(255,255,255,.1)", color: "#fff", outline: "none" }}>
+                  {minsList.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 8 }}>Kapanış Saati</label>
+              <div style={{ display: "flex", gap: 4 }}>
+                <select value={closeHour} onChange={e => setCloseHour(e.target.value)} style={{ flex: 1, padding: "10px", borderRadius: 8, background: "#1a1a1a", border: "1px solid rgba(255,255,255,.1)", color: "#fff", outline: "none" }}>
+                  {hoursList.map(h => <option key={h} value={h}>{h}</option>)}
+                </select>
+                <div style={{ display: "flex", alignItems: "center", color: "rgba(255,255,255,.3)" }}>:</div>
+                <select value={closeMin} onChange={e => setCloseMin(e.target.value)} style={{ flex: 1, padding: "10px", borderRadius: 8, background: "#1a1a1a", border: "1px solid rgba(255,255,255,.1)", color: "#fff", outline: "none" }}>
+                  {minsList.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+            </div>
           </div>
         </div>
 

@@ -30,6 +30,7 @@ export type Product = {
   tags: string[];
   serves: number;
   sort_order: number;
+  extras?: ProductExtra[];
 };
 
 export type Restaurant = {
@@ -39,7 +40,7 @@ export type Restaurant = {
   slug: string;
   phone: string | null;
   address: string | null;
-  plan: "free" | "starter" | "pro";
+  plan: "free" | "yenimekan" | "starter" | "pro";
   hours: string | null;
   wifi_password: string | null;
   theme_color: string | null;

@@ -19,118 +19,101 @@ const plans = [
     cta: "Ücretsiz Başla",
     ctaHref: "/panel",
     features: [
-      { text: "15 ürüne kadar", ok: true },
-      { text: "1 menü", ok: true },
-      { text: "Temel QR kod", ok: true },
-      { text: "5 dil desteği", ok: true },
-      { text: "Karanlık mod", ok: true },
-      { text: "Mekan fotoğrafları", ok: true },
+      { text: "5 Ürün kapasitesi", ok: true },
+      { text: "Temel QR Kod", ok: true },
+      { text: "5 Dil desteği", ok: true },
+      { text: "Karanlık Mod", ok: true },
       { text: "WiFi gösterimi", ok: true },
-      { text: "Garson çağır butonu", ok: true },
-      { text: "Sepet & WhatsApp sipariş", ok: false },
-      { text: "Şefin seçimi bölümü", ok: false },
-      { text: "Fotoğraf galerisi", ok: false },
-      { text: "Hazırlık süresi & porsiyon", ok: false },
-      { text: "Benzer yemek önerileri", ok: false },
-      { text: "Kampanya & indirim", ok: false },
-      { text: "Detaylı analitik", ok: false },
-      { text: "Logo kaldırma", ok: false },
-      { text: "Özel domain", ok: false },
-      { text: "Masa bazlı QR", ok: false },
+      { text: "Alerjen bilgileri ekleme", ok: true },
+      { text: "Kalori Bilgisi", ok: true },
+      { text: "Analitik & İstatistikler", ok: false },
+      { text: "Mekan fotoğrafları", ok: false },
+    ],
+  },
+  {
+    id: "yenimekan",
+    name: "Yeni Mekan",
+    desc: "Büyümeye başlayan mekanlar",
+    price: 49,
+    priceA: 39,
+    target: "Yeni nesil kafeler",
+    color: "rgba(255,255,255,.06)",
+    highlight: false,
+    cta: "Hemen Başla",
+    ctaHref: "/panel",
+    features: [
+      { text: "Ücretsiz plan özellikleri", ok: true, isGroup: true },
+      { text: "10 Ürün kapasitesi", ok: true },
+      { text: "Temel Analitik", ok: true },
+      { text: "Mekan fotoğrafları", ok: true },
+      { text: "Özelleştirilebilir QR Kod", ok: false },
+      { text: "Sepete ekleme & Sipariş", ok: false },
     ],
   },
   {
     id: "starter",
     name: "Başlangıç",
-    desc: "Büyümek isteyen restoranlar",
+    desc: "Profesyonel hizmet isteyenler",
     price: 149,
     priceA: 119,
-    target: "Tek şubeli aktif restoranlar",
-    color: "rgba(255,255,255,.06)",
-    highlight: false,
-    cta: "14 Gün Ücretsiz Dene",
+    target: "Popüler restoranlar",
+    color: A,
+    highlight: true,
+    cta: "Ücretsiz Dene",
     ctaHref: "/panel",
     features: [
-      { text: "50 ürüne kadar", ok: true },
-      { text: "1 menü", ok: true },
-      { text: "Özelleştirilebilir QR kod", ok: true },
-      { text: "5 dil desteği", ok: true },
-      { text: "Karanlık mod", ok: true },
-      { text: "Mekan fotoğrafları", ok: true },
-      { text: "WiFi gösterimi", ok: true },
-      { text: "Garson çağır butonu", ok: true },
-      { text: "Sepet & WhatsApp sipariş", ok: true },
+      { text: "Yeni Mekan özellikleri", ok: true, isGroup: true },
+      { text: "25 Ürün kapasitesi", ok: true },
+      { text: "Özelleştirilebilir QR Kod", ok: true },
+      { text: "Sepete ekleme & Sipariş", ok: true },
       { text: "Şefin seçimi bölümü", ok: true },
-      { text: "Fotoğraf galerisi (3 foto/ürün)", ok: true },
-      { text: "Hazırlık süresi & porsiyon", ok: true },
-      { text: "Benzer yemek önerileri", ok: false },
-      { text: "Kampanya & indirim", ok: false },
-      { text: "Temel analitik", ok: true },
-      { text: "Logo kaldırma", ok: false },
-      { text: "Özel domain", ok: false },
-      { text: "Masa bazlı QR (5 masa)", ok: true },
+      { text: "Hazırlık süresi & Porsiyon", ok: true },
+      { text: "Masa bazlı QR (10 Masa)", ok: true },
+      { text: "Mutfak Paneli & KDS", ok: false },
     ],
   },
   {
     id: "pro",
-    name: "Profesyonel",
-    desc: "Tüm özellikler, sınırsız güç",
+    name: "Pro",
+    desc: "Sınırsız güç ve kontrol",
     price: 299,
     priceA: 239,
-    target: "Yoğun restoranlar & kafeler",
-    color: A,
-    highlight: true,
-    cta: "14 Gün Ücretsiz Dene",
+    target: "Büyük zincirler & Restoranlar",
+    color: "rgba(255,255,255,.08)",
+    highlight: false,
+    cta: "Hemen Yükselt",
     ctaHref: "/panel",
     features: [
-      { text: "Sınırsız ürün", ok: true },
-      { text: "Sınırsız menü", ok: true },
-      { text: "Premium QR kod tasarımı", ok: true },
-      { text: "5 dil desteği", ok: true },
-      { text: "Karanlık mod", ok: true },
-      { text: "Mekan fotoğrafları", ok: true },
-      { text: "WiFi gösterimi", ok: true },
-      { text: "Garson çağır butonu", ok: true },
-      { text: "Sepet & WhatsApp sipariş", ok: true },
-      { text: "Şefin seçimi bölümü", ok: true },
-      { text: "Fotoğraf galerisi (sınırsız)", ok: true },
-      { text: "Hazırlık süresi & porsiyon", ok: true },
-      { text: "Benzer yemek önerileri", ok: true },
-      { text: "Kampanya & indirim", ok: true },
-      { text: "Detaylı analitik", ok: true },
-      { text: "Logo kaldırma (white-label)", ok: true },
-      { text: "Özel domain", ok: true },
-      { text: "Masa bazlı QR (sınırsız)", ok: true },
+      { text: "Başlangıç planı özellikleri", ok: true, isGroup: true },
+      { text: "Sınırsız ürün kapasitesi", ok: true },
+      { text: "Dijital Mutfak Paneli", ok: true },
+      { text: "Müşteri Yorumları & Ayarları", ok: true },
+      { text: "Yemek Önerileri (Benzerler)", ok: true },
+      { text: "Logo kaldırma (White-label)", ok: true },
+      { text: "Sınırsız Masa bazlı QR", ok: true },
     ],
   },
 ];
 
 const faqs = [
-  { q: "14 gün deneme nasıl çalışır?", a: "Başlangıç veya Pro planını seçin. 14 gün boyunca tüm özellikleri ücretsiz kullanın. Beğenmezseniz iptal edin, hiçbir ücret alınmaz. Kredi kartı bilgisi istenir ama 14 gün içinde çekim yapılmaz." },
-  { q: "İstediğim zaman plan değiştirebilir miyim?", a: "Evet. Üst plana geçişte fark anında yansır. Alt plana geçişte mevcut dönem sonunda uygulanır. Ücretsiz plana dönüşte Pro özellikler kapanır ama verileriniz silinmez." },
-  { q: "KDV dahil mi?", a: "Gösterilen fiyatlar KDV hariçtir. Faturanızda %20 KDV ayrıca gösterilir. Örneğin Pro plan: ₺299 + KDV = ₺358,80/ay" },
+  { q: "14 gün deneme nasıl çalışır?", a: "Başlangıç veya Pro planını seçin. 14 gün boyunca tüm özellikleri ücretsiz kullanın. Beğenmezseniz iptal edin, hiçbir ücret alınmaz." },
+  { q: "İstediğim zaman plan değiştirebilir miyim?", a: "Evet. Üst plana geçişte fark anında yansır. Alt plana geçişte mevcut dönem sonunda uygulanır." },
+  { q: "KDV dahil mi?", a: "Gösterilen fiyatlar KDV hariçtir. Faturanızda %20 KDV ayrıca gösterilir." },
   { q: "Başka gizli ücret var mı?", a: "Hayır. Sipariş başına komisyon yok, kurulum ücreti yok, trafik limiti yok. Sadece sabit aylık veya yıllık ücret." },
-  { q: "Yıllık planda erken iptal edersem?", a: "Yıllık planda kalan ayların ücretini iade ederiz. Sözleşme yok, risk yok." },
-  { q: "Özel fiyat alabilir miyim?", a: "10+ şubeniz varsa size özel fiyat teklifi sunabiliriz. İletişime geçin." },
 ];
 
 const compareRows = [
-  ["Ürün limiti", "15", "50", "Sınırsız"],
-  ["Menü sayısı", "1", "1", "Sınırsız"],
-  ["QR kod", "Temel", "Özel", "Premium"],
-  ["Dil desteği", "5", "5", "5"],
-  ["Karanlık mod", "✓", "✓", "✓"],
-  ["WiFi & Garson", "✓", "✓", "✓"],
-  ["Sepet & Sipariş", "—", "✓", "✓"],
-  ["Şefin seçimi", "—", "✓", "✓"],
-  ["Fotoğraf galerisi", "—", "3/ürün", "Sınırsız"],
-  ["Benzer öneriler", "—", "—", "✓"],
-  ["Kampanyalar", "—", "—", "✓"],
-  ["Analitik", "—", "Temel", "Detaylı"],
-  ["Logo kaldırma", "—", "—", "✓"],
-  ["Özel domain", "—", "—", "✓"],
-  ["Masa bazlı QR", "—", "5 masa", "Sınırsız"],
-  ["Destek", "—", "Email", "Email + Chat"],
+  ["Ürün limiti", "5", "10", "25", "Sınırsız"],
+  ["QR kod tasarımı", "Temel", "Temel", "Özel", "Özel"],
+  ["Analitik", "—", "Temel", "Temel", "Detaylı"],
+  ["Sepete Ekleme", false, false, true, true],
+  ["Şefin Seçimi", false, false, true, true],
+  ["Hazırlık & Porsiyon", false, false, true, true],
+  ["Masa Bazlı QR", false, false, "10 Masa", "Sınırsız"],
+  ["Mutfak Paneli", false, false, false, true],
+  ["Müşteri Yorumları", false, false, false, true],
+  ["Logo Kaldırma", false, false, false, true],
+  ["Benzer Öneriler", false, false, false, true],
 ];
 
 export default function FiyatPage() {
@@ -218,7 +201,7 @@ export default function FiyatPage() {
       {/* PLANS */}
       <section style={{ padding: "0 5% 80px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div className="plans-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20, alignItems: "start" }}>
+          <div className="plans-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20, alignItems: "start" }}>
             {plans.map((plan, i) => {
               const price = annual ? plan.priceA : plan.price;
               const includedCount = plan.features.filter(f => f.ok).length;
@@ -297,10 +280,24 @@ export default function FiyatPage() {
 
                   {/* Features */}
                   <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-                    {plan.features.filter(f => f.ok).map((f, j) => (
-                      <div key={j} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={plan.highlight ? A : "#22c55e"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><polyline points="20 6 9 17 4 12"/></svg>
-                        <span style={{ fontSize: 13, color: "rgba(255,255,255,.7)", lineHeight: 1.4 }}>{f.text}</span>
+                    {plan.features.filter(f => f.ok).map((f: any, j) => (
+                      <div key={j} style={{ 
+                        display: "flex", 
+                        alignItems: "flex-start", 
+                        gap: 10,
+                        padding: f.isGroup ? "8px 12px" : "0",
+                        background: f.isGroup ? (plan.highlight ? "rgba(255,255,255,.05)" : "rgba(212,71,10,.08)") : "transparent",
+                        borderRadius: 8,
+                        border: f.isGroup ? (plan.highlight ? "1px solid rgba(255,255,255,.1)" : `1px solid ${A}20`) : "none",
+                        marginBottom: f.isGroup ? 4 : 0
+                      }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={f.isGroup ? A : (plan.highlight ? A : "#22c55e")} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: f.isGroup ? 2 : 1 }}><polyline points="20 6 9 17 4 12"/></svg>
+                        <span style={{ 
+                          fontSize: f.isGroup ? 12 : 13, 
+                          color: f.isGroup ? (plan.highlight ? "#fff" : A) : "rgba(255,255,255,.7)", 
+                          lineHeight: 1.4,
+                          fontWeight: f.isGroup ? 800 : 400
+                        }}>{f.text}</span>
                       </div>
                     ))}
                     {lockedCount > 0 && (
@@ -338,10 +335,10 @@ export default function FiyatPage() {
                 <div key={i} className="compare-row" style={{ display: "grid", gridTemplateColumns: "1fr 120px 120px 140px", padding: "11px 24px", borderBottom: i < compareRows.length - 1 ? "1px solid rgba(255,255,255,.05)" : "none", background: i % 2 ? "rgba(255,255,255,.015)" : "transparent" }}>
                   <span style={{ fontSize: 12, color: "rgba(255,255,255,.6)", fontWeight: 500 }}>{row[0]}</span>
                   {[row[1], row[2], row[3]].map((val, j) => (
-                    <span key={j} style={{ fontSize: 12, textAlign: "center", fontWeight: val === "✓" ? 700 : val === "—" ? 400 : 600, color: val === "—" ? "rgba(255,255,255,.15)" : val === "✓" ? "#22c55e" : j === 2 ? "#fff" : "rgba(255,255,255,.6)" }}>
-                      {val === "✓" ? (
+                    <span key={j} style={{ fontSize: 12, textAlign: "center", fontWeight: val === true ? 700 : val === false ? 400 : 600, color: val === false ? "rgba(255,255,255,.15)" : val === true ? "#22c55e" : j === 2 ? "#fff" : "rgba(255,255,255,.6)" }}>
+                      {val === true ? (
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline-block" }}><polyline points="20 6 9 17 4 12"/></svg>
-                      ) : val === "—" ? (
+                      ) : val === false ? (
                         <span style={{ color: "rgba(255,255,255,.15)" }}>—</span>
                       ) : val}
                     </span>

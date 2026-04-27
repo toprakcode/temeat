@@ -2,6 +2,7 @@ import React from "react";
 import { Product } from "@/types";
 import { ALLERGENS, LangKey } from "@/lib/constants";
 import { getProductName, getProductDesc } from "@/lib/utils";
+import { UI_STRINGS } from "@/lib/translations";
 
 export function ProductCard({
   p,
@@ -12,7 +13,9 @@ export function ProductCard({
   C,
   onAdd,
   onRemove,
-  onClick
+  onClick,
+  hasPrepInfo,
+  hasCart
 }: {
   p: Product;
   i: number;
@@ -23,7 +26,10 @@ export function ProductCard({
   onAdd: (p: Product) => void;
   onRemove: (p: Product) => void;
   onClick: (p: Product) => void;
+  hasPrepInfo?: boolean;
+  hasCart?: boolean;
 }) {
+  const t = UI_STRINGS[lang];
   const discPrice = p.discount_pct ? Math.round(p.price * (1 - p.discount_pct / 100)) : null;
 
   return (
@@ -60,29 +66,33 @@ export function ProductCard({
             })}
           </div>
         )}
-          <div style={{ display: "flex", gap: 8, fontSize: 10, color: C.mt }}>
-            {p.prep_time && <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              {p.prep_time}dk
-            </span>}
-            {p.calories && <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 2c0 1.5-1 2.5-1 4s1 2.5 1 4c0 1.5-1 2.5-1 4s1 2.5 1 4"/></svg>
-              {p.calories}kal
-            </span>}
-          </div>
+          {(hasPrepInfo || p.calories) && (
+            <div style={{ display: "flex", gap: 8, fontSize: 10, color: C.mt }}>
+              {hasPrepInfo && p.prep_time && <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                {p.prep_time} {t.prep}
+              </span>}
+              {p.calories && <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 2c0 1.5-1 2.5-1 4s1 2.5 1 4c0 1.5-1 2.5-1 4s1 2.5-1 4"/></svg>
+                {p.calories} {t.kcal}
+              </span>}
+            </div>
+          )}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto", paddingTop: 8 }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
             <span style={{ fontSize: 16, fontWeight: 800 }}>₺{discPrice || p.price}</span>
             {discPrice && <span style={{ fontSize: 11, color: C.dm, textDecoration: "line-through" }}>₺{p.price}</span>}
           </div>
-          {cartQty > 0 ? (
-            <div style={{ display: "flex", alignItems: "center", background: C.al, borderRadius: 8, border: `1.5px solid ${themeColor}20` }}>
-              <button onClick={() => onRemove(p)} style={{ width: 28, height: 28, border: "none", background: "none", cursor: "pointer", fontSize: 16, color: themeColor }}>−</button>
-              <span style={{ fontWeight: 700, fontSize: 13, color: themeColor, minWidth: 16, textAlign: "center" }}>{cartQty}</span>
-              <button onClick={() => onAdd(p)} style={{ width: 28, height: 28, border: "none", background: themeColor, cursor: "pointer", fontSize: 16, color: "#fff", borderRadius: "0 6px 6px 0" }}>+</button>
-            </div>
-          ) : (
-            <button onClick={() => onAdd(p)} style={{ padding: "6px 14px", borderRadius: 8, border: `1.5px solid ${C.bd}`, background: "transparent", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", color: C.tx }}>+ Ekle</button>
+          {hasCart && (
+            cartQty > 0 ? (
+              <div style={{ display: "flex", alignItems: "center", background: C.al, borderRadius: 8, border: `1.5px solid ${themeColor}20` }}>
+                <button onClick={() => onRemove(p)} style={{ width: 28, height: 28, border: "none", background: "none", cursor: "pointer", fontSize: 16, color: themeColor }}>−</button>
+                <span style={{ fontWeight: 700, fontSize: 13, color: themeColor, minWidth: 16, textAlign: "center" }}>{cartQty}</span>
+                <button onClick={() => onAdd(p)} style={{ width: 28, height: 28, border: "none", background: themeColor, cursor: "pointer", fontSize: 16, color: "#fff", borderRadius: "0 6px 6px 0" }}>+</button>
+              </div>
+            ) : (
+              <button onClick={() => onAdd(p)} style={{ padding: "6px 14px", borderRadius: 8, border: `1.5px solid ${C.bd}`, background: "transparent", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", color: C.tx }}>+ {t.add}</button>
+            )
           )}
         </div>
       </div>

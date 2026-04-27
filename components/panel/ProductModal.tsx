@@ -12,6 +12,7 @@ export function ProductModal({
   onSave,
   onClose,
   themeColor = "#D4470A",
+  restaurantPlan = "free",
 }: {
   title: string;
   categories: Category[];
@@ -19,6 +20,7 @@ export function ProductModal({
   onSave: (data: any) => Promise<void>;
   onClose: () => void;
   themeColor?: string;
+  restaurantPlan?: string;
 }) {
   const [name, setName] = useState(initial.name_tr || "");
   const [nameEn, setNameEn] = useState(initial.name_en || "");
@@ -88,7 +90,7 @@ export function ProductModal({
     setSaving(true); 
     setError(null);
     
-    let finalImageUrl = initial.image_url || null;
+    let finalImageUrl = imagePreview; // Use the current preview state
     
     if (imageFile) {
       setImageUploading(true);
@@ -158,7 +160,11 @@ export function ProductModal({
             <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 8 }}>Fotoğraf</label>
             <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
               {imagePreview && (
-                <img src={imagePreview} alt="" style={{ width: 72, height: 72, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
+                <div style={{ position: "relative", flexShrink: 0 }}>
+                  <img src={imagePreview} alt="" style={{ width: 72, height: 72, borderRadius: 10, objectFit: "cover" }} />
+                  <button type="button" onClick={() => { setImagePreview(null); setImageFile(null); }}
+                    style={{ position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: 99, background: "#ef4444", color: "#fff", border: "2px solid #111", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 10 }}>✕</button>
+                </div>
               )}
               <label style={{ flex: 1, padding: "11px 14px", borderRadius: 10, border: "1.5px dashed rgba(255,255,255,.2)", background: "rgba(255,255,255,.04)", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, color: "rgba(255,255,255,.5)", fontSize: 13 }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -243,72 +249,89 @@ export function ProductModal({
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Kalori</label>
-              <input type="number" value={calories} onChange={e => setCalories(e.target.value)} placeholder="450"
-                style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>Hazırlık (dk)</label>
-              <input type="number" value={prepTime} onChange={e => setPrepTime(e.target.value)} placeholder="18"
-                style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
-            </div>
-          </div>
+          {(() => {
+            const planOrder = ["free", "yenimekan", "starter", "pro"];
+            const currentPlanIndex = planOrder.indexOf(restaurantPlan);
+            const starterLocked = currentPlanIndex < planOrder.indexOf("starter");
 
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 8 }}>
-              Alerjenler
-              <span style={{ fontSize: 10, color: "rgba(255,255,255,.25)", fontWeight: 400, marginLeft: 6 }}>1 Temmuz yönetmeliği gereği</span>
-            </label>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {ALLERGENS.map(a => {
-                const selected = allergens.includes(a.key);
-                return (
-                  <button key={a.key} type="button"
-                    onClick={() => setAllergens(prev => selected ? prev.filter(x => x !== a.key) : [...prev, a.key])}
-                    style={{ padding: "6px 10px", borderRadius: 8, border: `1.5px solid ${selected ? themeColor : "rgba(255,255,255,.1)"}`, background: selected ? `${themeColor}20` : "transparent", color: selected ? "#fff" : "rgba(255,255,255,.4)", fontSize: 11, fontWeight: selected ? 700 : 400, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4 }}>
-                    {a.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <button onClick={() => setChefPick(!chefPick)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderRadius: 10, border: `1.5px solid ${chefPick ? themeColor : "rgba(255,255,255,.1)"}`, background: chefPick ? `${themeColor}15` : "rgba(255,255,255,.04)", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
-            <div style={{ width: 20, height: 20, borderRadius: 6, background: chefPick ? themeColor : "rgba(255,255,255,.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              {chefPick && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
-            </div>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>Şefin Seçimi</div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)" }}>Menüde öne çıkar</div>
-            </div>
-          </button>
-
-          {/* EKSTRALAR */}
-          <div style={{ marginTop: 8 }}>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 8 }}>
-              Ekstralar / Seçenekler (Opsiyonel)
-            </label>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {extras.map((ex, i) => (
-                <div key={i} style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <input type="text" value={ex.name_tr} onChange={e => { const n = [...extras]; n[i].name_tr = e.target.value; setExtras(n); }} placeholder="Örn: Ekstra Peynir" style={{ flex: 2, padding: "9px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.04)", color: "#fff", fontSize: 13, outline: "none" }} />
-                  <div style={{ position: "relative", flex: 1 }}>
-                    <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "rgba(255,255,255,.4)" }}>₺</span>
-                    <input type="number" value={ex.price} onChange={e => { const n = [...extras]; n[i].price = Number(e.target.value); setExtras(n); }} placeholder="0" style={{ width: "100%", padding: "9px 12px 9px 24px", borderRadius: 8, border: "1px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.04)", color: "#fff", fontSize: 13, outline: "none" }} />
+            return (
+              <>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 6 }}>
+                      Kalori
+                    </label>
+                    <input type="number" value={calories} onChange={e => setCalories(e.target.value)} placeholder="450"
+                      style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
                   </div>
-                  <button type="button" onClick={() => { const n = [...extras]; n[i].is_multiple = !n[i].is_multiple; setExtras(n); }} style={{ padding: "9px 12px", borderRadius: 8, border: `1px solid ${ex.is_multiple ? themeColor : "rgba(255,255,255,.1)"}`, background: ex.is_multiple ? `${themeColor}20` : "transparent", color: ex.is_multiple ? themeColor : "rgba(255,255,255,.5)", fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }} title="Çoklu: Müşteri birden fazla ekstra seçebilir. Tekli: Zorunlu/Tek seçim (Örn: Boyut)">
-                    {ex.is_multiple ? "Çoklu Seçim" : "Tekli Seçim"}
-                  </button>
-                  <button type="button" onClick={() => setExtras(extras.filter((_, idx) => idx !== i))} style={{ padding: "8px", borderRadius: 8, border: "none", background: "transparent", color: "#ef4444", cursor: "pointer" }}>✕</button>
+                  <div style={{ opacity: starterLocked ? 0.5 : 1 }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "flex", alignItems: "center", gap: 4, marginBottom: 6 }}>
+                      Hazırlık (dk) {starterLocked && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>}
+                    </label>
+                    <input type="number" value={prepTime} onChange={e => !starterLocked && setPrepTime(e.target.value)} placeholder={starterLocked ? "Kilitli" : "18"} disabled={starterLocked}
+                      style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.06)", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none", cursor: starterLocked ? "not-allowed" : "text" }} />
+                  </div>
                 </div>
-              ))}
-              <button type="button" onClick={() => setExtras([...extras, { name_tr: "", price: 0, is_multiple: true }])} style={{ padding: "10px", borderRadius: 8, border: "1px dashed rgba(255,255,255,.2)", background: "transparent", color: "rgba(255,255,255,.6)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                + Ekstra Seçenek Ekle
-              </button>
-            </div>
-          </div>
+
+                <div style={{ opacity: starterLocked ? 0.5 : 1 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 8 }}>
+                    Alerjenler
+                    <span style={{ fontSize: 10, color: "rgba(255,255,255,.25)", fontWeight: 400, marginLeft: 6 }}>1 Temmuz yönetmeliği gereği</span>
+                  </label>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {ALLERGENS.map(a => {
+                      const selected = allergens.includes(a.key);
+                      return (
+                        <button key={a.key} type="button"
+                          onClick={() => setAllergens(prev => selected ? prev.filter(x => x !== a.key) : [...prev, a.key])}
+                          style={{ padding: "6px 10px", borderRadius: 8, border: `1.5px solid ${selected ? themeColor : "rgba(255,255,255,.1)"}`, background: selected ? `${themeColor}20` : "transparent", color: selected ? "#fff" : "rgba(255,255,255,.4)", fontSize: 11, fontWeight: selected ? 700 : 400, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4 }}>
+                          {a.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <button type="button" onClick={() => !starterLocked && setChefPick(!chefPick)} 
+                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderRadius: 10, border: `1.5px solid ${chefPick ? themeColor : "rgba(255,255,255,.1)"}`, background: chefPick ? `${themeColor}15` : "rgba(255,255,255,.04)", cursor: starterLocked ? "not-allowed" : "pointer", fontFamily: "inherit", textAlign: "left", opacity: starterLocked ? 0.5 : 1 }}>
+                  <div style={{ width: 20, height: 20, borderRadius: 6, background: chefPick ? themeColor : "rgba(255,255,255,.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    {chefPick && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#fff", display: "flex", alignItems: "center", gap: 6 }}>
+                      Şefin Seçimi {starterLocked && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>}
+                    </div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)" }}>Menüde öne çıkar</div>
+                  </div>
+                </button>
+
+                {/* EKSTRALAR */}
+                <div style={{ marginTop: 8, opacity: starterLocked ? 0.5 : 1 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                    Ekstralar / Seçenekler (Opsiyonel) {starterLocked && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>}
+                  </label>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {extras.map((ex, i) => (
+                      <div key={i} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <input type="text" value={ex.name_tr} onChange={e => { const n = [...extras]; n[i].name_tr = e.target.value; setExtras(n); }} placeholder="Örn: Ekstra Peynir" disabled={starterLocked} style={{ flex: 2, padding: "9px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.04)", color: "#fff", fontSize: 13, outline: "none", cursor: starterLocked ? "not-allowed" : "text" }} />
+                        <div style={{ position: "relative", flex: 1 }}>
+                          <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "rgba(255,255,255,.4)" }}>₺</span>
+                          <input type="number" value={ex.price} onChange={e => { const n = [...extras]; n[i].price = Number(e.target.value); setExtras(n); }} placeholder="0" disabled={starterLocked} style={{ width: "100%", padding: "9px 12px 9px 24px", borderRadius: 8, border: "1px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.04)", color: "#fff", fontSize: 13, outline: "none", cursor: starterLocked ? "not-allowed" : "text" }} />
+                        </div>
+                        <button type="button" onClick={() => { const n = [...extras]; n[i].is_multiple = !n[i].is_multiple; setExtras(n); }} disabled={starterLocked} style={{ padding: "9px 12px", borderRadius: 8, border: `1.5px solid ${ex.is_multiple ? themeColor : "rgba(255,255,255,.1)"}`, background: ex.is_multiple ? `${themeColor}20` : "transparent", color: ex.is_multiple ? themeColor : "rgba(255,255,255,.5)", fontSize: 11, fontWeight: 600, cursor: starterLocked ? "not-allowed" : "pointer", whiteSpace: "nowrap" }}>
+                          {ex.is_multiple ? "Çoklu" : "Tekli"}
+                        </button>
+                        <button type="button" onClick={() => setExtras(extras.filter((_, idx) => idx !== i))} disabled={starterLocked} style={{ padding: "8px", borderRadius: 8, border: "none", background: "transparent", color: "#ef4444", cursor: starterLocked ? "not-allowed" : "pointer" }}>✕</button>
+                      </div>
+                    ))}
+                    <button type="button" onClick={() => !starterLocked && setExtras([...extras, { name_tr: "", price: 0, is_multiple: true }])} disabled={starterLocked} style={{ padding: "10px", borderRadius: 8, border: "1px dashed rgba(255,255,255,.2)", background: "transparent", color: "rgba(255,255,255,.6)", fontSize: 12, fontWeight: 600, cursor: starterLocked ? "not-allowed" : "pointer" }}>
+                      + Ekstra Seçenek Ekle
+                    </button>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
 
           {error && <div style={{ padding: "10px 14px", borderRadius: 9, background: "rgba(239,68,68,.1)", border: "1px solid rgba(239,68,68,.2)", fontSize: 13, color: "#f87171" }}>{error}</div>}
 

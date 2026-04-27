@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Product, Restaurant } from "@/types";
 import { LangKey } from "@/lib/constants";
-import { getProductName } from "@/lib/utils";
+import { getProductName, getTranslatedName } from "@/lib/utils";
+import { UI_STRINGS } from "@/lib/translations";
 import { ModalWrapper } from "./ModalWrapper";
 
 export function CartModal({
@@ -33,6 +34,7 @@ export function CartModal({
 }) {
   const [tableNo, setTableNo] = useState(initialTableNo);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const t = UI_STRINGS[lang];
 
   useEffect(() => {
     if (initialTableNo) setTableNo(initialTableNo);
@@ -50,7 +52,7 @@ export function CartModal({
         style={{ position: "relative", background: C.cd, borderRadius: "20px 20px 0 0", maxHeight: "70vh", display: "flex", flexDirection: "column", animation: "slideUp .3s cubic-bezier(.25,1,.5,1)" }}>
         <div style={{ width: 28, height: 3, borderRadius: 99, background: C.dm, margin: "10px auto 0" }} />
         <div style={{ padding: "14px 20px 10px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${C.bd}` }}>
-          <span style={{ fontWeight: 700, fontSize: 15 }}>Sepetim</span>
+          <span style={{ fontWeight: 700, fontSize: 15 }}>{t.cart}</span>
           <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${C.bd}`, background: "transparent", cursor: "pointer", fontSize: 14, color: C.mt }}>×</button>
         </div>
         <div style={{ flex: 1, overflowY: "auto", padding: "0 20px" }}>
@@ -68,7 +70,7 @@ export function CartModal({
                   <div style={{ fontWeight: 600, fontSize: 13 }}>{getProductName(p, lang)}</div>
                   {extras.length > 0 && (
                     <div style={{ fontSize: 11, color: C.mt, marginTop: 2 }}>
-                      {extras.map(e => e.name_tr).join(", ")}
+                      {extras.map(e => getTranslatedName(e, lang)).join(", ")}
                     </div>
                   )}
                   <div style={{ fontSize: 12, color: C.mt, marginTop: 2 }}>₺{price}</div>
@@ -85,7 +87,7 @@ export function CartModal({
         </div>
         <div style={{ padding: "14px 20px 28px", borderTop: `1px solid ${C.bd}` }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14 }}>
-            <span style={{ fontSize: 13, color: C.mt }}>Toplam Tutar</span>
+            <span style={{ fontSize: 13, color: C.mt }}>{t.total}</span>
             <span style={{ fontSize: 24, fontWeight: 800 }}>₺{cartTotal}</span>
           </div>
           
@@ -95,13 +97,13 @@ export function CartModal({
                 type="text" 
                 value={tableNo} 
                 onChange={e => setTableNo(e.target.value)} 
-                placeholder="Masa No (Örn: 12)" 
+                placeholder={t.table_placeholder} 
                 style={{ width: "100px", padding: "14px", borderRadius: 12, border: `1.5px solid ${C.bd}`, background: C.cd, color: C.tx, fontSize: 14, fontWeight: 600, outline: "none", textAlign: "center" }} 
               />
             )}
             <button onClick={handleCheckout} disabled={!tableNo.trim() || isSubmitting} 
               style={{ flex: 1, padding: 14, borderRadius: 12, border: "none", background: themeColor, color: "#fff", fontSize: 14, fontWeight: 700, cursor: (!tableNo.trim() || isSubmitting) ? "not-allowed" : "pointer", opacity: (!tableNo.trim() || isSubmitting) ? 0.6 : 1, fontFamily: "inherit" }}>
-              {isSubmitting ? "Gönderiliyor..." : "Siparişi Gönder"}
+              {isSubmitting ? t.sending : t.send}
             </button>
           </div>
         </div>

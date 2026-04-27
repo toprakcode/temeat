@@ -56,58 +56,69 @@ export default function Home() {
       name: "Ücretsiz",
       price: 0,
       priceA: 0,
-      desc: "Başlamak için",
+      desc: "Dijital menüye ilk adım",
       features: [
-        "15 ürüne kadar",
-        "1 menü",
-        "5 dil desteği",
-        "Temel QR kod",
-        "Karanlık mod",
-        "Mekan fotoğrafları",
-        "WiFi gösterimi",
-        "Garson çağır butonu",
+        { text: "5 Ürün kapasitesi" },
+        { text: "Temel QR Kod" },
+        { text: "5 Dil desteği" },
+        { text: "Karanlık Mod" },
+        { text: "WiFi gösterimi" },
+        { text: "Alerjen bilgileri" },
+        { text: "Kalori Bilgisi" },
       ],
       cta: "Ücretsiz Başla",
       highlight: false,
     },
     {
+      id: "yenimekan",
+      name: "Yeni Mekan",
+      price: 49,
+      priceA: 39,
+      desc: "Büyüyen mekanlar için",
+      features: [
+        { text: "Ücretsiz plan özellikleri", isGroup: true },
+        { text: "10 Ürün kapasitesi" },
+        { text: "Temel Analitik" },
+        { text: "Mekan fotoğrafları" },
+      ],
+      cta: "Hemen Başla",
+      highlight: false,
+    },
+    {
       id: "starter",
       name: "Başlangıç",
-      price: 299,
-      priceA: 239,
-      desc: "Büyümek isteyenler için",
+      price: 149,
+      priceA: 119,
+      desc: "Profesyonel hizmet",
       features: [
-        "50 ürüne kadar",
-        "Özelleştirilebilir QR kod",
-        "5 dil desteği",
-        "Sepet & WhatsApp sipariş",
-        "Şefin seçimi bölümü",
-        "Fotoğraf galerisi",
-        "Hazırlık süresi & porsiyon",
-        "Temel analitik",
-        "Masa bazlı QR (10 masa)",
+        { text: "Yeni Mekan özellikleri", isGroup: true },
+        { text: "25 Ürün kapasitesi" },
+        { text: "Özelleştirilebilir QR Kod" },
+        { text: "Sepete ekleme & Sipariş" },
+        { text: "Şefin seçimi bölümü" },
+        { text: "Hazırlık süresi & Porsiyon" },
+        { text: "Masa bazlı QR (10 masa)" },
       ],
-      cta: "14 Gün Ücretsiz Dene",
-      highlight: false,
+      cta: "Ücretsiz Dene",
+      highlight: true,
     },
     {
       id: "pro",
       name: "Pro",
-      price: 599,
-      priceA: 479,
+      price: 299,
+      priceA: 239,
       desc: "Tam performans",
       features: [
-        "Sınırsız ürün & menü",
-        "Dijital Mutfak Paneli (KDS)",
-        "Müşteri Yorum Moderasyonu",
-        "Premium QR kod tasarımı",
-        "AI Benzer yemek önerileri",
-        "Detaylı Satış Analitiği",
-        "Logo kaldırma (white-label)",
-        "Sınırsız masa bazlı QR",
+        { text: "Başlangıç planı özellikleri", isGroup: true },
+        { text: "Sınırsız ürün kapasitesi" },
+        { text: "Dijital Mutfak Paneli" },
+        { text: "Müşteri Yorum Ayarları" },
+        { text: "AI Yemek Önerileri" },
+        { text: "Logo kaldırma" },
+        { text: "Sınırsız masa bazlı QR" },
       ],
-      cta: "14 Gün Ücretsiz Dene",
-      highlight: true,
+      cta: "Hemen Yükselt",
+      highlight: false,
     },
   ];
 
@@ -499,16 +510,33 @@ export default function Home() {
           <div id="price-header" data-animate style={{ textAlign: "center", marginBottom: 48 }}>
             <h2 style={{ fontSize: "clamp(28px, 4vw, 48px)", fontWeight: 900, letterSpacing: "-.04em", marginBottom: 24 }}>Basit, şeffaf fiyatlar</h2>
           </div>
-          <div className="plans-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
+          <div className="plans-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
             {plans.map((plan, i) => (
-              <div key={plan.id} style={{ borderRadius: 24, padding: 28, background: plan.highlight ? "#0a0a0a" : "#fff", border: plan.highlight ? `2px solid ${A}` : "1.5px solid #ebebeb" }}>
+              <div key={plan.id} style={{ borderRadius: 24, padding: 28, background: plan.highlight ? "#0a0a0a" : "#fff", border: plan.highlight ? `2px solid ${A}` : "1.5px solid #ebebeb", position: "relative" }}>
+                {plan.highlight && (
+                  <div style={{ position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)", background: A, color: "#fff", fontSize: 10, fontWeight: 800, padding: "4px 16px", borderRadius: 99, whiteSpace: "nowrap" }}>
+                    EN POPÜLER
+                  </div>
+                )}
                 <div style={{ fontSize: 13, fontWeight: 700, color: plan.highlight ? "rgba(255,255,255,.5)" : "#999", marginBottom: 16 }}>{plan.name}</div>
                 <div style={{ fontSize: 36, fontWeight: 900, color: plan.highlight ? "#fff" : "#111", marginBottom: 24 }}>{plan.price === 0 ? "Ücretsiz" : `₺${plan.price}`}</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
-                  {plan.features.map((f, j) => (
-                    <div key={j} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <IconCheck size={14} color={plan.highlight ? A : "#22c55e"} />
-                      <span style={{ fontSize: 13, color: plan.highlight ? "rgba(255,255,255,.7)" : "#555" }}>{f}</span>
+                  {plan.features.map((f: any, j) => (
+                    <div key={j} style={{ 
+                      display: "flex", 
+                      alignItems: "center", 
+                      gap: 8,
+                      padding: f.isGroup ? "6px 10px" : "0",
+                      background: f.isGroup ? (plan.highlight ? "rgba(255,255,255,.08)" : "rgba(212,71,10,.08)") : "transparent",
+                      borderRadius: 8,
+                      marginBottom: f.isGroup ? 4 : 0
+                    }}>
+                      <IconCheck size={14} color={f.isGroup ? A : (plan.highlight ? A : "#22c55e")} />
+                      <span style={{ 
+                        fontSize: f.isGroup ? 12 : 13, 
+                        color: f.isGroup ? (plan.highlight ? "#fff" : A) : (plan.highlight ? "rgba(255,255,255,.7)" : "#555"),
+                        fontWeight: f.isGroup ? 800 : 400
+                      }}>{f.text}</span>
                     </div>
                   ))}
                 </div>

@@ -1,138 +1,125 @@
-import React, { useState, useEffect } from "react";
-import { Product } from "@/types";
-import { ALLERGENS, LangKey } from "@/lib/constants";
-import { getProductName, getProductDesc } from "@/lib/utils";
-import { ModalWrapper } from "./ModalWrapper";
-import { supabase } from "@/lib/supabase";
+"use client";
 
-export function DetailModal({
-  product,
-  lang,
-  themeColor,
-  C,
-  onClose,
-  onAdd
-}: {
+import React, { useState } from "react";
+import { Product } from "@/types";
+import { LangKey } from "@/lib/constants";
+import { getProductName, getProductDesc, getTranslatedName } from "@/lib/utils";
+import { UI_STRINGS } from "@/lib/translations";
+
+interface DetailModalProps {
   product: Product;
   lang: LangKey;
   themeColor: string;
   C: any;
   onClose: () => void;
-  onAdd: (p: Product, extras?: any[]) => void;
-}) {
-  const [extras, setExtras] = useState<any[]>([]);
-  const [selectedExtras, setSelectedExtras] = useState<any[]>([]);
+  onAdd: (p: Product, extras: any[]) => void;
+  hasPrepInfo?: boolean;
+  hasCart?: boolean;
+}
 
-  useEffect(() => {
-    supabase.from("product_extras").select("*").eq("product_id", product.id).then(({ data }) => {
-      if (data) setExtras(data);
-    });
-  }, [product.id]);
+export function DetailModal({ product, lang, themeColor, C, onClose, onAdd, hasPrepInfo, hasCart }: DetailModalProps) {
+  const [selectedExtras, setSelectedExtras] = useState<any[]>([]);
+  const t = UI_STRINGS[lang];
 
   const toggleExtra = (extra: any) => {
     setSelectedExtras(prev => 
       prev.find(e => e.id === extra.id) 
-        ? prev.filter(e => e.id !== extra.id) 
+        ? prev.filter(e => e.id !== extra.id)
         : [...prev, extra]
     );
   };
 
-  const discountPrice = product.discount_pct > 0 ? Math.round(product.price * (1 - product.discount_pct / 100)) : product.price;
-  const extrasTotal = selectedExtras.reduce((sum, e) => sum + e.price, 0);
-  const totalPrice = discountPrice + extrasTotal;
+  const totalPrice = (product.discount_pct 
+    ? Math.round(product.price * (1 - product.discount_pct / 100)) 
+    : product.price) + selectedExtras.reduce((s, e) => s + e.price, 0);
 
   return (
-    <ModalWrapper onClick={onClose} zIndex={60}>
-      <div className="modal-inner" onClick={e => e.stopPropagation()}
-        style={{ position: "relative", background: C.cd, borderRadius: "20px 20px 0 0", maxHeight: "85vh", overflowY: "auto", animation: "slideUp .3s cubic-bezier(.25,1,.5,1)" }}>
-        <div style={{ width: 28, height: 3, borderRadius: 99, background: C.dm, margin: "10px auto 6px" }} />
-        <div style={{ position: "relative", width: "100%", height: 240 }}>
-          {product.image_url
-            ? <img src={product.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            : <div style={{ width: "100%", height: "100%", background: `${themeColor}15`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke={themeColor} strokeWidth="1.5" style={{ opacity: 0.3 }}><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
-              </div>
-          }
-          {product.discount_pct > 0 && (
-            <div style={{ position: "absolute", top: 12, left: 12, background: themeColor, color: "#fff", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 6 }}>-{product.discount_pct}%</div>
+    <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "flex-end", justifyContent: "center", background: "rgba(0,0,0,.6)", animation: "fadeIn .3s" }}>
+      <div onClick={onClose} style={{ position: "absolute", inset: 0 }} />
+      <div style={{ position: "relative", width: "100%", maxWidth: 680, background: C.bg, borderRadius: "24px 24px 0 0", overflow: "hidden", animation: "slideUp .4s cubic-bezier(0.16, 1, 0.3, 1)", maxHeight: "92vh", display: "flex", flexDirection: "column" }}>
+        
+        <div style={{ position: "relative", height: 280, flexShrink: 0 }}>
+          {product.image_url ? (
+            <img src={product.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          ) : (
+            <div style={{ width: "100%", height: "100%", background: `${themeColor}10`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>🍽️</div>
           )}
-          <button onClick={onClose} style={{ position: "absolute", top: 12, right: 12, width: 32, height: 32, borderRadius: 99, background: "rgba(0,0,0,.35)", border: "none", cursor: "pointer", color: "#fff", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+          <button onClick={onClose} style={{ position: "absolute", top: 20, right: 20, width: 36, height: 36, borderRadius: 18, background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
         </div>
-        <div style={{ padding: "16px 24px 32px" }}>
-          <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>{getProductName(product, lang)}</h2>
-          {(product.prep_time || product.calories || product.serves) && (
-            <div style={{ display: "flex", gap: 12, marginBottom: 12, fontSize: 12, color: C.mt }}>
-              {product.prep_time && <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                {product.prep_time} dk
-              </span>}
-              {product.serves > 1 && <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                {product.serves} kişilik
-              </span>}
-              {product.calories && <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 2c0 1.5-1 2.5-1 4s1 2.5 1 4c0 1.5-1 2.5-1 4s1 2.5 1 4"/></svg>
-                {product.calories} kal
-              </span>}
+
+        <div style={{ padding: "24px 24px 100px", overflowY: "auto", flex: 1 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+            <h2 style={{ fontSize: 24, fontWeight: 800, color: C.tx }}>{getProductName(product, lang)}</h2>
+            <div style={{ fontSize: 20, fontWeight: 800, color: themeColor }}>₺{product.discount_pct ? Math.round(product.price * (1 - product.discount_pct / 100)) : product.price}</div>
+          </div>
+
+          {(hasPrepInfo || product.calories) && (
+            <div style={{ display: "flex", gap: 16, marginBottom: 20 }}>
+              {hasPrepInfo && product.prep_time && (
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: C.mt, fontWeight: 600 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                  {product.prep_time} {t.prep}
+                </div>
+              )}
+              {product.calories && (
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: C.mt, fontWeight: 600 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+                  {product.calories} {t.kcal}
+                </div>
+              )}
             </div>
           )}
-          <p style={{ fontSize: 14, color: C.s2, lineHeight: 1.65, marginBottom: 16 }}>{getProductDesc(product, lang)}</p>
-          {product.allergens?.length > 0 && (
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: C.mt, marginBottom: 8, textTransform: "uppercase", letterSpacing: ".06em" }}>Alerjenler</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {product.allergens.map(a => {
-                  const allergen = ALLERGENS.find(al => al.key === a);
-                  return allergen ? (
-                    <span key={a} style={{ fontSize: 12, background: C.bg, border: `1px solid ${C.bd}`, borderRadius: 8, padding: "4px 10px", color: C.tx, fontWeight: 600 }}>
-                      {allergen.label}
-                    </span>
-                  ) : null;
-                })}
+
+          <p style={{ fontSize: 15, color: C.s2, lineHeight: 1.6, marginBottom: 30 }}>{getProductDesc(product, lang)}</p>
+
+          {product.allergens && product.allergens.length > 0 && (
+            <div style={{ marginBottom: 30 }}>
+              <h3 style={{ fontSize: 14, fontWeight: 700, color: C.tx, marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>{t.allergens}</h3>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {product.allergens.map((alg: string) => (
+                  <span key={alg} style={{ padding: "6px 12px", borderRadius: 8, background: C.bd, fontSize: 12, fontWeight: 600, color: C.mt }}>{alg}</span>
+                ))}
               </div>
             </div>
           )}
 
-          {extras.length > 0 && (
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: C.tx, marginBottom: 8 }}>Ekstralar & Seçenekler</div>
+          {product.extras && product.extras.length > 0 && (
+            <div style={{ marginBottom: 30 }}>
+              <h3 style={{ fontSize: 14, fontWeight: 700, color: C.tx, marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>{t.extras}</h3>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {extras.map(ex => {
-                  const isSelected = selectedExtras.some(e => e.id === ex.id);
+                {product.extras.map((ex: any) => {
+                  const isSelected = selectedExtras.find(e => e.id === ex.id);
                   return (
-                    <button key={ex.id} onClick={() => toggleExtra(ex)}
-                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 14px", borderRadius: 10, border: `1.5px solid ${isSelected ? themeColor : C.bd}`, background: isSelected ? `${themeColor}10` : C.cd, cursor: "pointer", fontFamily: "inherit", transition: "all .2s" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <div style={{ width: 18, height: 18, borderRadius: 6, border: `2px solid ${isSelected ? themeColor : C.dm}`, background: isSelected ? themeColor : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          {isSelected && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                    <button key={ex.id} onClick={() => toggleExtra(ex)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", borderRadius: 12, border: `1.5px solid ${isSelected ? themeColor : C.bd}`, background: isSelected ? `${themeColor}08` : "transparent", cursor: "pointer", transition: "all .2s" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${isSelected ? themeColor : C.mt}`, display: "flex", alignItems: "center", justifyContent: "center", background: isSelected ? themeColor : "transparent" }}>
+                          {isSelected && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}
                         </div>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: C.tx }}>{ex.name_tr}</span>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: isSelected ? themeColor : C.tx }}>{getTranslatedName(ex, lang)}</span>
                       </div>
-                      {ex.price > 0 && <span style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>+₺{ex.price}</span>}
+                      <span style={{ fontSize: 14, fontWeight: 700, color: isSelected ? themeColor : C.mt }}>+₺{ex.price}</span>
                     </button>
                   );
                 })}
               </div>
             </div>
           )}
+        </div>
 
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 16, borderTop: `1px solid ${C.bd}` }}>
-            <div>
-              {product.discount_pct > 0 || extrasTotal > 0
-                ? <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                    <span style={{ fontSize: 26, fontWeight: 800 }}>₺{totalPrice}</span>
-                    <span style={{ fontSize: 14, color: C.dm, textDecoration: "line-through" }}>₺{product.price}</span>
-                  </div>
-                : <span style={{ fontSize: 26, fontWeight: 800 }}>₺{totalPrice}</span>
-              }
+        {hasCart && (
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "20px 24px 32px", background: C.bg, borderTop: `1px solid ${C.bd}`, display: "flex", alignItems: "center", gap: 20 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, color: C.mt, fontWeight: 600, marginBottom: 2 }}>{t.total}</div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: themeColor }}>₺{totalPrice}</div>
             </div>
-            <button onClick={() => { onAdd(product, selectedExtras); onClose(); }}
-              style={{ padding: "12px 28px", borderRadius: 12, border: "none", background: themeColor, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: `0 4px 16px ${themeColor}30` }}>
-              + Sepete Ekle
+            <button onClick={() => { onAdd(product, selectedExtras); onClose(); }} style={{ flex: 1.5, height: 54, borderRadius: 16, border: "none", background: themeColor, color: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer", boxShadow: `0 8px 20px ${themeColor}30` }}>
+              {t.add}
             </button>
           </div>
-        </div>
+        )}
       </div>
-    </ModalWrapper>
+    </div>
   );
 }
