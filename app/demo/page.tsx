@@ -150,7 +150,7 @@ const ALL_DEMO_FEATURES = [
   { id: "stats", title: "Analitik", desc: "Mekan İstatistikleri", icon: "similar" },
   { id: "cart", title: "Sepet & Sipariş", desc: "Masa Bazlı Sipariş", icon: "cart" },
   { id: "chef", title: "Şefin Seçimi", desc: "Öne Çıkanlar", icon: "chef" },
-  { id: "details", title: "Ürün Detayları", desc: "Hazırlık & Kalori", icon: "details" },
+  { id: "details", title: "Ürün Detayları", desc: "Hazırlık Süresi", icon: "details" },
   { id: "reviews", title: "Yorumlar", desc: "Müşteri Değerlendirme", icon: "similar" },
   { id: "logo", title: "Beyaz Etiket", desc: "Logonuz & Markanız", icon: "logo" },
 ];
@@ -165,6 +165,7 @@ function MenuApp({ plan, lang, onLangChange, restaurant, categories, allProducts
   const [search, setSearch] = useState("");
   const [scrolled, setScrolled] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
 
   const fl = (m: string) => { setToast(m); setTimeout(() => setToast(null), 1500); };
   const hasFeature = (fid: string) => PLAN_FEATURES_MAP[plan as PlanKey].includes(fid);
@@ -216,21 +217,27 @@ function MenuApp({ plan, lang, onLangChange, restaurant, categories, allProducts
         </div>
       )}
 
-      {/* Header */}
       <div style={{ background: C.cd, borderBottom: `1px solid ${C.bd}`, position: "sticky", top: 0, zIndex: 30, boxShadow: scrolled ? "0 4px 12px rgba(0,0,0,.05)" : "none", transition: "all .3s" }}>
-        <div style={{ padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: "-.02em" }}>{hasFeature("logo") ? "Gusto Mediterranean" : "TEMeat Demo"}</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 1 }}>
-              <div style={{ fontSize: 10, color: "#22c55e", fontWeight: 600 }}>● 09:00 - 23:00</div>
+        <div style={{ padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0 }}>
+            {hasFeature("logo") ? (
+              <div style={{ width: 40, height: 40, borderRadius: 12, background: A, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 900, fontSize: 18 }}>G</div>
+            ) : (
+              <Logo size="sm" withTagline={false} isDark={dark} />
+            )}
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-.02em", color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{hasFeature("logo") ? "Gusto Mediterranean" : "deneme"}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+                <div style={{ fontSize: 11, color: "#22c55e", fontWeight: 700 }}>● 09:00 - 23:00</div>
+              </div>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {hasFeature("lang") && (
-              <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: `1px solid ${C.bd}` }}>
-                {(Object.keys(UI_STRINGS) as LangKey[]).map(l => (
+              <div style={{ display: "flex", background: "#000", borderRadius: 12, padding: 4 }}>
+                {(["tr", "en", "ar", "de", "ru"] as LangKey[]).map(l => (
                   <button key={l} onClick={() => onLangChange(l)}
-                    style={{ padding: "5px 6px", border: "none", cursor: "pointer", fontSize: 9, fontWeight: lang === l ? 700 : 400, background: lang === l ? C.tx : "transparent", color: lang === l ? C.bg : C.mt, minWidth: 22 }}>
+                    style={{ padding: "5px 7px", border: "none", cursor: "pointer", fontSize: 10, fontWeight: lang === l ? 800 : 400, background: lang === l ? "#333" : "transparent", color: "#fff", borderRadius: 8, minWidth: 26 }}>
                     {l.toUpperCase()}
                   </button>
                 ))}
@@ -238,8 +245,8 @@ function MenuApp({ plan, lang, onLangChange, restaurant, categories, allProducts
             )}
             {hasFeature("dark") && (
               <button onClick={() => setDark(!dark)}
-                style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${C.bd}`, background: "transparent", cursor: "pointer", fontSize: 12, color: C.mt, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                {dark ? "◐" : "◑"}
+                style={{ width: 36, height: 36, borderRadius: 12, border: `1px solid ${C.bd}`, background: C.cd, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: C.tx }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
               </button>
             )}
           </div>
@@ -249,11 +256,11 @@ function MenuApp({ plan, lang, onLangChange, restaurant, categories, allProducts
       <div style={{ flex: 1, overflowY: "auto" }} onScroll={(e: any) => setScrolled(e.target.scrollTop > 20)}>
         {/* WiFi */}
         {hasFeature("wifi") && (
-          <div style={{ padding: "10px 20px", borderBottom: `1px solid ${C.bd}` }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-              <Icon type="wifi" size={12} active={false} />
-              <span style={{ fontSize: 10, color: C.mt, fontWeight: 600 }}>WiFi:</span>
-              <code style={{ fontSize: 11, fontWeight: 600, color: C.tx, background: C.cd, border: `1px solid ${C.bd}`, borderRadius: 6, padding: "2px 8px" }}>gusto-free-wifi</code>
+          <div style={{ padding: "12px 20px", borderBottom: `1px solid ${C.bd}`, display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.mt} strokeWidth="2"><path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg>
+              <span style={{ fontSize: 12, color: C.mt, fontWeight: 500 }}>WiFi:</span>
+              <div style={{ background: C.cd, border: `1px solid ${C.bd}`, borderRadius: 8, padding: "4px 12px", fontSize: 12, fontWeight: 700, color: C.tx }}>gusto-free-wifi</div>
             </div>
           </div>
         )}
@@ -294,10 +301,10 @@ function MenuApp({ plan, lang, onLangChange, restaurant, categories, allProducts
         {/* Categories (Sticky) */}
         {!search && (
           <div style={{ position: "sticky", top: 0, zIndex: 25, background: C.bg, borderBottom: `1px solid ${C.bd}` }}>
-            <div style={{ display: "flex", overflowX: "auto" }}>
+            <div style={{ display: "flex", overflowX: "auto", scrollbarWidth: "none", msOverflowStyle: "none" }}>
               {categories.map((c: any) => (
                 <button key={c.id} onClick={() => setActiveCat(c.id)}
-                  style={{ flexShrink: 0, padding: "14px 16px", border: "none", cursor: "pointer", fontSize: 13, fontWeight: activeCat === c.id ? 700 : 500, color: activeCat === c.id ? A : C.mt, background: "transparent", borderBottom: activeCat === c.id ? `3px solid ${A}` : "3px solid transparent", transition: "all .2s" }}>
+                  style={{ flexShrink: 0, padding: "14px 18px", border: "none", cursor: "pointer", fontSize: 13, fontWeight: activeCat === c.id ? 800 : 500, color: activeCat === c.id ? A : C.mt, background: "transparent", borderBottom: activeCat === c.id ? `3px solid ${A}` : "3px solid transparent", transition: "all .2s", whiteSpace: "nowrap" }}>
                   {c.name}
                 </button>
               ))}
@@ -306,33 +313,45 @@ function MenuApp({ plan, lang, onLangChange, restaurant, categories, allProducts
         )}
 
         {/* Product List */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12, padding: "16px 20px 100px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 20, padding: "20px 20px 140px" }}>
           {filtered.map((it: any) => {
             const qty = cart.find(i => i.product.id === it.id)?.qty || 0;
             return (
-              <div key={it.id} style={{ display: "flex", gap: 14, padding: 12, background: C.cd, borderRadius: 16, border: `1px solid ${C.bd}` }}>
-                <div onClick={() => hasFeature("details") ? setDet(it) : null} style={{ width: 90, height: 90, borderRadius: 12, overflow: "hidden", flexShrink: 0, position: "relative", cursor: hasFeature("details") ? "pointer" : "default" }}>
+              <div key={it.id} style={{ background: C.cd, borderRadius: 24, border: `1px solid ${C.bd}`, overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 4px 20px rgba(0,0,0,.03)" }}>
+                <div onClick={() => hasFeature("details") ? setDet(it) : null} style={{ position: "relative", width: "100%", height: 200, cursor: hasFeature("details") ? "pointer" : "default" }}>
                   <img src={it.image_url} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" />
-                  {it.discount_pct > 0 && <div style={{ position: "absolute", top: 6, left: 6, background: A, color: "#fff", fontSize: 9, fontWeight: 900, padding: "3px 7px", borderRadius: 6 }}>-%{it.discount_pct}</div>}
+                  {it.discount_pct > 0 && <div style={{ position: "absolute", top: 16, left: 16, background: "#ef4444", color: "#fff", fontSize: 11, fontWeight: 800, padding: "5px 10px", borderRadius: 10 }}>-%{it.discount_pct}</div>}
                 </div>
-                <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: C.tx, marginBottom: 2 }}>{getProductName(it, lang)}</div>
-                    <div style={{ fontSize: 11, color: C.mt, lineHeight: 1.4, height: 30, overflow: "hidden" }}>{getProductDesc(it, lang)}</div>
+                <div style={{ padding: 20 }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: C.tx, marginBottom: 6 }}>{getProductName(it, lang)}</div>
+                  <div style={{ fontSize: 13, color: C.mt, lineHeight: 1.6, marginBottom: 14 }}>{getProductDesc(it, lang)}</div>
+                  
+                  {/* Allergens & Prep */}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
+                    {hasFeature("allergens") && ["Yumurta", "Balık", "Soya"].map(a => (
+                      <span key={a} style={{ background: C.bg, border: `1px solid ${C.bd}`, borderRadius: 8, padding: "3px 10px", fontSize: 11, color: C.mt, fontWeight: 600 }}>{a}</span>
+                    ))}
+                    {hasFeature("details") && it.prep_time && (
+                      <span style={{ fontSize: 11, color: C.mt, fontWeight: 600, display: "flex", alignItems: "center", gap: 5, marginLeft: 4 }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                        {it.prep_time} dk
+                      </span>
+                    )}
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
-                    <div style={{ fontWeight: 800, color: A, fontSize: 15 }}>
-                      {it.discount_pct ? <span style={{ fontSize: 11, textDecoration: "line-through", color: C.mt, marginRight: 6, fontWeight: 400 }}>₺{it.price}</span> : null}
-                      ₺{getDiscountedPrice(it)}
+
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                      <span style={{ fontWeight: 800, color: C.tx, fontSize: 20 }}>₺{getDiscountedPrice(it)}</span>
+                      {it.discount_pct ? <span style={{ fontSize: 13, textDecoration: "line-through", color: C.mt }}>₺{it.price}</span> : null}
                     </div>
                     {qty > 0 ? (
-                      <div style={{ display: "flex", alignItems: "center", background: C.al, borderRadius: 10, border: `1px solid ${A}20` }}>
-                        <button onClick={() => removeFromCart(it)} style={{ width: 30, height: 30, border: "none", background: "none", color: A, fontSize: 18 }}>-</button>
-                        <span style={{ minWidth: 20, textAlign: "center", fontSize: 13, fontWeight: 700, color: A }}>{qty}</span>
-                        <button onClick={() => addToCart(it)} style={{ width: 30, height: 30, border: "none", background: A, color: "#fff", borderRadius: "0 8px 8px 0", fontSize: 16 }}>+</button>
+                      <div style={{ display: "flex", alignItems: "center", background: C.al, borderRadius: 12, border: `1px solid ${A}20` }}>
+                        <button onClick={() => removeFromCart(it)} style={{ width: 36, height: 36, border: "none", background: "none", color: A, fontSize: 20 }}>-</button>
+                        <span style={{ minWidth: 24, textAlign: "center", fontSize: 15, fontWeight: 700, color: A }}>{qty}</span>
+                        <button onClick={() => addToCart(it)} style={{ width: 36, height: 36, border: "none", background: A, color: "#fff", borderRadius: "0 12px 12px 0", fontSize: 18 }}>+</button>
                       </div>
                     ) : (
-                      <button onClick={() => addToCart(it)} style={{ height: 32, padding: "0 14px", borderRadius: 10, border: `1px solid ${C.bd}`, background: C.cd, fontSize: 11, fontWeight: 700, color: C.tx, cursor: "pointer" }}>+ {t.add}</button>
+                      <button onClick={() => addToCart(it)} style={{ height: 40, padding: "0 20px", borderRadius: 12, border: `1px solid ${C.bd}`, background: C.cd, fontSize: 13, fontWeight: 700, color: C.tx, cursor: "pointer" }}>+ {t.add}</button>
                     )}
                   </div>
                 </div>
@@ -340,26 +359,57 @@ function MenuApp({ plan, lang, onLangChange, restaurant, categories, allProducts
             );
           })}
         </div>
+
+        {/* Reviews Section */}
+        {hasFeature("reviews") && !search && (
+          <div style={{ padding: "30px 20px 100px", borderTop: `1px solid ${C.bd}`, background: C.cd }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 800, color: C.tx }}>{t.reviews}</h3>
+                <p style={{ fontSize: 11, color: C.mt }}>Müşteri deneyimleri</p>
+              </div>
+              <button onClick={() => setShowReviewModal(true)} style={{ padding: "8px 14px", borderRadius: 10, border: `1.5px solid ${A}`, background: "transparent", color: A, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                {t.write_review}
+              </button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {[
+                { name: "Ahmet Y.", rating: 5, comment: "Harika servis, ürünler çok taze." },
+                { name: "Selin K.", rating: 4, comment: "Hızlı geldi ama porsiyon biraz küçüktü." }
+              ].map((rev, i) => (
+                <div key={i} style={{ padding: 14, borderRadius: 14, background: C.bg, border: `1px solid ${C.bd}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: C.tx }}>{rev.name}</div>
+                    <div style={{ color: "#f59e0b", fontSize: 10 }}>{"⭐".repeat(rev.rating)}</div>
+                  </div>
+                  <div style={{ fontSize: 12, color: C.s2, lineHeight: "1.4" }}>{rev.comment}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Bottom Bar */}
-      <div style={{ background: C.cd, borderTop: `1px solid ${C.bd}`, padding: "10px 20px 24px", position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 40 }}>
-        <div style={{ display: "flex", gap: 10 }}>
-          {hasFeature("waiter") && (
-            <button onClick={() => fl(t.waiter_notified)} style={{ flex: 1, padding: 12, borderRadius: 12, border: `1.5px solid ${C.bd}`, background: C.cd, color: C.tx, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-              <Icon type="waiter" size={14} active={false} /> {t.waiter}
-            </button>
-          )}
-          <button onClick={() => setShowPayment(true)} style={{ flex: 1, padding: 12, borderRadius: 12, border: `1.5px solid ${C.bd}`, background: C.cd, color: C.tx, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-            <Icon type="cart" size={14} active={false} /> {t.total}
+      <div style={{ background: C.cd, borderTop: `1px solid ${C.bd}`, padding: "20px 20px 48px", position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 40, display: "flex", gap: 16 }}>
+        {hasFeature("waiter") && (
+          <button onClick={() => fl(t.waiter_notified)} style={{ flex: 1, height: 60, borderRadius: 18, border: `1px solid ${C.bd}`, background: C.cd, color: C.tx, fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, boxShadow: "0 2px 12px rgba(0,0,0,.04)" }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <span>Garson Çağır</span>
           </button>
-          {hasFeature("cart") && cartCount > 0 && (
-            <button onClick={() => setShowCart(true)} style={{ flex: 1.5, padding: "0 16px", borderRadius: 12, border: "none", background: A, color: "#fff", fontSize: 13, fontWeight: 800, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", boxShadow: `0 4px 16px ${A}30` }}>
-              <span>{cartCount}x</span>
-              <span>₺{cartTotal}</span>
-            </button>
-          )}
-        </div>
+        )}
+        <button onClick={() => setShowPayment(true)} style={{ flex: 1, height: 60, borderRadius: 18, border: `1px solid ${C.bd}`, background: C.cd, color: C.tx, fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, boxShadow: "0 2px 12px rgba(0,0,0,.04)" }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          <span>Hesap İste</span>
+        </button>
+        {hasFeature("cart") && cartCount > 0 && (
+          <button onClick={() => setShowCart(true)} style={{ position: "absolute", top: -75, right: 20, padding: "14px 24px", borderRadius: 100, border: "none", background: A, color: "#fff", fontSize: 16, fontWeight: 800, display: "flex", alignItems: "center", gap: 12, boxShadow: `0 10px 30px ${A}40`, animation: "fi .3s" }}>
+            <span>{cartCount}x</span>
+            <div style={{ width: 1, height: 20, background: "rgba(255,255,255,.3)" }} />
+            <span>₺{cartTotal}</span>
+          </button>
+        )}
       </div>
 
       {showPayment && (
@@ -421,7 +471,7 @@ function MenuApp({ plan, lang, onLangChange, restaurant, categories, allProducts
             <div style={{ padding: "20px 24px 40px" }}>
               <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>{getProductName(det, lang)}</h2>
               <div style={{ display: "flex", gap: 14, marginBottom: 16, fontSize: 12, color: C.mt, fontWeight: 600 }}>
-                {det.prep_time && <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Icon type="chef" size={14} active={false} /> {det.prep_time} {t.prep}</span>}
+                {hasFeature("details") && det.prep_time && <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Icon type="chef" size={14} active={false} /> {det.prep_time} {t.prep}</span>}
                 {det.serves && <span style={{ display: "flex", alignItems: "center", gap: 4 }}>👥 {det.serves} {t.serves}</span>}
               </div>
               <p style={{ fontSize: 14, color: C.s2, lineHeight: 1.7, marginBottom: 24 }}>{getProductDesc(det, lang)}</p>
@@ -455,6 +505,23 @@ function MenuApp({ plan, lang, onLangChange, restaurant, categories, allProducts
           </div>
         </>
       )}
+
+      {/* Review Modal Mock */}
+      {showReviewModal && (
+        <>
+          <div onClick={() => setShowReviewModal(false)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 150, animation: "fi .2s" }} />
+          <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "85%", background: C.cd, borderRadius: 24, padding: 24, zIndex: 160, animation: "fi .3s", boxShadow: "0 20px 40px rgba(0,0,0,.3)" }}>
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: C.tx, marginBottom: 6 }}>{t.review_title}</h3>
+            <p style={{ fontSize: 12, color: C.mt, marginBottom: 20 }}>Deneyiminizi paylaşın</p>
+            <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 20 }}>
+              {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize: 24, cursor: "pointer" }}>⭐</span>)}
+            </div>
+            <input type="text" placeholder={t.review_placeholder_name} style={{ width: "100%", padding: 12, borderRadius: 10, border: `1px solid ${C.bd}`, background: C.bg, color: C.tx, marginBottom: 12, fontSize: 13, outline: "none", fontFamily: "inherit" }} />
+            <textarea placeholder={t.review_placeholder_comment} rows={3} style={{ width: "100%", padding: 12, borderRadius: 10, border: `1px solid ${C.bd}`, background: C.bg, color: C.tx, marginBottom: 20, fontSize: 13, outline: "none", resize: "none", fontFamily: "inherit" }} />
+            <button onClick={() => { setShowReviewModal(false); fl(t.order_success); }} style={{ width: "100%", padding: 14, borderRadius: 12, border: "none", background: A, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{t.review_submit}</button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -465,50 +532,59 @@ export default function DemoPage() {
   const [isMobile, setIsMobile] = useState(true);
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f8fafc", color: "#0f172a", fontFamily: "'Inter', sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#080808", color: "#fff", fontFamily: "'Inter', sans-serif" }}>
       {/* Header */}
-      <nav style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "16px 24px", position: "sticky", top: 0, zIndex: 100 }}>
+      <nav style={{ background: "rgba(255,255,255,0.02)", borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "16px 24px", position: "sticky", top: 0, zIndex: 100, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <Logo size="md" />
-          <Link href="/fiyat" style={{ fontSize: 14, fontWeight: 600, color: A, textDecoration: "none" }}>Fiyatlandırmaya Dön</Link>
+          <Logo size="md" isDark={true} />
+          <Link href="/fiyat" style={{ fontSize: 13, fontWeight: 700, color: A, textDecoration: "none", border: `1.5px solid ${A}30`, padding: "8px 16px", borderRadius: 10, transition: "all .2s" }}
+            onMouseEnter={e => e.currentTarget.style.background = `${A}10`}
+            onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+            Fiyatlandırmaya Dön
+          </Link>
         </div>
       </nav>
 
-      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 24px", display: "grid", gridTemplateColumns: "1fr 450px", gap: 40 }}>
+      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "60px 24px", display: "grid", gridTemplateColumns: "1fr 420px", gap: 60 }}>
         {/* Left: Controls & Features */}
         <div>
-          <div style={{ marginBottom: 40 }}>
-            <h1 style={{ fontSize: 32, fontWeight: 900, marginBottom: 12, letterSpacing: "-.03em" }}>Dijital Menünüzü Deneyimleyin</h1>
-            <p style={{ fontSize: 18, color: "#64748b", lineHeight: 1.6 }}>Seçtiğiniz plana göre özelliklerin nasıl değiştiğini canlı olarak test edin.</p>
+          <div style={{ marginBottom: 48, animation: "fadeUp .5s both" }}>
+            <h1 style={{ fontSize: "clamp(32px, 5vw, 48px)", fontWeight: 900, marginBottom: 16, letterSpacing: "-.04em", lineHeight: 1.1 }}>
+              Dijital Menünüzü <span style={{ color: A }}>Deneyimleyin</span>
+            </h1>
+            <p style={{ fontSize: 18, color: "rgba(255,255,255,0.4)", lineHeight: 1.6, maxWidth: 500 }}>
+              Seçtiğiniz plana göre özelliklerin nasıl değiştiğini canlı olarak test edin.
+            </p>
           </div>
 
-          <div style={{ background: "#fff", borderRadius: 24, padding: 32, border: "1px solid #e2e8f0", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.05)" }}>
-            <div style={{ marginBottom: 32 }}>
-              <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 16 }}>Paket Seçimi</label>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
+          <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 32, padding: 36, border: "1px solid rgba(255,255,255,0.06)", animation: "fadeUp .6s .1s both" }}>
+            <div style={{ marginBottom: 40 }}>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.2)", textTransform: "uppercase", letterSpacing: ".15em", marginBottom: 20 }}>PAKET SEÇİMİ</label>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14 }}>
                 {(Object.keys(PLAN_LIMITS) as PlanKey[]).map(p => (
                   <button key={p} onClick={() => setActivePlan(p)}
-                    style={{ padding: "16px", borderRadius: 16, border: activePlan === p ? `2px solid ${A}` : "2px solid #f1f5f9", background: activePlan === p ? `${A}08` : "#fff", cursor: "pointer", transition: "all .2s" }}>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: activePlan === p ? A : "#0f172a", marginBottom: 2 }}>{PLAN_LIMITS[p].label}</div>
-                    <div style={{ fontSize: 11, color: activePlan === p ? A : "#64748b" }}>{PLAN_LIMITS[p].products === Infinity ? "Sınırsız" : `${PLAN_LIMITS[p].products} Ürün`}</div>
+                    style={{ padding: "20px", borderRadius: 20, border: activePlan === p ? `2px solid ${A}` : "2px solid rgba(255,255,255,0.06)", background: activePlan === p ? `${A}08` : "transparent", cursor: "pointer", transition: "all .25s", textAlign: "left", position: "relative", overflow: "hidden" }}>
+                    {activePlan === p && <div style={{ position: "absolute", top: 12, right: 12, width: 6, height: 6, borderRadius: 99, background: A }} />}
+                    <div style={{ fontSize: 16, fontWeight: 800, color: activePlan === p ? "#fff" : "rgba(255,255,255,0.6)", marginBottom: 4 }}>{PLAN_LIMITS[p].label}</div>
+                    <div style={{ fontSize: 11, color: activePlan === p ? A : "rgba(255,255,255,0.3)", fontWeight: 600 }}>{PLAN_LIMITS[p].products === Infinity ? "Sınırsız" : `${PLAN_LIMITS[p].products} Ürün`}</div>
                   </button>
                 ))}
               </div>
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 16 }}>Aktif Özellikler</label>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.2)", textTransform: "uppercase", letterSpacing: ".15em", marginBottom: 20 }}>AKTİF ÖZELLİKLER</label>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 20 }}>
                 {ALL_DEMO_FEATURES.map(f => {
                   const active = PLAN_FEATURES_MAP[activePlan].includes(f.id);
                   return (
-                    <div key={f.id} style={{ display: "flex", gap: 12, opacity: active ? 1 : 0.4, transition: "opacity .3s" }}>
-                      <div style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 10, background: active ? `${A}12` : "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", color: active ? A : "#94a3b8" }}>
-                        <Icon type={f.icon} size={18} active={active} />
+                    <div key={f.id} style={{ display: "flex", gap: 14, opacity: active ? 1 : 0.2, transition: "all .4s ease" }}>
+                      <div style={{ flexShrink: 0, width: 42, height: 42, borderRadius: 12, background: active ? `${A}15` : "rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center", color: active ? A : "#fff" }}>
+                        <Icon type={f.icon} size={20} active={active} />
                       </div>
                       <div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: active ? "#0f172a" : "#94a3b8" }}>{f.title}</div>
-                        <div style={{ fontSize: 11, color: "#64748b" }}>{f.desc}</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: active ? "#fff" : "rgba(255,255,255,0.4)" }}>{f.title}</div>
+                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>{f.desc}</div>
                       </div>
                     </div>
                   );
@@ -519,12 +595,14 @@ export default function DemoPage() {
         </div>
 
         {/* Right: Mockup Preview */}
-        <div style={{ position: "sticky", top: 100, alignSelf: "start" }}>
-          <div style={{ position: "relative", width: 320, height: 650, margin: "0 auto", background: "#000", borderRadius: 44, padding: 12, boxShadow: "0 50px 100px -20px rgba(0,0,0,0.25)" }}>
+        <div style={{ position: "sticky", top: 120, alignSelf: "start", animation: "fadeUp .7s .2s both" }}>
+          <div style={{ position: "relative", width: 340, height: 680, margin: "0 auto", background: "#000", borderRadius: 50, padding: 12, boxShadow: `0 40px 100px -20px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)` }}>
             {/* Phone Bezel Details */}
-            <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: 120, height: 30, background: "#000", borderRadius: "0 0 16px 16px", zIndex: 100 }}></div>
+            <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: 130, height: 32, background: "#000", borderRadius: "0 0 18px 18px", zIndex: 100 }}>
+              <div style={{ position: "absolute", bottom: 8, left: "50%", transform: "translateX(-50%)", width: 40, height: 4, borderRadius: 99, background: "#111" }} />
+            </div>
 
-            <div style={{ width: "100%", height: "100%", background: "#fff", borderRadius: 32, overflow: "hidden", position: "relative" }}>
+            <div style={{ width: "100%", height: "100%", background: "#fff", borderRadius: 38, overflow: "hidden", position: "relative" }}>
               <MenuApp
                 plan={activePlan}
                 lang={activeLang}
@@ -535,11 +613,19 @@ export default function DemoPage() {
               />
             </div>
           </div>
-          <div style={{ textAlign: "center", marginTop: 24, fontSize: 13, color: "#94a3b8", fontWeight: 500 }}>
-            <span style={{ color: activePlan === "pro" ? A : "inherit" }}>{PLAN_LIMITS[activePlan].label} Paket</span> Önizlemesi
+          <div style={{ textAlign: "center", marginTop: 28 }}>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase" }}>ÖNİZLEME MODU</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: A, marginTop: 4 }}>{PLAN_LIMITS[activePlan].label} Paket</div>
           </div>
         </div>
       </main>
+
+      <style>{`
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }

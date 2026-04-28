@@ -13,6 +13,7 @@ import { SettingsForm } from "@/components/panel/SettingsForm";
 import { TableGrid } from "@/components/panel/TableGrid";
 import QRCode from "react-qr-code";
 import { useRouter } from "next/navigation";
+import { AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart as RechartsBarChart, Bar } from "recharts";
 
 const A_GLOBAL = DEFAULT_COLOR;
 
@@ -70,6 +71,7 @@ export default function PanelPage() {
 
   const [orders, setOrders] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
+  const [reviewFilter, setReviewFilter] = useState("pending");
   const [replyText, setReplyText] = useState("");
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
 
@@ -193,6 +195,12 @@ export default function PanelPage() {
 
     const { data: prodsData } = await supabase.from("products").select("*").eq("restaurant_id", restaurantId).order("sort_order");
     setProducts(prodsData || []);
+
+    // Set QR States from Restaurant data if they exist
+    if (restData.qr_color) setQrColor(restData.qr_color);
+    if (restData.qr_bg_color) setQrBgColor(restData.qr_bg_color);
+    if (restData.qr_frame_type) setQrFrameType(restData.qr_frame_type);
+    if (restData.qr_logo_visible !== undefined) setQrLogoVisible(restData.qr_logo_visible);
   };
 
   useEffect(() => {
@@ -386,11 +394,113 @@ export default function PanelPage() {
     setProducts(prev => prev.map(p => p.id === id ? { ...p, is_active: !current } : p));
   };
 
+  const toggleProductAvailability = async (id: string, current: boolean) => {
+    const { error } = await supabase.from("products").update({ is_available: !current }).eq("id", id);
+    if (!error) {
+      setProducts(prev => prev.map(p => p.id === id ? { ...p, is_available: !current } : p));
+      flash(current ? "Ürün tükendi olarak işaretlendi." : "Ürün stokta var olarak işaretlendi.");
+    } else {
+      flash("Hata: " + error.message);
+    }
+  };
+
   const deleteProduct = async (id: string) => {
     if (!confirm("Bu ürünü silmek istediğinize emin misiniz?")) return;
     await supabase.from("products").delete().eq("id", id);
     setProducts(prev => prev.filter(p => p.id !== id));
     flash("Ürün silindi.");
+  };
+
+  const handleSaveQrSettings = async () => {
+    if (!restaurant) return;
+    const { error } = await supabase.from("restaurants").update({
+      qr_color: qrColor,
+      qr_bg_color: qrBgColor,
+      qr_frame_type: qrFrameType,
+      qr_logo_visible: qrLogoVisible
+    }).eq("id", restaurant.id);
+    
+    if (!error) {
+      setRestaurant({ ...restaurant, qr_color: qrColor, qr_bg_color: qrBgColor, qr_frame_type: qrFrameType, qr_logo_visible: qrLogoVisible });
+      flash("Tasarım kaydedildi ve tüm masalara uygulandı! ✓");
+    } else {
+      flash("Hata: Tasarım kaydedilemedi.");
+    }
+  };
+
+  const QRCodeFrame = ({ value, tableNo, size = 200, id, isPrint = false }: any) => {
+    const isMain = tableNo === undefined;
+    const finalSize = isPrint ? 140 : size;
+    const logoSize = Math.floor(finalSize * 0.22); // QR boyutunun %22'si kadar logo
+    
+    return (
+      <div id={id} style={{ 
+        position: "relative", 
+        padding: qrFrameType === "none" ? 20 : isPrint ? 25 : (isMain ? 40 : 25), 
+        background: qrBgColor, 
+        borderRadius: qrFrameType === "elegant" ? (isPrint ? 25 : 40) : (isPrint ? 16 : 24), 
+        boxShadow: isPrint ? "none" : (isMain ? "0 20px 50px rgba(0,0,0,.3)" : "0 8px 20px rgba(0,0,0,.1)"), 
+        display: "flex", 
+        flexDirection: "column", 
+        alignItems: "center",
+        border: qrFrameType === "minimal" ? `1px solid ${qrColor}20` : (isPrint ? "1px solid #eee" : "none"),
+        width: isPrint ? "180px" : "auto",
+        transition: "transform .2s"
+      }}>
+        {qrFrameType === "elegant" && (
+          <div style={{ marginBottom: isPrint ? 15 : (isMain ? 25 : 15), textAlign: "center", width: "100%" }}>
+            <div style={{ fontSize: isPrint ? 14 : (isMain ? 20 : 12), fontWeight: 900, color: qrColor, letterSpacing: "0.15em", fontFamily: "serif" }}>{restaurant?.name?.toUpperCase()}</div>
+            <div style={{ height: 1.5, width: "60%", background: `linear-gradient(90deg, transparent, ${qrColor}, transparent)`, margin: (isPrint ? 6 : (isMain ? 10 : 6)) + "px auto" }} />
+            <div style={{ fontSize: isPrint ? 7 : (isMain ? 9 : 6), color: qrColor, opacity: 0.6, letterSpacing: "0.3em", fontWeight: 700 }}>GURME LEZZET DURAGI</div>
+          </div>
+        )}
+
+        {qrFrameType === "modern" && (
+          <div style={{ position: "absolute", top: isPrint ? -12 : (isMain ? -18 : -12), background: qrColor, color: qrBgColor, padding: isPrint ? "4px 14px" : (isMain ? "8px 24px" : "4px 14px"), borderRadius: isPrint ? 8 : (isMain ? 14 : 8), fontSize: isPrint ? 9 : (isMain ? 12 : 9), fontWeight: 900, boxShadow: isPrint ? "none" : `0 8px 20px ${qrColor}40`, letterSpacing: "0.05em", whiteSpace: "nowrap", zIndex: 2 }}>MENÜYÜ TARA</div>
+        )}
+
+        <div style={{ position: "relative", padding: isPrint ? 8 : (isMain ? 12 : 8), background: "#fff", borderRadius: isPrint ? 10 : (isMain ? 16 : 10), boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
+          <QRCode value={value} size={finalSize} fgColor={qrColor} bgColor="#ffffff" level="H" />
+          {qrLogoVisible && (
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ width: logoSize, height: logoSize, background: "#fff", borderRadius: isPrint ? 6 : (isMain ? 12 : 6), padding: isPrint ? 2 : (isMain ? 4 : 2), display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 15px rgba(0,0,0,0.1)", overflow: "hidden" }}>
+                {restaurant?.logo_url ? (
+                  <img src={restaurant.logo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: isPrint ? 3 : (isMain ? 6 : 3) }} />
+                ) : (
+                  <div style={{ width: "100%", height: "100%", background: qrColor, borderRadius: isPrint ? 4 : (isMain ? 8 : 4), display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: Math.floor(logoSize * 0.5), fontWeight: 900 }}>{restaurant?.name?.[0] || "T"}</div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {qrFrameType === "minimal" && (
+          <div style={{ marginTop: isPrint ? 12 : (isMain ? 20 : 12), textAlign: "center" }}>
+            <div style={{ fontSize: isPrint ? 8 : (isMain ? 11 : 8), fontWeight: 700, color: qrColor, letterSpacing: "0.1em" }}>MASA NUMARASI</div>
+            <div style={{ fontSize: isPrint ? 14 : (isMain ? 18 : 14), fontWeight: 900, color: qrColor, marginTop: 2 }}>{tableNo || "00"}</div>
+          </div>
+        )}
+        
+        {qrFrameType === "modern" && (
+          <div style={{ marginTop: isPrint ? 12 : (isMain ? 24 : 12), textAlign: "center", display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ height: 1, width: isMain ? 15 : 10, background: qrColor, opacity: 0.2 }} />
+            <div style={{ fontSize: isPrint ? 8 : (isMain ? 11 : 8), fontWeight: 800, color: qrColor, opacity: 0.5, letterSpacing: "0.1em" }}>MASA {tableNo || "00"}</div>
+            <div style={{ height: 1, width: isMain ? 15 : 10, background: qrColor, opacity: 0.2 }} />
+          </div>
+        )}
+
+        {qrFrameType === "elegant" && (
+          <div style={{ marginTop: isPrint ? 15 : (isMain ? 28 : 15), display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+            <div style={{ fontSize: isPrint ? 8 : (isMain ? 10 : 8), fontWeight: 700, color: qrColor, opacity: 0.5, letterSpacing: "0.2em" }}>MASA {tableNo || "00"}</div>
+            <div style={{ width: 3, height: 3, borderRadius: 99, background: qrColor, opacity: 0.3 }} />
+          </div>
+        )}
+        
+        {qrFrameType === "none" && !isMain && (
+           <div style={{ marginTop: 10, fontSize: 12, fontWeight: 900, color: qrColor }}>MASA {tableNo}</div>
+        )}
+      </div>
+    );
   };
 
   const handleSignOut = async () => { await supabase.auth.signOut(); window.location.href = "/auth"; };
@@ -479,14 +589,30 @@ export default function PanelPage() {
   };
 
   const handleReviewStatus = async (id: string, status: string) => {
-    await supabase.from("reviews").update({ status }).eq("id", id);
+    const { data, error } = await supabase.from("reviews").update({ status }).eq("id", id).select();
+    if (error) {
+      flash("Hata: " + error.message);
+      return;
+    }
+    if (!data || data.length === 0) {
+      flash("Hata: Güncelleme yetkiniz yok (RLS kuralı eksik olabilir).");
+      return;
+    }
     setReviews(prev => prev.map(r => r.id === id ? { ...r, status } : r));
     flash("Yorum durumu güncellendi.");
   };
 
   const handleReviewReply = async (id: string) => {
     if (!replyText.trim()) return;
-    await supabase.from("reviews").update({ owner_reply: replyText.trim(), status: "approved" }).eq("id", id);
+    const { data, error } = await supabase.from("reviews").update({ owner_reply: replyText.trim(), status: "approved" }).eq("id", id).select();
+    if (error) {
+      flash("Hata: " + error.message);
+      return;
+    }
+    if (!data || data.length === 0) {
+      flash("Hata: Cevaplama yetkiniz yok (RLS kuralı eksik olabilir).");
+      return;
+    }
     setReviews(prev => prev.map(r => r.id === id ? { ...r, owner_reply: replyText.trim(), status: "approved" } : r));
     setReplyText("");
     setReplyingTo(null);
@@ -569,7 +695,8 @@ export default function PanelPage() {
   );
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#080808", fontFamily: "'Outfit', system-ui, sans-serif", color: "#fff" }}>
+    <>
+      <div style={{ display: "flex", minHeight: "100vh", background: "#080808", fontFamily: "'Outfit', system-ui, sans-serif", color: "#fff" }}>
       <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
       <style>{`
         *{box-sizing:border-box;margin:0;padding:0}
@@ -599,6 +726,25 @@ export default function PanelPage() {
         input:focus,select:focus,textarea:focus{outline:none;border-color:${A}!important}
         @media(max-width:960px){.sidebar{width:60px!important}.sidebar-label,.sidebar-logo-text,.sidebar-rest,.sidebar-plan{display:none!important}}
         @media(max-width:600px){.main-pad{padding:16px!important}.stats-grid{grid-template-columns:1fr 1fr!important}.chart-grid{grid-template-columns:1fr!important}.actions-grid{grid-template-columns:1fr 1fr!important}}
+        
+        @media print {
+          body { background: #fff !important; }
+          main, .no-print, header, footer { display: none !important; }
+          #print-area { 
+            display: block !important; 
+            visibility: visible !important; 
+            position: absolute !important; 
+            left: 0 !important; 
+            top: 0 !important; 
+            width: 100% !important; 
+            z-index: 9999999 !important;
+            background: #fff !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          #print-area * { visibility: visible !important; }
+          @page { size: auto; margin: 1cm; }
+        }
       `}</style>
 
       {toast && (
@@ -918,8 +1064,8 @@ export default function PanelPage() {
               )}
 
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 0 }}>
-                <h2 style={{ fontSize: 16, fontWeight: 700 }}>Aktif Siparişler</h2>
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,.4)" }}>{orders.filter(o => o.status !== "completed" && o.status !== "cancelled").length} bekleyen sipariş</div>
+                <h2 style={{ fontSize: 16, fontWeight: 700 }}>Dijital Mutfak Paneli (KDS)</h2>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,.4)" }}>{orders.filter(o => o.status !== "completed" && o.status !== "cancelled").length} aktif sipariş</div>
               </div>
 
               {orders.length === 0 ? (
@@ -930,58 +1076,79 @@ export default function PanelPage() {
                   <div style={{ fontSize: 14 }}>Henüz sipariş yok.</div>
                 </div>
               ) : (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
-                  {orders.map(order => (
-                    <div key={order.id} className="card" style={{ padding: "20px", borderLeft: `4px solid ${getStatusColor(order.status)}` }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
-                        <div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                            <span style={{ fontSize: 16, fontWeight: 800 }}>Masa {order.table_no}</span>
-                            <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 6, background: `${getStatusColor(order.status)}20`, color: getStatusColor(order.status), fontWeight: 700 }}>{getStatusLabel(order.status)}</span>
-                          </div>
-                          <div style={{ fontSize: 11, color: "rgba(255,255,255,.3)" }}>{new Date(order.created_at).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })} · #{order.id.slice(0, 5)}</div>
+                <div style={{ display: "flex", gap: 16, overflowX: "auto", paddingBottom: 16, minHeight: 600, alignItems: "stretch" }}>
+                  {[
+                    { status: "pending", title: "Bekliyor", color: "#f59e0b" },
+                    { status: "preparing", title: "Hazırlanıyor", color: "#3b82f6" },
+                    { status: "ready", title: "Hazır", color: "#10b981" },
+                    { status: "completed", title: "Geçmiş", color: "rgba(255,255,255,0.4)" }
+                  ].map(col => {
+                    const colOrders = col.status === "completed" 
+                      ? orders.filter(o => o.status === "completed" || o.status === "cancelled").slice(0, 15)
+                      : orders.filter(o => o.status === col.status);
+                      
+                    return (
+                      <div key={col.status} style={{ flex: "0 0 320px", display: "flex", flexDirection: "column", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 20, padding: 16 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                          <h3 style={{ fontSize: 14, fontWeight: 800, color: col.color, display: "flex", alignItems: "center", gap: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                            <div style={{ width: 8, height: 8, borderRadius: 99, background: col.color, boxShadow: `0 0 10px ${col.color}` }} />
+                            {col.title}
+                          </h3>
+                          <span style={{ fontSize: 12, fontWeight: 700, background: "rgba(255,255,255,0.1)", padding: "2px 8px", borderRadius: 99 }}>{colOrders.length}</span>
                         </div>
-                        <div style={{ textAlign: "right" }}>
-                          <div style={{ fontSize: 16, fontWeight: 800 }}>₺{order.total_amount}</div>
-                          <div style={{ fontSize: 10, color: "rgba(255,255,255,.3)" }}>{order.order_items?.length} ürün</div>
-                        </div>
-                      </div>
-
-                      <div style={{ background: "rgba(255,255,255,.02)", borderRadius: 10, padding: "12px", marginBottom: 16 }}>
-                        {order.order_items?.map((item: any, idx: number) => {
-                          const product = products.find(p => p.id === item.product_id);
-                          return (
-                            <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: idx === order.order_items.length - 1 ? 0 : 8 }}>
-                              <div>
-                                <span style={{ fontWeight: 700, color: A }}>{item.quantity}x</span> {product?.name_tr || "Ürün"}
-                                {item.extras_selected?.length > 0 && (
-                                  <div style={{ fontSize: 10, color: "rgba(255,255,255,.3)", marginTop: 2 }}>
-                                    + {item.extras_selected.map((e: any) => e.name_tr).join(", ")}
-                                  </div>
+                        
+                        <div style={{ display: "flex", flexDirection: "column", gap: 12, flex: 1, overflowY: "auto", paddingRight: 4 }}>
+                          {colOrders.map(order => (
+                            <div key={order.id} className="card" style={{ padding: "16px", borderLeft: `4px solid ${getStatusColor(order.status)}`, cursor: "default" }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                                <div>
+                                  <div style={{ fontSize: 16, fontWeight: 900, marginBottom: 2 }}>Masa {order.table_no}</div>
+                                  <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)" }}>{new Date(order.created_at).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })} · #{order.id.slice(0, 5)}</div>
+                                </div>
+                                <div style={{ textAlign: "right" }}>
+                                  <div style={{ fontSize: 15, fontWeight: 800, color: A }}>₺{order.total_amount}</div>
+                                </div>
+                              </div>
+        
+                              <div style={{ background: "rgba(0,0,0,.2)", borderRadius: 10, padding: "12px", marginBottom: 16 }}>
+                                {order.order_items?.map((item: any, idx: number) => {
+                                  const product = products.find(p => p.id === item.product_id);
+                                  return (
+                                    <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: idx === order.order_items.length - 1 ? 0 : 8 }}>
+                                      <div style={{ flex: 1, paddingRight: 8 }}>
+                                        <span style={{ fontWeight: 800, color: "#fff", marginRight: 6 }}>{item.quantity}x</span> 
+                                        <span style={{ color: "rgba(255,255,255,0.9)" }}>{product?.name_tr || "Ürün"}</span>
+                                        {item.extras_selected?.length > 0 && (
+                                          <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)", marginTop: 4, display: "flex", flexDirection: "column", gap: 2 }}>
+                                            {item.extras_selected.map((e: any, i: number) => <span key={i}>+ {e.name_tr}</span>)}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+        
+                              <div style={{ display: "flex", gap: 8, flexDirection: "column" }}>
+                                {order.status === "pending" && (
+                                  <button onClick={() => updateOrderStatus(order.id, "preparing")} className="btn" style={{ width: "100%", padding: "10px", borderRadius: 10, background: "#3b82f6", color: "#fff", border: "none", fontSize: 13, fontWeight: 700 }}>Hazırlanıyor'a Al</button>
+                                )}
+                                {order.status === "preparing" && (
+                                  <button onClick={() => updateOrderStatus(order.id, "ready")} className="btn" style={{ width: "100%", padding: "10px", borderRadius: 10, background: "#10b981", color: "#fff", border: "none", fontSize: 13, fontWeight: 700 }}>Hazır Yap</button>
+                                )}
+                                {order.status === "ready" && (
+                                  <button onClick={() => updateOrderStatus(order.id, "completed")} className="btn" style={{ width: "100%", padding: "10px", borderRadius: 10, background: "rgba(255,255,255,.1)", color: "#fff", border: "none", fontSize: 13, fontWeight: 700 }}>Tamamla</button>
+                                )}
+                                {order.status === "pending" && (
+                                  <button onClick={() => updateOrderStatus(order.id, "cancelled")} className="btn" style={{ width: "100%", padding: "10px", borderRadius: 10, background: "transparent", color: "#ef4444", border: "1px solid rgba(239,68,68,.3)", fontSize: 13, fontWeight: 600 }}>İptal Et</button>
                                 )}
                               </div>
-                              <span style={{ fontWeight: 600 }}>₺{item.price * item.quantity}</span>
                             </div>
-                          );
-                        })}
+                          ))}
+                        </div>
                       </div>
-
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        {order.status === "pending" && (
-                          <button onClick={() => updateOrderStatus(order.id, "preparing")} className="btn" style={{ padding: "8px 16px", borderRadius: 8, background: "#3b82f6", color: "#fff", border: "none", fontSize: 12, fontWeight: 700 }}>Hazırlanıyor Yap</button>
-                        )}
-                        {order.status === "preparing" && (
-                          <button onClick={() => updateOrderStatus(order.id, "ready")} className="btn" style={{ padding: "8px 16px", borderRadius: 8, background: "#10b981", color: "#fff", border: "none", fontSize: 12, fontWeight: 700 }}>Hazır Yap</button>
-                        )}
-                        {order.status === "ready" && (
-                          <button onClick={() => updateOrderStatus(order.id, "completed")} className="btn" style={{ padding: "8px 16px", borderRadius: 8, background: "rgba(255,255,255,.1)", color: "#fff", border: "none", fontSize: 12, fontWeight: 700 }}>Tamamla</button>
-                        )}
-                        {order.status !== "completed" && order.status !== "cancelled" && (
-                          <button onClick={() => updateOrderStatus(order.id, "cancelled")} className="btn" style={{ padding: "8px 16px", borderRadius: 8, background: "transparent", color: "#ef4444", border: "1px solid rgba(239,68,68,.3)", fontSize: 12, fontWeight: 600 }}>İptal Et</button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1019,13 +1186,13 @@ export default function PanelPage() {
                 </div>
               ) : (
                 <div className="card" style={{ overflow: "hidden" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 80px 90px 100px", padding: "12px 20px", borderBottom: "1px solid rgba(255,255,255,.06)", background: "rgba(255,255,255,.02)" }}>
-                    {["Ürün", "Kategori", "Fiyat", "Durum", ""].map((h, i) => (
+                  <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 80px 180px 100px", padding: "12px 20px", borderBottom: "1px solid rgba(255,255,255,.06)", background: "rgba(255,255,255,.02)" }}>
+                    {["Ürün", "Kategori", "Fiyat", "Aktif / Stok", ""].map((h, i) => (
                       <span key={i} style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,.25)", letterSpacing: ".06em" }}>{h}</span>
                     ))}
                   </div>
                   {filteredProducts.map((item, i) => (
-                    <div key={item.id} className="row-item" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 80px 90px 100px", padding: "14px 20px", borderBottom: i < filteredProducts.length - 1 ? "1px solid rgba(255,255,255,.05)" : "none", alignItems: "center", opacity: item.is_active ? 1 : 0.5 }}>
+                    <div key={item.id} className="row-item" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 80px 180px 100px", padding: "14px 20px", borderBottom: i < filteredProducts.length - 1 ? "1px solid rgba(255,255,255,.05)" : "none", alignItems: "center", opacity: item.is_active ? 1 : 0.5 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                         {item.image_url ? (
                           <img src={item.image_url} alt="" style={{ width: 40, height: 40, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
@@ -1049,12 +1216,20 @@ export default function PanelPage() {
                       </div>
                       <span style={{ fontSize: 12, color: "rgba(255,255,255,.5)" }}>{categories.find(c => c.id === item.category_id)?.name || "—"}</span>
                       <span style={{ fontSize: 13, fontWeight: 700 }}>₺{item.price}</span>
-                      <button onClick={() => toggleProduct(item.id, item.is_active)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 7, border: "none", cursor: "pointer", background: item.is_active ? "#22c55e18" : "rgba(255,255,255,.06)" }}>
-                        <div style={{ width: 28, height: 16, borderRadius: 99, background: item.is_active ? "#22c55e" : "rgba(255,255,255,.15)", position: "relative" }}>
-                          <div style={{ position: "absolute", top: 2, left: item.is_active ? 14 : 2, width: 12, height: 12, borderRadius: 99, background: "#fff", transition: "left .2s" }} />
-                        </div>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: item.is_active ? "#22c55e" : "rgba(255,255,255,.3)" }}>{item.is_active ? "Aktif" : "Pasif"}</span>
-                      </button>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button onClick={() => toggleProduct(item.id, item.is_active)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 8px", borderRadius: 7, border: "none", cursor: "pointer", background: item.is_active ? "rgba(34,197,94,0.1)" : "rgba(255,255,255,0.05)" }}>
+                          <div style={{ width: 24, height: 12, borderRadius: 99, background: item.is_active ? "#22c55e" : "rgba(255,255,255,0.15)", position: "relative" }}>
+                            <div style={{ position: "absolute", top: 1, left: item.is_active ? 13 : 1, width: 10, height: 10, borderRadius: 99, background: "#fff", transition: "left .2s" }} />
+                          </div>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: item.is_active ? "#22c55e" : "rgba(255,255,255,0.3)" }}>AKTİF</span>
+                        </button>
+                        <button onClick={() => toggleProductAvailability(item.id, item.is_available !== false)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 8px", borderRadius: 7, border: "none", cursor: "pointer", background: item.is_available !== false ? "rgba(59,130,246,0.1)" : "rgba(239,68,68,0.1)" }}>
+                          <div style={{ width: 24, height: 12, borderRadius: 99, background: item.is_available !== false ? "#3b82f6" : "#ef4444", position: "relative" }}>
+                            <div style={{ position: "absolute", top: 1, left: item.is_available !== false ? 13 : 1, width: 10, height: 10, borderRadius: 99, background: "#fff", transition: "left .2s" }} />
+                          </div>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: item.is_available !== false ? "#3b82f6" : "#ef4444" }}>{item.is_available !== false ? "STOKTA" : "BİTTİ"}</span>
+                        </button>
+                      </div>
                       <div style={{ display: "flex", gap: 6 }}>
                         <button onClick={() => setEditingProduct(item)} className="btn" style={{ width: 30, height: 30, borderRadius: 7, border: "1px solid rgba(255,255,255,.1)", background: "transparent", cursor: "pointer", color: "rgba(255,255,255,.5)", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}>✎</button>
                         <button onClick={() => deleteProduct(item.id)} className="btn" style={{ width: 30, height: 30, borderRadius: 7, border: "1px solid rgba(239,68,68,.2)", background: "transparent", cursor: "pointer", color: "#ef4444", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
@@ -1153,7 +1328,11 @@ export default function PanelPage() {
                   </div>
 
                   <div className="card" style={{ padding: "20px" }}>
-                    <button onClick={() => flash("Tasarım kaydedildi ve tüm masalara uygulandı.")} style={{ width: "100%", padding: "12px", borderRadius: 12, border: "none", background: A, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", marginBottom: 10 }}>Tasarımı Kaydet</button>
+                    <button onClick={handleSaveQrSettings} style={{ width: "100%", padding: "12px", borderRadius: 12, border: "none", background: A, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", marginBottom: 10 }}>Tasarımı Kaydet</button>
+                    <button onClick={() => window.print()} style={{ width: "100%", padding: "12px", borderRadius: 12, border: `1.5px solid ${A}`, background: "transparent", color: A, fontSize: 13, fontWeight: 700, cursor: "pointer", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                      Baskı Sayfası (A4)
+                    </button>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                       <button onClick={() => downloadQR('png')} style={{ padding: "12px", borderRadius: 12, border: "1px solid rgba(255,255,255,.1)", background: "transparent", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>PNG İndir</button>
                       <button onClick={() => downloadQR('svg')} style={{ padding: "12px", borderRadius: 12, border: "1px solid rgba(255,255,255,.1)", background: "transparent", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>SVG İndir</button>
@@ -1164,45 +1343,7 @@ export default function PanelPage() {
                 {/* PREVIEW */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                   <div className="card" style={{ padding: "40px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "radial-gradient(circle at 50% 50%, rgba(255,255,255,.03) 0%, rgba(255,255,255,0) 100%)", minHeight: 480 }}>
-                    <div id="main-qr" style={{ position: "relative", padding: qrFrameType === "none" ? 20 : 40, background: qrBgColor, borderRadius: 24, boxShadow: "0 20px 50px rgba(0,0,0,.3)", display: "flex", flexDirection: "column", alignItems: "center" }}>
-                      
-                      {/* FRAME DECORATION */}
-                      {qrFrameType === "elegant" && (
-                        <div style={{ marginBottom: 20, textAlign: "center" }}>
-                          <div style={{ fontSize: 18, fontWeight: 900, color: qrColor, letterSpacing: "0.1em" }}>{restaurant?.name?.toUpperCase()}</div>
-                          <div style={{ height: 2, width: 40, background: qrColor, margin: "8px auto" }} />
-                        </div>
-                      )}
-
-                      {qrFrameType === "modern" && (
-                        <div style={{ position: "absolute", top: -15, background: qrColor, color: qrBgColor, padding: "6px 20px", borderRadius: 99, fontSize: 12, fontWeight: 800, boxShadow: "0 4px 12px rgba(0,0,0,.1)" }}>MENÜYÜ TARA</div>
-                      )}
-
-                      <div style={{ position: "relative" }}>
-                        <QRCode value={`${typeof window !== 'undefined' ? window.location.origin : 'https://temeat.com.tr'}/${restaurant?.slug}`} size={200} fgColor={qrColor} bgColor={qrBgColor} level="H" />
-                        {qrLogoVisible && (
-                          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <div style={{ width: 44, height: 44, background: qrBgColor, borderRadius: 10, padding: 4, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 10px rgba(0,0,0,.1)", overflow: "hidden" }}>
-                              {restaurant?.logo_url ? (
-                                <img src={restaurant.logo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 4 }} />
-                              ) : (
-                                <div style={{ width: "100%", height: "100%", background: qrColor, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", color: qrBgColor, fontSize: 18, fontWeight: 900 }}>T</div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {qrFrameType === "minimal" && (
-                        <div style={{ marginTop: 20, fontSize: 12, fontWeight: 600, color: qrColor, opacity: .6 }}>MASA 01</div>
-                      )}
-                      
-                      {(qrFrameType === "elegant" || qrFrameType === "modern") && (
-                        <div style={{ marginTop: 24, textAlign: "center" }}>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: qrColor, opacity: .4 }}>TEMEAT DİJİTAL MENÜ</div>
-                        </div>
-                      )}
-                    </div>
+                    <QRCodeFrame id="main-qr" value={`${typeof window !== 'undefined' ? window.location.origin : 'https://temeat.com.tr'}/${restaurant?.slug}`} />
                     
                     <div style={{ marginTop: 32, display: "flex", alignItems: "center", gap: 12 }}>
                       <div style={{ width: 8, height: 8, borderRadius: 99, background: "#22c55e" }} />
@@ -1218,18 +1359,17 @@ export default function PanelPage() {
                       if (currentPlanIndex >= planOrder.indexOf("starter")) count = 10;
                       if (currentPlanIndex >= planOrder.indexOf("pro")) count = restaurant?.table_count || 20;
 
+                      const qrBaseUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://temeat.com.tr'}/${restaurant?.slug}`;
+
                       return Array.from({ length: count }).map((_, i) => (
-                        <div key={i} className="card" style={{ padding: "12px", textAlign: "center" }}>
+                        <div key={i} className="card" style={{ padding: "12px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center" }}>
                           <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8 }}>{count === 1 ? "Genel Menü" : `Masa ${i + 1}`}</div>
-                          <div id={`table-qr-${i}`} style={{ width: "100%", aspectRatio: "1/1", background: qrBgColor, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", padding: 8, position: "relative" }}>
-                            <QRCode value={`${typeof window !== 'undefined' ? window.location.origin : 'https://temeat.com.tr'}/${restaurant?.slug}${count === 1 ? "" : `?table=${i+1}`}`} size={50} fgColor={qrColor} bgColor={qrBgColor} level="H" />
-                            {qrLogoVisible && restaurant?.logo_url && (
-                              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                <div style={{ width: 14, height: 14, background: qrBgColor, borderRadius: 3, padding: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                  <img src={restaurant.logo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 1 }} />
-                                </div>
-                              </div>
-                            )}
+                          <div id={`table-qr-${i}`} style={{ width: "100%", display: "flex", justifyContent: "center" }}>
+                            <QRCodeFrame 
+                              value={`${qrBaseUrl}${count === 1 ? "" : `?table=${i+1}`}`} 
+                              tableNo={i + 1}
+                              size={80} 
+                            />
                           </div>
                           <button onClick={() => downloadTableQR(i)} style={{ width: "100%", marginTop: 8, padding: "6px", borderRadius: 6, border: "1px solid rgba(255,255,255,.05)", background: "rgba(255,255,255,.03)", color: "rgba(255,255,255,.4)", fontSize: 10, fontWeight: 700, cursor: "pointer", transition: "all .2s" }}
                             onMouseEnter={e => { e.currentTarget.style.color = "#fff"; e.currentTarget.style.background = "rgba(255,255,255,.08)"; }}>
@@ -1239,6 +1379,7 @@ export default function PanelPage() {
                       ));
                     })()}
                   </div>
+
                 </div>
               </div>
             </div>
@@ -1307,13 +1448,29 @@ export default function PanelPage() {
                           <div style={{ fontSize: 14, fontWeight: 700 }}>Günlük Yoğunluk</div>
                           <div style={{ fontSize: 11, color: "rgba(255,255,255,.3)" }}>Siparişlerin saatlik dağılımı</div>
                         </div>
-                        <div style={{ height: 180, display: "flex", alignItems: "flex-end", gap: 4, paddingBottom: 20 }}>
-                          {hours.map((v, i) => (
-                            <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-                              <div style={{ width: "100%", height: `${(v / maxHour) * 100}%`, background: i === new Date().getHours() ? A : "rgba(255,255,255,.1)", borderRadius: "4px 4px 0 0", transition: "all .3s" }} />
-                              {i % 4 === 0 && <span style={{ fontSize: 9, color: "rgba(255,255,255,.3)" }}>{i}:00</span>}
-                            </div>
-                          ))}
+                        <div style={{ height: 220, width: "100%", marginTop: 20 }}>
+                          {(() => {
+                            const hourlyData = hours.map((v, i) => ({ name: `${i}:00`, Sipariş: v }));
+                            return (
+                              <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={hourlyData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                                  <defs>
+                                    <linearGradient id="colorUv" x1="0" y1="0" x2="0" y2="1">
+                                      <stop offset="5%" stopColor={A} stopOpacity={0.4}/>
+                                      <stop offset="95%" stopColor={A} stopOpacity={0}/>
+                                    </linearGradient>
+                                  </defs>
+                                  <XAxis dataKey="name" stroke="rgba(255,255,255,0.2)" fontSize={10} tickMargin={10} minTickGap={20} />
+                                  <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} allowDecimals={false} />
+                                  <RechartsTooltip 
+                                    contentStyle={{ background: "#1c1c1c", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 12, color: "#fff" }}
+                                    itemStyle={{ color: A, fontWeight: 700 }}
+                                  />
+                                  <Area type="monotone" dataKey="Sipariş" stroke={A} strokeWidth={3} fillOpacity={1} fill="url(#colorUv)" />
+                                </AreaChart>
+                              </ResponsiveContainer>
+                            );
+                          })()}
                         </div>
                       </div>
 
@@ -1414,24 +1571,24 @@ export default function PanelPage() {
                 <h2 style={{ fontSize: 16, fontWeight: 700 }}>Müşteri Değerlendirmeleri</h2>
                 <div style={{ display: "flex", gap: 8 }}>
                   {["pending", "approved", "rejected"].map(s => (
-                    <button key={s} onClick={() => flash("Filtreleme özelliği eklenecek...")} 
-                      style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.03)", color: "rgba(255,255,255,.5)", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+                    <button key={s} onClick={() => setReviewFilter(s)} 
+                      style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${reviewFilter === s ? A : "rgba(255,255,255,.1)"}`, background: reviewFilter === s ? `${A}20` : "rgba(255,255,255,.03)", color: reviewFilter === s ? A : "rgba(255,255,255,.5)", fontSize: 11, fontWeight: 600, cursor: "pointer", transition: "all 0.2s" }}>
                       {s === "pending" ? "Bekleyen" : s === "approved" ? "Onaylı" : "Reddedilen"}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {reviews.length === 0 ? (
+              {reviews.filter(r => r.status === reviewFilter).length === 0 ? (
                 <div className="card" style={{ padding: "60px 20px", textAlign: "center", color: "rgba(255,255,255,.2)" }}>
                   <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}>
                     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.2 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   </div>
-                  <div style={{ fontSize: 14 }}>Henüz hiç yorum yapılmamış.</div>
+                  <div style={{ fontSize: 14 }}>Bu kategoriye ait yorum bulunmuyor.</div>
                 </div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                  {reviews.map(rev => {
+                  {reviews.filter(r => r.status === reviewFilter).map(rev => {
                     const product = products.find(p => p.id === rev.product_id);
                     return (
                       <div key={rev.id} className="card" style={{ padding: 20, borderLeft: `4px solid ${rev.status === "pending" ? "#f59e0b" : rev.status === "approved" ? "#22c55e" : "#ef4444"}` }}>
@@ -1655,6 +1812,37 @@ export default function PanelPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+
+      {/* GLOBAL HIDDEN PRINT AREA */}
+      <div id="print-area" style={{ display: "none" }}>
+        <div style={{ 
+          display: "grid", 
+          gridTemplateColumns: "repeat(3, 1fr)", 
+          gap: "30px", 
+          padding: "20px",
+          background: "#fff"
+        }}>
+          {(() => {
+            const planOrder = ["free", "yenimekan", "starter", "pro"];
+            const currentPlanIndex = planOrder.indexOf(restaurant?.plan || "free");
+            let count = 1;
+            if (currentPlanIndex >= planOrder.indexOf("starter")) count = 10;
+            if (currentPlanIndex >= planOrder.indexOf("pro")) count = restaurant?.table_count || 20;
+            const qrBaseUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://temeat.com.tr'}/${restaurant?.slug}`;
+
+            return Array.from({ length: count }).map((_, i) => (
+              <div key={i} style={{ display: "flex", justifyContent: "center", border: "1px dashed #eee", padding: "15px", borderRadius: "8px" }}>
+                <QRCodeFrame 
+                  value={`${qrBaseUrl}${count === 1 ? "" : `?table=${i+1}`}`} 
+                  tableNo={i + 1}
+                  isPrint={true}
+                />
+              </div>
+            ));
+          })()}
+        </div>
+      </div>
+    </>
   );
 }

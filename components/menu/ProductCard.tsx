@@ -33,7 +33,7 @@ export function ProductCard({
   const discPrice = p.discount_pct ? Math.round(p.price * (1 - p.discount_pct / 100)) : null;
 
   return (
-    <div style={{ animation: `fadeUp .4s ${i * .03}s both`, background: C.cd, borderRadius: 16, border: `1px solid ${C.bd}`, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+    <div style={{ animation: `fadeUp .4s ${i * .03}s both`, background: C.cd, borderRadius: 16, border: `1px solid ${C.bd}`, overflow: "hidden", display: "flex", flexDirection: "column", opacity: p.is_available === false ? 0.7 : 1, filter: p.is_available === false ? "grayscale(0.5)" : "none" }}>
       <div onClick={() => onClick(p)} style={{ position: "relative", width: "100%", paddingTop: "60%", cursor: "pointer", flexShrink: 0 }}>
         <div style={{ position: "absolute", inset: 0 }}>
           {p.image_url
@@ -43,7 +43,12 @@ export function ProductCard({
               </div>
           }
         </div>
-        {p.discount_pct > 0 && (
+        {p.is_available === false && (
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(2px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10 }}>
+            <span style={{ color: "#fff", fontSize: 12, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.05em", padding: "4px 10px", border: "2px solid #fff", borderRadius: 10 }}>TÜKENDİ</span>
+          </div>
+        )}
+        {p.discount_pct > 0 && p.is_available !== false && (
           <div style={{ position: "absolute", top: 8, left: 8, background: themeColor, color: "#fff", fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 5 }}>-{p.discount_pct}%</div>
         )}
       </div>
@@ -66,16 +71,12 @@ export function ProductCard({
             })}
           </div>
         )}
-          {(hasPrepInfo || p.calories) && (
+          {hasPrepInfo && p.prep_time && (
             <div style={{ display: "flex", gap: 8, fontSize: 10, color: C.mt }}>
-              {hasPrepInfo && p.prep_time && <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 {p.prep_time} {t.prep}
-              </span>}
-              {p.calories && <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 2c0 1.5-1 2.5-1 4s1 2.5 1 4c0 1.5-1 2.5-1 4s1 2.5-1 4"/></svg>
-                {p.calories} {t.kcal}
-              </span>}
+              </span>
             </div>
           )}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto", paddingTop: 8 }}>
@@ -84,7 +85,9 @@ export function ProductCard({
             {discPrice && <span style={{ fontSize: 11, color: C.dm, textDecoration: "line-through" }}>₺{p.price}</span>}
           </div>
           {hasCart && (
-            cartQty > 0 ? (
+            p.is_available === false ? (
+              <span style={{ fontSize: 10, fontWeight: 700, color: C.dm, textTransform: "uppercase" }}>Tükendi</span>
+            ) : cartQty > 0 ? (
               <div style={{ display: "flex", alignItems: "center", background: C.al, borderRadius: 8, border: `1.5px solid ${themeColor}20` }}>
                 <button onClick={() => onRemove(p)} style={{ width: 28, height: 28, border: "none", background: "none", cursor: "pointer", fontSize: 16, color: themeColor }}>−</button>
                 <span style={{ fontWeight: 700, fontSize: 13, color: themeColor, minWidth: 16, textAlign: "center" }}>{cartQty}</span>

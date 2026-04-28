@@ -34,7 +34,8 @@ export function ReviewModal({
       customer_name: name.trim(),
       rating,
       comment: comment.trim() || null,
-      is_public: true
+      is_public: true,
+      status: "pending"
     });
 
     if (error) {

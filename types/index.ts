@@ -21,6 +21,7 @@ export type Product = {
   desc_ru: string | null;
   price: number;
   is_active: boolean;
+  is_available: boolean;
   image_url: string | null;
   discount_pct: number;
   calories: number | null;

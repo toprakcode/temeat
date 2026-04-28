@@ -55,18 +55,12 @@ export function DetailModal({ product, lang, themeColor, C, onClose, onAdd, hasP
             <div style={{ fontSize: 20, fontWeight: 800, color: themeColor }}>₺{product.discount_pct ? Math.round(product.price * (1 - product.discount_pct / 100)) : product.price}</div>
           </div>
 
-          {(hasPrepInfo || product.calories) && (
+          {hasPrepInfo && (
             <div style={{ display: "flex", gap: 16, marginBottom: 20 }}>
-              {hasPrepInfo && product.prep_time && (
+              {product.prep_time && (
                 <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: C.mt, fontWeight: 600 }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
                   {product.prep_time} {t.prep}
-                </div>
-              )}
-              {product.calories && (
-                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: C.mt, fontWeight: 600 }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
-                  {product.calories} {t.kcal}
                 </div>
               )}
             </div>
@@ -114,9 +108,15 @@ export function DetailModal({ product, lang, themeColor, C, onClose, onAdd, hasP
               <div style={{ fontSize: 12, color: C.mt, fontWeight: 600, marginBottom: 2 }}>{t.total}</div>
               <div style={{ fontSize: 24, fontWeight: 800, color: themeColor }}>₺{totalPrice}</div>
             </div>
-            <button onClick={() => { onAdd(product, selectedExtras); onClose(); }} style={{ flex: 1.5, height: 54, borderRadius: 16, border: "none", background: themeColor, color: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer", boxShadow: `0 8px 20px ${themeColor}30` }}>
-              {t.add}
-            </button>
+            {product.is_available === false ? (
+              <button disabled style={{ flex: 1.5, height: 54, borderRadius: 16, border: "none", background: C.bd, color: C.mt, fontSize: 16, fontWeight: 700, cursor: "not-allowed" }}>
+                Tükendi
+              </button>
+            ) : (
+              <button onClick={() => { onAdd(product, selectedExtras); onClose(); }} style={{ flex: 1.5, height: 54, borderRadius: 16, border: "none", background: themeColor, color: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer", boxShadow: `0 8px 20px ${themeColor}30` }}>
+                {t.add}
+              </button>
+            )}
           </div>
         )}
       </div>
