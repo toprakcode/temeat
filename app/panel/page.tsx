@@ -510,7 +510,7 @@ export default function PanelPage() {
   const chartData = weeklyViews.length > 0 ? weeklyViews : weeklyData;
 
   const A = restaurant?.theme_color || DEFAULT_COLOR;
-  const tabLabel: Record<string, string> = { dashboard: "Genel Bakış", tables: "Masalar", orders: "Siparişler", payments: "Ödemeler", reviews: "Müşteri Yorumları", menu: "Menü Yönetimi", qr: "QR Kodlar", analytics: "Analitik", settings: "Ayarlar" };
+   const tabLabel: Record<string, string> = { dashboard: "Genel Bakış", menu: "Menü Yönetimi", analytics: "Analitik", campaigns: "Kampanya Merkezi", qr: "QR Kodlar", tables: "Masalar", orders: "Siparişler", payments: "Ödemeler", reviews: "Müşteri Yorumları", settings: "Ayarlar" };
 
   const resolveServiceRequest = async (id: string) => {
     const { error } = await supabase.from("service_requests").update({ status: "resolved", resolved_at: new Date().toISOString() }).eq("id", id);
@@ -1735,6 +1735,75 @@ export default function PanelPage() {
               )}
             </div>
           )}
+          {/* CAMPAIGNS MANAGEMENT */}
+          {activeTab === "campaigns" && (
+            <div style={{ animation: "fadeUp .35s both", display: "flex", flexDirection: "column", gap: 24 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <h2 style={{ fontSize: 18, fontWeight: 800 }}>Kampanya Merkezi</h2>
+                  <p style={{ fontSize: 13, color: "rgba(255,255,255,.3)" }}>AI destekli kampanyalarla satışlarınızı artırın</p>
+                </div>
+                <button onClick={() => flash("Yeni kampanya oluşturma yakında aktif olacak!")} style={{ padding: "10px 20px", borderRadius: 12, border: "none", background: A, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                  Yeni Kampanya
+                </button>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                {/* AI CAMPAIGN GENERATOR */}
+                <div className="card" style={{ padding: 24, background: `linear-gradient(135deg, ${A}15, rgba(0,0,0,0))`, border: `1px solid ${A}30` }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 14, background: A, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", marginBottom: 20 }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+                  </div>
+                  <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>AI Kampanya Sihirbazı</h3>
+                  <p style={{ fontSize: 13, color: "rgba(255,255,255,.4)", lineHeight: 1.6, marginBottom: 24 }}>Verilerinizi analiz ettik. "Öğle Arası Yoğunluğu" için en popüler 3 ürününüzde %15 indirim yapmanızı öneriyoruz.</p>
+                  <button onClick={() => flash("AI Önerisi Uygulandı! ✓")} style={{ padding: "10px 18px", borderRadius: 10, border: `1.5px solid ${A}`, background: "transparent", color: A, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Öneriyi Uygula</button>
+                </div>
+
+                {/* CURRENT PERFORMANCE */}
+                <div className="card" style={{ padding: 24 }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: "#10b981", marginBottom: 20, textTransform: "uppercase", letterSpacing: ".05em" }}>Kampanya Performansı</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+                    <div>
+                      <div style={{ fontSize: 24, fontWeight: 900 }}>₺12.450</div>
+                      <div style={{ fontSize: 11, color: "rgba(255,255,255,.3)", marginTop: 4 }}>Ekstra Gelir</div>
+                    </div>
+                    <div style={{ width: 1, height: 40, background: "rgba(255,255,255,.1)" }} />
+                    <div>
+                      <div style={{ fontSize: 24, fontWeight: 900 }}>245</div>
+                      <div style={{ fontSize: 11, color: "rgba(255,255,255,.3)", marginTop: 4 }}>Kullanım</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <h3 style={{ fontSize: 15, fontWeight: 800, marginTop: 12 }}>Aktif Kampanyalar</h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {[
+                  { name: "Hoş Geldin İndirimi", type: "Yüzde İndirim", value: "%10", status: "Aktif", color: "#10b981" },
+                  { name: "Gece Kuşu Menüsü", type: "Sabit Fiyat", value: "₺120", status: "Planlandı", color: "#3b82f6" }
+                ].map((c, i) => (
+                  <div key={i} className="card" style={{ padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(255,255,255,.03)", display: "flex", alignItems: "center", justifyContent: "center", color: c.color }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 700 }}>{c.name}</div>
+                        <div style={{ fontSize: 11, color: "rgba(255,255,255,.3)" }}>{c.type} · {c.value}</div>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <span style={{ fontSize: 10, fontWeight: 800, padding: "4px 8px", borderRadius: 6, background: `${c.color}20`, color: c.color }}>{c.status}</span>
+                      <button style={{ background: "none", border: "none", color: "rgba(255,255,255,.2)", cursor: "pointer" }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* REVIEWS MANAGEMENT */}
           {activeTab === "reviews" && (
@@ -1907,11 +1976,11 @@ export default function PanelPage() {
       )}
 
       {showAddProduct && (
-        <ProductModal key="add" title="Ürün Ekle" categories={categories} initial={{}} onSave={handleAddProduct} onClose={() => setShowAddProduct(false)} themeColor={A} restaurantPlan={restaurant?.plan || "free"} />
+        <ProductModal key="add" title="Ürün Ekle" categories={categories} allProducts={products} initial={{}} onSave={handleAddProduct} onClose={() => setShowAddProduct(false)} themeColor={A} restaurantPlan={restaurant?.plan || "free"} />
       )}
 
       {editingProduct && (
-        <ProductModal key={editingProduct!.id} title="Ürünü Düzenle" categories={categories} initial={editingProduct!} onSave={handleEditProduct} onClose={() => setEditingProduct(null)} themeColor={A} restaurantPlan={restaurant?.plan || "free"} />
+        <ProductModal key={editingProduct!.id} title="Ürünü Düzenle" categories={categories} allProducts={products} initial={editingProduct!} onSave={handleEditProduct} onClose={() => setEditingProduct(null)} themeColor={A} restaurantPlan={restaurant?.plan || "free"} />
       )}
 
       {/* KDS - KITCHEN DISPLAY SYSTEM OVERLAY */}

@@ -11,6 +11,7 @@ export function ProductModal({
   initial,
   onSave,
   onClose,
+  allProducts = [],
   themeColor = "#D4470A",
   restaurantPlan = "free",
 }: {
@@ -19,6 +20,7 @@ export function ProductModal({
   initial: Partial<Product> & { category_id?: string | null };
   onSave: (data: any) => Promise<void>;
   onClose: () => void;
+  allProducts?: Product[];
   themeColor?: string;
   restaurantPlan?: string;
 }) {
@@ -27,6 +29,8 @@ export function ProductModal({
   const [nameAr, setNameAr] = useState(initial.name_ar || "");
   const [nameDe, setNameDe] = useState(initial.name_de || "");
   const [nameRu, setNameRu] = useState(initial.name_ru || "");
+  const [isCombo, setIsCombo] = useState((initial as any).is_combo || false);
+  const [comboItems, setComboItems] = useState<string[]>((initial as any).combo_items || []);
   const [desc, setDesc] = useState(initial.desc_tr || "");
   const [descEn, setDescEn] = useState(initial.desc_en || "");
   const [descAr, setDescAr] = useState(initial.desc_ar || "");
@@ -134,6 +138,8 @@ export function ProductModal({
       calories: calories ? Number(calories) : null,
       prep_time: prepTime ? Number(prepTime) : null,
       is_chef_pick: chefPick,
+      is_combo: isCombo,
+      combo_items: comboItems,
       allergens,
       image_url: finalImageUrl,
       extras: extras.filter(e => e.name_tr.trim() !== ""), // boş olanları atla
@@ -164,6 +170,42 @@ export function ProductModal({
               <option value="">Kategori seçin...</option>
               {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
+          </div>
+
+          {/* COMBO MENU TOGGLE */}
+          <div style={{ padding: "16px", borderRadius: 16, border: `1px solid ${isCombo ? themeColor : "rgba(255,255,255,.08)"}`, background: isCombo ? `${themeColor}08` : "rgba(255,255,255,.02)", transition: "all .3s" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: isCombo ? themeColor : "rgba(255,255,255,.05)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+                </div>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "#fff" }}>Bu bir Kombo Menü mü?</div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,.3)" }}>İçecek, patates gibi yan ürünleri bu pakete ekleyin</div>
+                </div>
+              </div>
+              <button type="button" onClick={() => setIsCombo(!isCombo)} 
+                style={{ width: 44, height: 22, borderRadius: 99, background: isCombo ? themeColor : "rgba(255,255,255,.1)", border: "none", cursor: "pointer", position: "relative", transition: "all .3s" }}>
+                <div style={{ position: "absolute", left: isCombo ? 24 : 2, top: 2, width: 18, height: 18, borderRadius: 99, background: "#fff", transition: "all .3s" }} />
+              </button>
+            </div>
+
+            {isCombo && (
+              <div style={{ marginTop: 16, animation: "fadeDown .3s both" }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,.4)", display: "block", marginBottom: 10, textTransform: "uppercase" }}>Menüye Dahil Ürünleri Seçin</label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, maxHeight: 200, overflowY: "auto", paddingRight: 4 }}>
+                  {allProducts.filter(p => p.id !== initial.id).map(p => {
+                    const selected = comboItems.includes(p.id);
+                    return (
+                      <button key={p.id} type="button" onClick={() => setComboItems(prev => selected ? prev.filter(id => id !== p.id) : [...prev, p.id])}
+                        style={{ padding: "10px", borderRadius: 12, border: `1.5px solid ${selected ? themeColor : "rgba(255,255,255,.05)"}`, background: selected ? `${themeColor}15` : "rgba(255,255,255,.02)", color: selected ? "#fff" : "rgba(255,255,255,.4)", fontSize: 12, fontWeight: 600, textAlign: "left", cursor: "pointer", transition: "all .2s" }}>
+                        {p.name_tr}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
           
           <div>
