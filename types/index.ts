@@ -27,6 +27,10 @@ export type Product = {
   calories: number | null;
   prep_time: number | null;
   is_chef_pick: boolean;
+  is_combo?: boolean;
+  combo_items?: string[];
+  tax_rate?: number;
+  label?: string | null;
   allergens: string[];
   tags: string[];
   serves: number;
