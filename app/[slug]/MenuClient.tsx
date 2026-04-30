@@ -286,7 +286,7 @@ export default function MenuClient({
       </div>
 
       {/* Modals */}
-      {detailProduct && <DetailModal product={detailProduct} lang={lang} themeColor={A} C={C} onClose={() => setDetailProduct(null)} onAdd={addToCart} hasPrepInfo={hasFeature("prep_info")} hasCart={hasFeature("cart")} />}
+      {detailProduct && <DetailModal product={detailProduct} allProducts={products} categories={categories} lang={lang} themeColor={A} C={C} onClose={() => setDetailProduct(null)} onAdd={addToCart} hasPrepInfo={hasFeature("prep_info")} hasCart={hasFeature("cart")} />}
       {showCart && <CartModal cartItems={cart} cartTotal={cartTotal} restaurant={restaurant} lang={lang} themeColor={A} C={C} isRTL={isRTL} onClose={() => setShowCart(false)} onAdd={addToCart} onRemove={removeFromCart} onCheckout={handleCheckout} initialTableNo={tableNo} />}
       {showReviewModal && <ReviewModal restaurant={restaurant} lang={lang} onClose={() => setShowReviewModal(false)} onSuccess={() => flash(t.order_success)} />}
       

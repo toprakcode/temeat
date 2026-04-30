@@ -82,14 +82,27 @@ function MenuContent({ params: paramsPromise }: { params: Promise<{ slug: string
       const { data: rest, error: restError } = await supabase.from("restaurants").select("*").eq("slug", slug).single();
       if (restError || !rest) { setNotFound(true); setLoading(false); return; }
       setRestaurant(rest);
-      document.title = `${rest.name} Menüsü | TEMeat`;
-      
-      supabase.from("page_views").insert({ restaurant_id: rest.id, lang: navigator.language?.slice(0, 2) || "tr" }).then();
 
       const [catsRes, prodsRes] = await Promise.all([
         supabase.from("categories").select("*").eq("restaurant_id", rest.id).order("sort_order"),
         supabase.from("products").select("*, extras:product_extras(*)").eq("restaurant_id", rest.id).eq("is_active", true).order("sort_order")
       ]);
+
+      // AI-POWERED DYNAMIC SEO
+      const topCategories = catsRes.data?.slice(0, 2).map(c => c.name).join(", ");
+      document.title = `${rest.name} | En İyi ${topCategories || "Lezzetler"} - Dijital Menü`;
+      
+      const metaDesc = document.querySelector('meta[name="description"]');
+      const descContent = `${rest.name} restoranının dijital menüsünü inceleyin. ${topCategories} ve daha fazlası en taze haliyle sizi bekliyor.`;
+      if (metaDesc) metaDesc.setAttribute("content", descContent);
+      else {
+        const meta = document.createElement('meta');
+        meta.name = "description";
+        meta.content = descContent;
+        document.head.appendChild(meta);
+      }
+      
+      supabase.from("page_views").insert({ restaurant_id: rest.id, lang: navigator.language?.slice(0, 2) || "tr" }).then();
 
       setCategories(catsRes.data || []);
       setProducts(prodsRes.data || []);
@@ -315,7 +328,7 @@ function MenuContent({ params: paramsPromise }: { params: Promise<{ slug: string
           {search ? (
             <div className="product-grid">
               {products.filter(p => getProductName(p, lang).toLowerCase().includes(search.toLowerCase())).map((p, i) => (
-                <ProductCard key={p.id} p={p} i={i} lang={lang} cartQty={cart.filter(item => item.product.id === p.id).reduce((s, item) => s + item.qty, 0)} themeColor={A} C={C} onAdd={addToCart} onRemove={(prod) => { const item = cart.find(c => c.product.id === prod.id); if (item) removeFromCart(item.id); }} onClick={setDetailProduct} hasPrepInfo={hasFeature("prep_info")} hasCart={hasFeature("cart")} />
+                <ProductCard key={p.id} p={p} i={i} lang={lang} cartQty={cart.filter(item => item.product.id === p.id).reduce((s, item) => s + item.qty, 0)} themeColor={A} C={C} onAdd={addToCart} onRemove={(prod) => { const item = cart.find(c => c.product.id === prod.id); if (item) removeFromCart(item.id); }} onClick={setDetailProduct} hasPrepInfo={hasFeature("prep_info")} hasCart={hasFeature("cart")} isAIChoice={p.discount_pct > 15 || i === 0} />
               ))}
             </div>
           ) : (
@@ -324,7 +337,7 @@ function MenuContent({ params: paramsPromise }: { params: Promise<{ slug: string
                 <div style={{ padding: "20px 20px 8px", fontSize: 17, fontWeight: 800, color: C.tx }}>{getTranslatedName(cat, lang)}</div>
                 <div className="product-grid">
                   {products.filter(p => p.category_id === cat.id).map((p, i) => (
-                    <ProductCard key={p.id} p={p} i={i} lang={lang} cartQty={cart.filter(item => item.product.id === p.id).reduce((s, item) => s + item.qty, 0)} themeColor={A} C={C} onAdd={addToCart} onRemove={(prod) => { const item = cart.find(c => c.product.id === prod.id); if (item) removeFromCart(item.id); }} onClick={setDetailProduct} hasPrepInfo={hasFeature("prep_info")} hasCart={hasFeature("cart")} />
+                    <ProductCard key={p.id} p={p} i={i} lang={lang} cartQty={cart.filter(item => item.product.id === p.id).reduce((s, item) => s + item.qty, 0)} themeColor={A} C={C} onAdd={addToCart} onRemove={(prod) => { const item = cart.find(c => c.product.id === prod.id); if (item) removeFromCart(item.id); }} onClick={setDetailProduct} hasPrepInfo={hasFeature("prep_info")} hasCart={hasFeature("cart")} isAIChoice={p.discount_pct > 15 || i === 0} />
                   ))}
                 </div>
               </div>

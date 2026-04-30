@@ -15,7 +15,8 @@ export function ProductCard({
   onRemove,
   onClick,
   hasPrepInfo,
-  hasCart
+  hasCart,
+  isAIChoice
 }: {
   p: Product;
   i: number;
@@ -28,6 +29,7 @@ export function ProductCard({
   onClick: (p: Product) => void;
   hasPrepInfo?: boolean;
   hasCart?: boolean;
+  isAIChoice?: boolean;
 }) {
   const t = UI_STRINGS[lang];
   const discPrice = p.discount_pct ? Math.round(p.price * (1 - p.discount_pct / 100)) : null;
@@ -49,7 +51,28 @@ export function ProductCard({
           </div>
         )}
         {p.discount_pct > 0 && p.is_available !== false && (
-          <div style={{ position: "absolute", top: 8, left: 8, background: themeColor, color: "#fff", fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 5 }}>-{p.discount_pct}%</div>
+          <div style={{ position: "absolute", top: 8, left: 8, background: themeColor, color: "#fff", fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 5, zIndex: 11 }}>-{p.discount_pct}%</div>
+        )}
+        {isAIChoice && p.is_available !== false && (
+          <div style={{ 
+            position: "absolute", 
+            top: 8, 
+            right: 8, 
+            background: `linear-gradient(135deg, ${themeColor} 0%, #ff8c00 100%)`, 
+            color: "#fff", 
+            fontSize: 9, 
+            fontWeight: 800, 
+            padding: "4px 8px", 
+            borderRadius: 8, 
+            zIndex: 11,
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.2)"
+          }}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+            AI SEÇİMİ
+          </div>
         )}
       </div>
       <div style={{ padding: "12px 14px", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>

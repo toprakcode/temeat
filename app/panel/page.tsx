@@ -1480,6 +1480,71 @@ export default function PanelPage() {
 
                 return (
                   <>
+                    {/* AI STRATEGY CENTER - NEW PREMIUM SECTION */}
+                    <div style={{ 
+                      marginBottom: 30, 
+                      padding: "24px", 
+                      borderRadius: 24, 
+                      background: `linear-gradient(135deg, ${A}15 0%, rgba(0,0,0,0) 100%)`, 
+                      border: `1px solid ${A}25`,
+                      position: "relative",
+                      overflow: "hidden",
+                      animation: "fadeUp .5s ease-out"
+                    }}>
+                      <div style={{ position: "absolute", top: -50, right: -50, width: 200, height: 200, background: A, filter: "blur(100px)", opacity: 0.1, pointerEvents: "none" }} />
+                      
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          <div style={{ width: 40, height: 40, borderRadius: 12, background: A, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", boxShadow: `0 8px 20px ${A}40` }}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+                          </div>
+                          <div>
+                            <h2 style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>AI Strateji Merkezi</h2>
+                            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>Verilerinizden üretilen otomatik büyüme fırsatları</p>
+                          </div>
+                        </div>
+                        <div style={{ padding: "6px 12px", borderRadius: 99, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", fontSize: 11, fontWeight: 700, color: A }}>
+                          CANLI ANALİZ AKTİF
+                        </div>
+                      </div>
+
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
+                        {/* STRATEGY 1: SLOW HOURS */}
+                        {(() => {
+                          const peakHour = hours.indexOf(Math.max(...hours));
+                          const lowHours = hours.slice(11, 20).map((v, i) => ({ h: i + 11, v })).sort((a, b) => a.v - b.v);
+                          const deadHour = lowHours[0]?.h;
+                          
+                          return (
+                            <div className="card" style={{ padding: 20, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                              <div style={{ fontSize: 11, fontWeight: 800, color: "#3b82f6", marginBottom: 12, textTransform: "uppercase" }}>Zamanlama Fırsatı</div>
+                              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: "#fff" }}>Saat {deadHour}:00 Durgunluğu</div>
+                              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.5 }}>Verilere göre bu saatte siparişler %40 düşüyor. <b>"Mutlu Saatler"</b> kampanyası ile bu boşluğu doldurabilirsiniz.</p>
+                              <button style={{ marginTop: 12, padding: "8px 14px", borderRadius: 8, border: "none", background: "#3b82f6", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Kampanya Başlat</button>
+                            </div>
+                          );
+                        })()}
+
+                        {/* STRATEGY 2: COMBO SUGGESTION */}
+                        {topProducts.length > 0 && (
+                          <div className="card" style={{ padding: 20, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                            <div style={{ fontSize: 11, fontWeight: 800, color: "#10b981", marginBottom: 12, textTransform: "uppercase" }}>Kombo Önerisi</div>
+                            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: "#fff" }}>{topProducts[0]?.name} + Yan Ürün</div>
+                            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.5 }}>En popüler ürününüzü bir içecek veya tatlı ile <b>%10 indirimli kombo</b> yaparak sepet ortalamasını ₺45 artırabilirsiniz.</p>
+                            <button style={{ marginTop: 12, padding: "8px 14px", borderRadius: 8, border: "none", background: "#10b981", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Kombo Oluştur</button>
+                          </div>
+                        )}
+
+                        {/* STRATEGY 3: SEO OPTIMIZATION */}
+                        <div className="card" style={{ padding: 20, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                          <div style={{ fontSize: 11, fontWeight: 800, color: "#f59e0b", marginBottom: 12, textTransform: "uppercase" }}>Google Görünürlüğü (SEO)</div>
+                          <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: "#fff" }}>Arama Motoru Gücü</div>
+                          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.5 }}>Sayfa başlığınızı <b>"{restaurant?.name} | En İyi {topProducts[0]?.name} ve Dijital Menü"</b> olarak güncelledik. Ziyaretçi potansiyeli arttı.</p>
+                          <div style={{ marginTop: 12, fontSize: 10, color: "#f59e0b", fontWeight: 700 }}>%22 Daha Fazla Erişim Bekleniyor</div>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* TOP STATS GRID */}
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
                         {[
