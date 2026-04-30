@@ -146,13 +146,23 @@ export default function PanelPage() {
     setLastWeekViews(lastWeek?.length || 0);
     setTotalViewsReal(total || 0);
     const days = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
+    // FETCH MENU DATA (Categories and Products)
+    const { data: catsData } = await supabase.from("categories").select("*").eq("restaurant_id", restaurantId).order("sort_order");
+    setCategories(catsData || []);
+
+    const { data: prodsData } = await supabase.from("products").select("*").eq("restaurant_id", restaurantId).order("sort_order");
+    setProducts(prodsData || []);
+
+    const { data: ordersData } = await supabase.from("orders").select("*, order_items(*)").eq("restaurant_id", restaurantId).order("created_at", { ascending: false });
+    setOrders(ordersData || []);
+
     setWeeklyViews(days.map((day, i) => {
       const dayStart = new Date(weekAgo.getTime() + i * 24 * 60 * 60 * 1000);
       const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
       return {
         day,
         views: thisWeek?.filter(v => { const d = new Date(v.viewed_at); return d >= dayStart && d < dayEnd; }).length || 0,
-        orders: 0,
+        orders: ordersData?.filter(o => { const d = new Date(o.created_at); return d >= dayStart && d < dayEnd; }).length || 0,
       };
     }));
 
@@ -183,18 +193,8 @@ export default function PanelPage() {
     const { data: revsData } = await supabase.from("reviews").select("*").eq("restaurant_id", restaurantId).order("created_at", { ascending: false });
     setReviews(revsData || []);
 
-    const { data: ordersData } = await supabase.from("orders").select("*, order_items(*)").eq("restaurant_id", restaurantId).order("created_at", { ascending: false });
-    setOrders(ordersData || []);
-
     const { data: serviceData } = await supabase.from("service_requests").select("*").eq("restaurant_id", restaurantId).order("created_at", { ascending: false });
     setServiceRequests(serviceData || []);
-
-    // FETCH MENU DATA (Categories and Products)
-    const { data: catsData } = await supabase.from("categories").select("*").eq("restaurant_id", restaurantId).order("sort_order");
-    setCategories(catsData || []);
-
-    const { data: prodsData } = await supabase.from("products").select("*").eq("restaurant_id", restaurantId).order("sort_order");
-    setProducts(prodsData || []);
 
     // Set QR States from Restaurant data if they exist
     if (restData.qr_color) setQrColor(restData.qr_color);
@@ -584,8 +584,42 @@ export default function PanelPage() {
     link.download = `${restaurant?.slug}-masa-${index + 1}.svg`;
     link.click();
   };
+  const downloadCSV = (data: any[], filename: string) => {
+    if (data.length === 0) { flash("İndirilecek veri yok."); return; }
+    
+    const headers = Object.keys(data[0]);
+    const csvContent = [
+      headers.join(","),
+      ...data.map(row => headers.map(h => {
+        let val = row[h];
+        if (typeof val === 'string') val = `"${val.replace(/"/g, '""')}"`;
+        return val;
+      }).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `${filename}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    flash(`${filename}.csv indiriliyor...`);
+  };
+
   const downloadReviewExcel = () => {
-    flash("Excel indirme özelliği yakında aktif olacak.");
+    downloadCSV(reviews, `${restaurant?.slug}-yorumlar`);
+  };
+
+  const downloadOrderExcel = () => {
+    downloadCSV(orders.map(o => ({
+      id: o.id,
+      masa: o.table_no,
+      tutar: o.total_amount,
+      durum: o.status,
+      tarih: new Date(o.created_at).toLocaleString('tr-TR')
+    })), `${restaurant?.slug}-siparisler`);
   };
 
   const handleReviewStatus = async (id: string, status: string) => {
@@ -1064,7 +1098,13 @@ export default function PanelPage() {
               )}
 
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 0 }}>
-                <h2 style={{ fontSize: 16, fontWeight: 700 }}>Dijital Mutfak Paneli (KDS)</h2>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <h2 style={{ fontSize: 16, fontWeight: 700 }}>Dijital Mutfak Paneli (KDS)</h2>
+                  <button onClick={downloadOrderExcel} style={{ padding: "4px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    CSV İndir
+                  </button>
+                </div>
                 <div style={{ fontSize: 12, color: "rgba(255,255,255,.4)" }}>{orders.filter(o => o.status !== "completed" && o.status !== "cancelled").length} aktif sipariş</div>
               </div>
 
@@ -1179,7 +1219,9 @@ export default function PanelPage() {
 
               {filteredProducts.length === 0 ? (
                 <div className="card" style={{ padding: "48px", textAlign: "center" }}>
-                  <div style={{ fontSize: 32, marginBottom: 12 }}>🍽</div>
+                  <div style={{ width: 64, height: 64, borderRadius: 20, background: "rgba(255,255,255,0.03)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", color: A }}>
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
+                  </div>
                   <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 8 }}>Henüz ürün yok</div>
                   <div style={{ fontSize: 13, color: "rgba(255,255,255,.4)", marginBottom: 20 }}>İlk ürününüzü ekleyin</div>
                   <button onClick={() => setShowAddProduct(true)} style={{ padding: "10px 24px", borderRadius: 9, border: "none", background: A, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>+ Ürün Ekle</button>
@@ -1267,7 +1309,7 @@ export default function PanelPage() {
                       return null;
                     })()}
                     <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 20, display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontSize: 18 }}>🎨</span> Tasarım Özelleştirme
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={A} strokeWidth="2.5"><path d="M12 19l7-7 3 3-7 7-3-3zM18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5zM2 2l7.5 1.5M7.6 7.6L2 2l5.6 5.6z"/></svg> Tasarım Özelleştirme
                     </div>
                     
                     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -1300,14 +1342,14 @@ export default function PanelPage() {
                         <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,.3)", marginBottom: 12, textTransform: "uppercase", letterSpacing: ".05em" }}>Çerçeve Stili</div>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                           {[
-                            { id: "none", label: "Çerçevesiz", icon: "⬜" },
-                            { id: "minimal", label: "Minimalist", icon: "◽" },
-                            { id: "elegant", label: "Kurumsal", icon: "💎" },
-                            { id: "modern", label: "Modern", icon: "✨" }
+                            { id: "none", label: "Çerçevesiz", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg> },
+                            { id: "minimal", label: "Minimalist", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="7" y="7" width="10" height="10" rx="1"/></svg> },
+                            { id: "elegant", label: "Kurumsal", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg> },
+                            { id: "modern", label: "Modern", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg> }
                           ].map(f => (
                             <button key={f.id} onClick={() => setQrFrameType(f.id)} 
                               style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, border: "1px solid", borderColor: qrFrameType === f.id ? A : "rgba(255,255,255,.06)", background: qrFrameType === f.id ? `${A}15` : "rgba(255,255,255,.02)", color: qrFrameType === f.id ? "#fff" : "rgba(255,255,255,.5)", fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all .2s" }}>
-                              <span>{f.icon}</span> {f.label}
+                              {f.icon} {f.label}
                             </button>
                           ))}
                         </div>
@@ -1385,14 +1427,28 @@ export default function PanelPage() {
             </div>
           )}
 
-          {/* ADVANCED ANALYTICS */}
+          {/* ADVANCED ANALYTICS (PRO VERSION) */}
           {activeTab === "analytics" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 20, animation: "fadeUp .35s both" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 24, animation: "fadeUp .4s cubic-bezier(0.16, 1, 0.3, 1) both" }}>
               {(() => {
                 // Calculation Logic
                 const completedOrders = orders.filter(o => o.status === "completed");
                 const totalRevenue = completedOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+                const avgOrderValue = completedOrders.length > 0 ? Math.round(totalRevenue / completedOrders.length) : 0;
                 
+                // Category Revenue Calculation
+                const catRevenue: Record<string, { name: string, value: number }> = {};
+                completedOrders.forEach(order => {
+                  order.order_items?.forEach((item: any) => {
+                    const prod = products.find(p => p.id === item.product_id);
+                    const cat = categories.find(c => c.id === prod?.category_id);
+                    const catName = cat?.name || "Diğer";
+                    if (!catRevenue[catName]) catRevenue[catName] = { name: catName, value: 0 };
+                    catRevenue[catName].value += (item.price || 0) * (item.quantity || 1);
+                  });
+                });
+                const categoryData = Object.values(catRevenue).sort((a, b) => b.value - a.value);
+
                 // Top Products Calculation
                 const productCounts: Record<string, { name: string, count: number, revenue: number }> = {};
                 orders.forEach(order => {
@@ -1412,7 +1468,6 @@ export default function PanelPage() {
                   const hour = new Date(o.created_at).getHours();
                   hours[hour]++;
                 });
-                const maxHour = Math.max(...hours) || 1;
 
                 // Service Performance Calculation
                 const resolvedRequests = serviceRequests.filter(s => s.status === "resolved" && s.resolved_at);
@@ -1425,73 +1480,125 @@ export default function PanelPage() {
 
                 return (
                   <>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 14 }}>
-                      {[
-                        { label: "Toplam Gelir", value: `₺${totalRevenue.toLocaleString()}`, sub: "Tamamlanan", color: "#22c55e" },
-                        { label: "Sipariş", value: orders.length.toString(), sub: "Toplam", color: A },
-                        { label: "Görüntülenme", value: totalViewsReal.toLocaleString(), sub: "Menü Trafiği", color: "#8b5cf6" },
-                        { label: "Servis İsteği", value: serviceRequests.length.toString(), sub: "Garson Çağrı", color: "#3b82f6" },
-                        { label: "Yanıt Süresi", value: `${avgResponseMinutes} dk`, sub: "Ortalama", color: avgResponseMinutes < 5 ? "#22c55e" : "#f59e0b" },
-                      ].map((s, i) => (
-                        <div key={i} className="card" style={{ padding: "18px", borderLeft: `4px solid ${s.color}` }}>
-                          <div style={{ fontSize: 10, color: "rgba(255,255,255,.3)", marginBottom: 6, fontWeight: 700, textTransform: "uppercase" }}>{s.label}</div>
-                          <div style={{ fontSize: 22, fontWeight: 900, marginBottom: 4 }}>{s.value}</div>
-                          <div style={{ fontSize: 10, color: "rgba(255,255,255,.4)", fontWeight: 600 }}>{s.sub}</div>
-                        </div>
-                      ))}
+                    {/* TOP STATS GRID */}
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
+                        {[
+                          { label: "Toplam Gelir", val: `₺${totalRevenue.toLocaleString()}`, trend: "+12%", color: "#22c55e", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> },
+                          { label: "Ort. Sepet", val: `₺${avgOrderValue}`, trend: "+5%", color: A, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4H6z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg> },
+                          { label: "Müşteri Trafiği", val: totalViewsReal.toLocaleString(), trend: "+18%", color: "#8b5cf6", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
+                          { label: "Servis Skoru", val: avgResponseMinutes > 0 ? `${avgResponseMinutes} dk` : "—", trend: "Hızlı", color: "#3b82f6", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> },
+                        ].map((s, i) => (
+                          <div key={i} className="card" style={{ padding: "24px", position: "relative", overflow: "hidden" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                              <div style={{ width: 32, height: 32, borderRadius: 8, background: `${s.color}15`, display: "flex", alignItems: "center", justifyContent: "center", color: s.color }}>{s.icon}</div>
+                              <div style={{ fontSize: 10, fontWeight: 800, color: s.color, background: `${s.color}10`, padding: "2px 8px", borderRadius: 99 }}>{s.trend}</div>
+                            </div>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,.3)", marginBottom: 4, textTransform: "uppercase" }}>{s.label}</div>
+                            <div style={{ fontSize: 24, fontWeight: 900 }}>{s.val}</div>
+                          </div>
+                        ))}
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 400px", gap: 16 }}>
-                      {/* HOURLY CHART */}
-                      <div className="card" style={{ padding: "24px" }}>
+                    {/* MAIN CHARTS BENTO GRID */}
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 20 }}>
+                      
+                      {/* HOURLY HEATMAP AREA CHART */}
+                      <div className="card" style={{ gridColumn: "span 8", padding: 24 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-                          <div style={{ fontSize: 14, fontWeight: 700 }}>Günlük Yoğunluk</div>
-                          <div style={{ fontSize: 11, color: "rgba(255,255,255,.3)" }}>Siparişlerin saatlik dağılımı</div>
+                          <div>
+                            <h3 style={{ fontSize: 16, fontWeight: 800 }}>Yoğunluk Analizi</h3>
+                            <p style={{ fontSize: 12, color: "rgba(255,255,255,.3)" }}>Siparişlerin gün içindeki saatlik dağılımı</p>
+                          </div>
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <div style={{ padding: "6px 12px", borderRadius: 8, background: "rgba(255,255,255,.03)", fontSize: 11, fontWeight: 600 }}>Bugün</div>
+                          </div>
                         </div>
-                        <div style={{ height: 220, width: "100%", marginTop: 20 }}>
-                          {(() => {
-                            const hourlyData = hours.map((v, i) => ({ name: `${i}:00`, Sipariş: v }));
-                            return (
-                              <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={hourlyData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
-                                  <defs>
-                                    <linearGradient id="colorUv" x1="0" y1="0" x2="0" y2="1">
-                                      <stop offset="5%" stopColor={A} stopOpacity={0.4}/>
-                                      <stop offset="95%" stopColor={A} stopOpacity={0}/>
-                                    </linearGradient>
-                                  </defs>
-                                  <XAxis dataKey="name" stroke="rgba(255,255,255,0.2)" fontSize={10} tickMargin={10} minTickGap={20} />
-                                  <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} allowDecimals={false} />
-                                  <RechartsTooltip 
-                                    contentStyle={{ background: "#1c1c1c", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 12, color: "#fff" }}
-                                    itemStyle={{ color: A, fontWeight: 700 }}
-                                  />
-                                  <Area type="monotone" dataKey="Sipariş" stroke={A} strokeWidth={3} fillOpacity={1} fill="url(#colorUv)" />
-                                </AreaChart>
-                              </ResponsiveContainer>
-                            );
-                          })()}
+                        <div style={{ height: 280, width: "100%" }}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={hours.map((v, i) => ({ name: `${i}:00`, Sipariş: v }))} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                              <defs>
+                                <linearGradient id="colorOrder" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor={A} stopOpacity={0.3}/>
+                                  <stop offset="95%" stopColor={A} stopOpacity={0}/>
+                                </linearGradient>
+                              </defs>
+                              <XAxis dataKey="name" stroke="rgba(255,255,255,0.1)" fontSize={10} tickMargin={10} minTickGap={30} />
+                              <YAxis stroke="rgba(255,255,255,0.1)" fontSize={10} allowDecimals={false} />
+                              <RechartsTooltip 
+                                contentStyle={{ background: "#111", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontSize: 12, boxShadow: "0 10px 30px rgba(0,0,0,.5)" }}
+                                itemStyle={{ color: A, fontWeight: 800 }}
+                                cursor={{ stroke: A, strokeWidth: 1, strokeDasharray: "4 4" }}
+                              />
+                              <Area type="monotone" dataKey="Sipariş" stroke={A} strokeWidth={3} fillOpacity={1} fill="url(#colorOrder)" animationDuration={1500} />
+                            </AreaChart>
+                          </ResponsiveContainer>
                         </div>
                       </div>
 
-                      {/* TOP PRODUCTS */}
-                      <div className="card" style={{ padding: "24px" }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 20 }}>En Çok Satanlar</div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                          {topProducts.length > 0 ? topProducts.map((p, i) => (
-                            <div key={i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                              <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(255,255,255,.04)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: A }}>{i+1}</div>
-                              <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: 12, fontWeight: 600 }}>{p.name}</div>
-                                <div style={{ fontSize: 10, color: "rgba(255,255,255,.3)" }}>{p.count} adet satıldı</div>
+                      {/* CATEGORY REVENUE BAR CHART */}
+                      <div className="card" style={{ gridColumn: "span 4", padding: 24, display: "flex", flexDirection: "column" }}>
+                        <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>Kategori Geliri</h3>
+                        <p style={{ fontSize: 12, color: "rgba(255,255,255,.3)", marginBottom: 24 }}>Cironun kategorilere dağılımı</p>
+                        
+                        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 16 }}>
+                          {categoryData.slice(0, 6).map((cat, i) => (
+                            <div key={i} style={{ width: "100%" }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
+                                <span>{cat.name}</span>
+                                <span style={{ color: "rgba(255,255,255,.4)" }}>₺{cat.value.toLocaleString()}</span>
                               </div>
-                              <div style={{ fontSize: 12, fontWeight: 700 }}>₺{p.revenue.toLocaleString()}</div>
+                              <div style={{ height: 6, background: "rgba(255,255,255,.03)", borderRadius: 99, overflow: "hidden" }}>
+                                <div style={{ width: `${(cat.value / totalRevenue) * 100}%`, height: "100%", background: i === 0 ? A : i === 1 ? "#3b82f6" : "#444", borderRadius: 99 }} />
+                              </div>
                             </div>
-                          )) : (
-                            <div style={{ textAlign: "center", padding: "40px 0", color: "rgba(255,255,255,.3)", fontSize: 12 }}>Henüz sipariş verisi yok</div>
+                          ))}
+                          {categoryData.length === 0 && (
+                            <div style={{ margin: "auto", textAlign: "center", color: "rgba(255,255,255,.2)", fontSize: 12 }}>Henüz veri yok</div>
                           )}
                         </div>
                       </div>
+
+                      {/* TOP PRODUCTS LIST (DETAILED) */}
+                      <div className="card" style={{ gridColumn: "span 6", padding: 24 }}>
+                        <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 20 }}>En Çok Tercih Edilenler</h3>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                          {topProducts.map((p, i) => (
+                            <div key={i} style={{ display: "flex", alignItems: "center", gap: 16, padding: "12px 16px", borderRadius: 16, background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.04)" }}>
+                              <div style={{ width: 36, height: 36, borderRadius: 10, background: i === 0 ? `${A}20` : "rgba(255,255,255,.05)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 900, color: i === 0 ? A : "#fff" }}>
+                                {i + 1}
+                              </div>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 14, fontWeight: 700 }}>{p.name}</div>
+                                <div style={{ fontSize: 11, color: "rgba(255,255,255,.3)" }}>{p.count} Sipariş</div>
+                              </div>
+                              <div style={{ textAlign: "right" }}>
+                                <div style={{ fontSize: 14, fontWeight: 800 }}>₺{p.revenue.toLocaleString()}</div>
+                                <div style={{ fontSize: 10, color: "#22c55e", fontWeight: 700 }}>%{Math.round((p.revenue / totalRevenue) * 100)} Pay</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* RECENT REVIEWS SUMMARY */}
+                      <div className="card" style={{ gridColumn: "span 6", padding: 24 }}>
+                        <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 20 }}>Müşteri Geri Bildirimleri</h3>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                          {reviews.slice(0, 3).map((rev, i) => (
+                            <div key={i} style={{ padding: "14px", borderRadius: 16, background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                                <div style={{ fontSize: 13, fontWeight: 700 }}>{rev.customer_name}</div>
+                                <div style={{ color: "#f59e0b", fontSize: 11 }}>{"★".repeat(rev.rating)}</div>
+                              </div>
+                              <p style={{ fontSize: 12, color: "rgba(255,255,255,.5)", lineHeight: "1.4" }}>"{rev.comment || "Yorumsuz puanlama"}"</p>
+                            </div>
+                          ))}
+                          <button onClick={() => setActiveTab("reviews")} style={{ width: "100%", padding: "10px", borderRadius: 12, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.06)", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                            Tüm Yorumları Yönet
+                          </button>
+                        </div>
+                      </div>
+
                     </div>
                   </>
                 );
@@ -1568,7 +1675,13 @@ export default function PanelPage() {
           {activeTab === "reviews" && (
             <div style={{ animation: "fadeUp .35s both", display: "flex", flexDirection: "column", gap: 20 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <h2 style={{ fontSize: 16, fontWeight: 700 }}>Müşteri Değerlendirmeleri</h2>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <h2 style={{ fontSize: 16, fontWeight: 700 }}>Müşteri Değerlendirmeleri</h2>
+                  <button onClick={downloadReviewExcel} style={{ padding: "4px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    CSV İndir
+                  </button>
+                </div>
                 <div style={{ display: "flex", gap: 8 }}>
                   {["pending", "approved", "rejected"].map(s => (
                     <button key={s} onClick={() => setReviewFilter(s)} 

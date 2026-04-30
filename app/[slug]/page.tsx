@@ -12,6 +12,7 @@ import { Suspense } from "react";
 import Logo from "../components/Logo";
 import { ReviewModal } from "@/components/menu/ReviewModal";
 import { UI_STRINGS } from "@/lib/translations";
+import Link from "next/link";
 
 export default function MenuPage(props: any) {
   return (
@@ -33,11 +34,17 @@ function MenuContent({ params: paramsPromise }: { params: Promise<{ slug: string
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [lang, setLang] = useState<LangKey>("tr");
-  const [dark, setDark] = useState(false);
+  const [dark, setDark] = useState(true);
   const [activeCat, setActiveCat] = useState<string | null>(null);
   const [cart, setCart] = useState<{ id: string; product: Product; qty: number; extras: any[] }[]>([]);
   const [showCart, setShowCart] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [lastOrderId, setLastOrderId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(`last_order_${slug}`);
+    if (saved) setLastOrderId(saved);
+  }, [slug]);
   const [search, setSearch] = useState("");
   const [detailProduct, setDetailProduct] = useState<Product | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -169,11 +176,20 @@ function MenuContent({ params: paramsPromise }: { params: Promise<{ slug: string
       total_amount: cartTotal
     }).select().single();
     if (orderError) { flash("Hata!"); return; }
+    
+    // Save to localStorage for persistence
+    localStorage.setItem(`last_order_${slug}`, order.id);
+
     const orderItems = cart.map(item => ({ order_id: order.id, product_id: item.product.id, quantity: item.qty, price: item.product.price, extras_selected: item.extras }));
     await supabase.from("order_items").insert(orderItems);
     setCart([]);
     setShowCart(false);
     flash(t.order_success);
+    
+    // Redirect to tracking page
+    setTimeout(() => {
+      window.location.href = `/${slug}/order/${order.id}`;
+    }, 1500);
   };
 
   const scrollToCat = (catId: string) => {
@@ -232,7 +248,21 @@ function MenuContent({ params: paramsPromise }: { params: Promise<{ slug: string
               <Logo size="sm" withTagline={false} isDark={dark} />
             )}
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: "-.02em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{restaurant!.name}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: "-.02em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{restaurant!.name}</div>
+                {restaurant!.wifi_password && (
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(restaurant!.wifi_password!);
+                      flash("WiFi Şifresi Kopyalandı!");
+                    }}
+                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "2px 6px", display: "flex", alignItems: "center", gap: 4, cursor: "pointer", color: A }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg>
+                    <span style={{ fontSize: 9, fontWeight: 700 }}>WIFI</span>
+                  </button>
+                )}
+              </div>
               {restaurant!.hours && <div style={{ fontSize: 10, color: "#22c55e", fontWeight: 600 }}>● {restaurant!.hours.replace("-", " - ")}</div>}
             </div>
           </div>
@@ -242,8 +272,12 @@ function MenuContent({ params: paramsPromise }: { params: Promise<{ slug: string
                 <button key={l.key} onClick={() => setLang(l.key)} style={{ padding: "5px 6px", border: "none", cursor: "pointer", fontSize: 9, fontWeight: lang === l.key ? 700 : 400, background: lang === l.key ? C.tx : "transparent", color: lang === l.key ? C.bg : C.mt }}>{l.label}</button>
               ))}
             </div>
-            <button onClick={() => setDark(!dark)} style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${C.bd}`, background: "transparent", cursor: "pointer", fontSize: 12, color: C.mt, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              {dark ? "☀️" : "🌙"}
+            <button onClick={() => setDark(!dark)} style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${C.bd}`, background: "transparent", cursor: "pointer", color: C.mt, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {dark ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+              )}
             </button>
           </div>
         </div>
@@ -254,10 +288,13 @@ function MenuContent({ params: paramsPromise }: { params: Promise<{ slug: string
         <div style={{ padding: "14px 20px 10px" }}>
           <div style={{ position: "relative" }}>
             <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={t.search} style={{ width: "100%", padding: "11px 16px 11px 36px", borderRadius: 12, border: `1.5px solid ${C.bd}`, background: C.cd, color: C.tx, fontSize: 14, outline: "none" }} />
-            <span style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)", opacity: 0.4 }}>🔍</span>
+            <span style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)", opacity: 0.4, display: "flex", alignItems: "center" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </span>
           </div>
         </div>
 
+        {/* Categories */}
         {/* Categories */}
         {!search && categories.length > 0 && (
           <div style={{ position: "sticky", top: 60, zIndex: 25, background: C.bg, borderBottom: `1px solid ${C.bd}` }}>
@@ -270,6 +307,8 @@ function MenuContent({ params: paramsPromise }: { params: Promise<{ slug: string
             </div>
           </div>
         )}
+
+
 
         {/* Products */}
         <div style={{ paddingBottom: 100 }}>
@@ -292,6 +331,53 @@ function MenuContent({ params: paramsPromise }: { params: Promise<{ slug: string
             ))
           )}
         </div>
+
+        {/* Reviews Section */}
+        {restaurant?.show_reviews !== false && (
+          <div style={{ padding: "0 20px 120px", marginTop: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <div>
+                <h3 style={{ fontSize: 18, fontWeight: 800, color: C.tx }}>{t.reviews}</h3>
+                <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
+                  <div style={{ color: "#f59e0b", display: "flex" }}>
+                    {[1, 2, 3, 4, 5].map(s => (
+                      <svg key={s} width="12" height="12" viewBox="0 0 24 24" fill="#f59e0b"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
+                    ))}
+                  </div>
+                  <span style={{ fontSize: 12, color: C.mt, fontWeight: 600 }}>({reviews.length})</span>
+                </div>
+              </div>
+            </div>
+
+            {reviews.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {reviews.map((rev) => (
+                  <div key={rev.id} style={{ padding: 16, borderRadius: 16, background: C.cd, border: `1px solid ${C.bd}`, boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: C.tx }}>{rev.customer_name}</div>
+                      <div style={{ color: "#f59e0b", display: "flex", gap: 2 }}>
+                        {[1, 2, 3, 4, 5].map(s => (
+                          <svg key={s} width="10" height="10" viewBox="0 0 24 24" fill={s <= rev.rating ? "#f59e0b" : "none"} stroke={s <= rev.rating ? "#f59e0b" : "#DDD"} strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
+                        ))}
+                      </div>
+                    </div>
+                    {rev.comment && <div style={{ fontSize: 13, color: C.s2, lineHeight: "1.5" }}>{rev.comment}</div>}
+                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.15)", marginTop: 10, fontWeight: 600 }}>
+                      {new Date(rev.created_at).toLocaleDateString("tr-TR")}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ padding: "40px 20px", textAlign: "center", background: C.cd, borderRadius: 20, border: `1px dashed ${C.bd}` }}>
+                <div style={{ width: 48, height: 48, borderRadius: 14, background: "rgba(255,255,255,0.03)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px", color: C.mt }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </div>
+                <div style={{ fontSize: 14, color: C.mt, fontWeight: 500 }}>Henüz yorum yapılmamış. İlk yorumu sen yap!</div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Bottom Bar */}
@@ -304,6 +390,12 @@ function MenuContent({ params: paramsPromise }: { params: Promise<{ slug: string
           
           <button onClick={() => setShowPaymentSelect(true)} style={{ flex: 1, padding: 11, borderRadius: 11, border: `1.5px solid ${C.bd}`, background: C.cd, color: C.tx, fontSize: 11, fontWeight: 600 }}>{t.bill}</button>
 
+          {lastOrderId && (
+            <Link href={`/${slug}/order/${lastOrderId}`} style={{ flex: 1, padding: 11, borderRadius: 11, border: `1.5px solid ${A}60`, background: `${A}20`, color: "#fff", fontSize: 11, fontWeight: 700, textDecoration: "none", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              Takip Et
+            </Link>
+          )}
+
           {cartCount > 0 && (
             <button onClick={() => setShowCart(true)} style={{ flex: 1.5, padding: "11px 16px", borderRadius: 11, border: "none", background: A, color: "#fff", fontSize: 13, fontWeight: 700 }}>₺{cartTotal}</button>
           )}
@@ -311,7 +403,7 @@ function MenuContent({ params: paramsPromise }: { params: Promise<{ slug: string
       </div>
 
       {/* Modals */}
-      {detailProduct && <DetailModal product={detailProduct} lang={lang} themeColor={A} C={C} onClose={() => setDetailProduct(null)} onAdd={addToCart} hasPrepInfo={hasFeature("prep_info")} hasCart={hasFeature("cart")} />}
+      {detailProduct && <DetailModal product={detailProduct} allProducts={products} categories={categories} lang={lang} themeColor={A} C={C} onClose={() => setDetailProduct(null)} onAdd={addToCart} hasPrepInfo={hasFeature("prep_info")} hasCart={hasFeature("cart")} />}
       {showCart && <CartModal cartItems={cart} cartTotal={cartTotal} restaurant={restaurant!} lang={lang} themeColor={A} C={C} isRTL={isRTL} onClose={() => setShowCart(false)} onAdd={addToCart} onRemove={removeFromCart} onCheckout={handleCheckout} initialTableNo={tableNo} />}
       {showReviewModal && <ReviewModal restaurant={restaurant!} lang={lang} onClose={() => setShowReviewModal(false)} onSuccess={() => flash(t.order_success)} />}
       

@@ -1,5 +1,7 @@
 "use client";
 
+// Refresh manifest
+
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Logo from "./components/Logo";
@@ -113,7 +115,8 @@ export default function Home() {
         { text: "Sınırsız ürün kapasitesi" },
         { text: "Dijital Mutfak Paneli" },
         { text: "Müşteri Yorum Ayarları" },
-        { text: "AI Yemek Önerileri" },
+        { text: "AI Yemek Önerileri", isSpecial: true },
+        { text: "AI Ürün Açıklama Sihirbazı", isSpecial: true },
         { text: "Logo kaldırma" },
         { text: "Sınırsız masa bazlı QR" },
       ],
@@ -205,7 +208,7 @@ export default function Home() {
           </div>
 
           <h1 style={{ fontSize: "clamp(48px, 8vw, 84px)", fontWeight: 900, lineHeight: 0.95, letterSpacing: "-0.05em", color: "#fff", marginBottom: 32 }}>
-            Restoranınızı <br /> <span style={{ color: A }}>Tek Panelden</span> Yönetin
+            Restoranınızı <br /> <span style={{ background: `linear-gradient(90deg, ${A}, #ff8c00)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Tek Panelden</span> Yönetin
           </h1>
 
           <p style={{ fontSize: "clamp(16px, 2vw, 19px)", color: "rgba(255,255,255,0.5)", maxWidth: 700, margin: "0 auto 48px", lineHeight: 1.6 }}>
@@ -467,14 +470,17 @@ export default function Home() {
               <p style={{ fontSize: 15, color: "rgba(255,255,255,0.4)" }}>Müşterileriniz masadan tek tıkla garson çağırabilir veya hesap isteyebilir. İstekler anında panelinize düşer.</p>
             </div>
             <div className="bento-card" style={{ gridColumn: "span 5", gridRow: "span 2" }}>
-              <div style={{ color: A, marginBottom: 24, background: `${A}15`, width: 56, height: 56, borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center" }}><IconChart /></div>
-              <h3 style={{ fontSize: 24, fontWeight: 800, color: "#fff", marginBottom: 16 }}>Gelişmiş Analitik</h3>
-              <p style={{ fontSize: 16, color: "rgba(255,255,255,0.4)", lineHeight: 1.6 }}>Hangi ürünler daha çok satıyor? En yoğun saatleriniz hangileri? Cironuzu ve müşteri tercihlerini anlık grafiklerle takip edin.</p>
+              <div style={{ color: A, marginBottom: 24, background: `${A}15`, width: 56, height: 56, borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center" }}><IconZap size={24} color={A} /></div>
+              <h3 style={{ fontSize: 24, fontWeight: 800, color: "#fff", marginBottom: 16 }}>AI Destekli Menü</h3>
+              <p style={{ fontSize: 16, color: "rgba(255,255,255,0.4)", lineHeight: 1.6 }}>Yapay zeka ile iştah kabartan ürün açıklamaları oluşturun ve müşterilerinize sepette tamamlayıcı ürün önerileri sunarak sepet tutarınızı artırın.</p>
+              <div style={{ marginTop: 24, padding: "12px", background: "linear-gradient(90deg, rgba(212,71,10,.1), transparent)", borderRadius: 12, border: "1px solid rgba(212,71,10,.2)", fontSize: 13, color: "#fff", fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
+                <IconStar size={14} color="#ff8c00" /> Yeni: AI Açıklama Sihirbazı
+              </div>
             </div>
             <div className="bento-card" style={{ gridColumn: "span 7", gridRow: "span 1" }}>
-              <div style={{ color: A, marginBottom: 20, background: `${A}15`, width: 48, height: 48, borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center" }}><IconSettings /></div>
-              <h3 style={{ fontSize: 20, fontWeight: 800, color: "#fff", marginBottom: 12 }}>Yorum Moderasyonu</h3>
-              <p style={{ fontSize: 15, color: "rgba(255,255,255,0.4)" }}>Müşteri geri bildirimlerini kontrol edin, onaylayın ve doğrudan cevaplayarak müşteri sadakatini artırın.</p>
+              <div style={{ color: A, marginBottom: 20, background: `${A}15`, width: 48, height: 48, borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center" }}><IconChart /></div>
+              <h3 style={{ fontSize: 20, fontWeight: 800, color: "#fff", marginBottom: 12 }}>Gelişmiş Analitik</h3>
+              <p style={{ fontSize: 15, color: "rgba(255,255,255,0.4)" }}>Hangi ürünler daha çok satıyor? Cironuzu ve müşteri tercihlerini anlık grafiklerle takip edin.</p>
             </div>
           </div>
         </div>
@@ -519,7 +525,10 @@ export default function Home() {
                   </div>
                 )}
                 <div style={{ fontSize: 13, fontWeight: 700, color: plan.highlight ? "rgba(255,255,255,.5)" : "#999", marginBottom: 16 }}>{plan.name}</div>
-                <div style={{ fontSize: 36, fontWeight: 900, color: plan.highlight ? "#fff" : "#111", marginBottom: 24 }}>{plan.price === 0 ? "Ücretsiz" : `₺${plan.price}`}</div>
+                <div style={{ fontSize: 36, fontWeight: 900, color: plan.highlight ? "#fff" : "#111", marginBottom: 24 }}>
+                  ₺{plan.price}
+                  <span style={{ fontSize: 14, fontWeight: 500, opacity: 0.6, marginLeft: 4 }}>/aylık</span>
+                </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
                   {plan.features.map((f: any, j) => (
                     <div key={j} style={{ 
@@ -555,7 +564,11 @@ export default function Home() {
               { q: "Müşterilerim uygulama indirmek zorunda mı?", a: "Hayır. QR kodu okuttukları anda tarayıcı üzerinden menünüz anında açılır. Sıfır sürtünme, maksimum hız." },
               { q: "Menüdeki fiyatları istediğim an değiştirebilir miyim?", a: "Evet. Yönetim panelinden yaptığınız her değişiklik saniyeler içinde tüm QR kodlara yansır. Kağıt menü maliyetinden kurtulursunuz." },
               { q: "Siparişler mutfağa nasıl iletiliyor?", a: "Müşteri sipariş verdiğinde, yönetim panelinizdeki Mutfak Ekranına anlık olarak düşer. Sesli uyarı ile personeliniz bilgilendirilir." },
-              { q: "Aylık ücret dışında bir komisyon alıyor musunuz?", a: "Hayır. TEMeat komisyon almaz. Sadece seçtiğiniz paketin sabit aylık veya yıllık ücretini ödersiniz." }
+              { q: "Aylık ücret dışında bir komisyon alıyor musunuz?", a: "Hayır. TEMeat komisyon almaz. Sadece seçtiğiniz paketin sabit aylık veya yıllık ücretini ödersiniz." },
+              { q: "Birden fazla şube yönetebilir miyim?", a: "Evet, Pro paketimiz ile birden fazla şubenizi tek bir merkezden yönetebilirsiniz." },
+              { q: "Kendi logomuzu ekleyebiliyor muyuz?", a: "Kesinlikle. Tüm menülerde ve QR kodlarda kendi logonuzu ve kurumsal renklerinizi kullanabilirsiniz." },
+              { q: "Ödemeler nasıl alınıyor?", a: "TEMeat şu an için sipariş yönetimine odaklanmıştır. Ödemeleri mevcut POS sisteminiz veya nakit/kart ile masada almaya devam edebilirsiniz." },
+              { q: "Sözleşme veya taahhüt var mı?", a: "Hayır, herhangi bir taahhüt bulunmamaktadır. İstediğiniz ay üyeliğinizi iptal edebilir veya plan değiştirebilirsiniz." }
             ].map((f, i) => (
               <div key={i} style={{ padding: 24, borderRadius: 16, background: "#f9f9f9" }}>
                 <h4 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>{f.q}</h4>

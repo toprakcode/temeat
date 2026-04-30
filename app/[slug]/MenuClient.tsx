@@ -153,6 +153,11 @@ export default function MenuClient({
     setCart([]);
     setShowCart(false);
     flash(t.order_success);
+
+    // Redirect to tracking page
+    setTimeout(() => {
+      window.location.href = `/${slug}/order/${order.id}`;
+    }, 1500);
   };
 
   const scrollToCat = (catId: string) => {

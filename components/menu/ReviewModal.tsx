@@ -54,10 +54,23 @@ export function ReviewModal({
         <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 8, color: "#111" }}>{t.review_title}</h2>
         <p style={{ fontSize: 13, color: "#666", marginBottom: 24 }}>{t.review_desc}</p>
 
-        <div style={{ display: "flex", justifyContent: "center", gap: 10, marginBottom: 28 }}>
+        <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 28 }}>
           {[1, 2, 3, 4, 5].map(s => (
-            <button key={s} onClick={() => setRating(s)} style={{ background: "none", border: "none", fontSize: 32, cursor: "pointer", filter: s <= rating ? "none" : "grayscale(1) opacity(0.3)", transition: "all .2s" }}>
-              ⭐
+            <button 
+              key={s} 
+              onClick={() => setRating(s)} 
+              style={{ 
+                background: "none", 
+                border: "none", 
+                cursor: "pointer", 
+                padding: 0,
+                transition: "transform .2s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                transform: s <= rating ? "scale(1.1)" : "scale(1)"
+              }}
+            >
+              <svg width="36" height="36" viewBox="0 0 24 24" fill={s <= rating ? A : "none"} stroke={s <= rating ? A : "#DDD"} strokeWidth="1.5" strokeLinejoin="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
             </button>
           ))}
         </div>

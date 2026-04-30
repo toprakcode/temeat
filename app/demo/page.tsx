@@ -514,7 +514,11 @@ function MenuApp({ plan, lang, onLangChange, restaurant, categories, allProducts
             <h3 style={{ fontSize: 18, fontWeight: 800, color: C.tx, marginBottom: 6 }}>{t.review_title}</h3>
             <p style={{ fontSize: 12, color: C.mt, marginBottom: 20 }}>Deneyiminizi paylaşın</p>
             <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 20 }}>
-              {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize: 24, cursor: "pointer" }}>⭐</span>)}
+              {[1,2,3,4,5].map(s => (
+                <svg key={s} width="24" height="24" viewBox="0 0 24 24" fill={s <= 4 ? "#f59e0b" : "none"} stroke={s <= 4 ? "#f59e0b" : "#DDD"} strokeWidth="1.5">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+              ))}
             </div>
             <input type="text" placeholder={t.review_placeholder_name} style={{ width: "100%", padding: 12, borderRadius: 10, border: `1px solid ${C.bd}`, background: C.bg, color: C.tx, marginBottom: 12, fontSize: 13, outline: "none", fontFamily: "inherit" }} />
             <textarea placeholder={t.review_placeholder_comment} rows={3} style={{ width: "100%", padding: 12, borderRadius: 10, border: `1px solid ${C.bd}`, background: C.bg, color: C.tx, marginBottom: 20, fontSize: 13, outline: "none", resize: "none", fontFamily: "inherit" }} />

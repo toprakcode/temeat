@@ -8,6 +8,8 @@ import { UI_STRINGS } from "@/lib/translations";
 
 interface DetailModalProps {
   product: Product;
+  allProducts: Product[];
+  categories: any[];
   lang: LangKey;
   themeColor: string;
   C: any;
@@ -17,7 +19,7 @@ interface DetailModalProps {
   hasCart?: boolean;
 }
 
-export function DetailModal({ product, lang, themeColor, C, onClose, onAdd, hasPrepInfo, hasCart }: DetailModalProps) {
+export function DetailModal({ product, allProducts, categories, lang, themeColor, C, onClose, onAdd, hasPrepInfo, hasCart }: DetailModalProps) {
   const [selectedExtras, setSelectedExtras] = useState<any[]>([]);
   const t = UI_STRINGS[lang];
 
@@ -33,6 +35,35 @@ export function DetailModal({ product, lang, themeColor, C, onClose, onAdd, hasP
     ? Math.round(product.price * (1 - product.discount_pct / 100)) 
     : product.price) + selectedExtras.reduce((s, e) => s + e.price, 0);
 
+  // Advanced AI Suggestions Logic
+  const getSuggestions = () => {
+    const currentCat = categories.find(c => c.id === product.category_id)?.name.toLowerCase() || "";
+    
+    // Keywords for smarter matching
+    const isDrink = (name: string) => ["içecek", "meşrubat", "drink", "su", "kahve", "çay", "beverage", "soft"].some(k => name.includes(k));
+    const isDessert = (name: string) => ["tatlı", "dessert", "pasta", "dondurma"].some(k => name.includes(k));
+    const isSide = (name: string) => ["yan", "meze", "salata", "ekstra", "side", "appetizer"].some(k => name.includes(k));
+
+    // Try to find complementary items first
+    let recommended = allProducts.filter(p => {
+      if (p.id === product.id || !p.is_active) return false;
+      const pCat = categories.find(c => c.id === p.category_id)?.name.toLowerCase() || "";
+      
+      if (isDessert(currentCat)) return isDrink(pCat);
+      if (isDrink(currentCat)) return isSide(pCat) || isDessert(pCat);
+      return isDrink(pCat) || isSide(pCat) || isDessert(pCat);
+    });
+
+    // Fallback: If no complementary items, take any 3 products from different categories
+    if (recommended.length === 0) {
+      recommended = allProducts.filter(p => p.id !== product.id && p.is_active);
+    }
+
+    return recommended.sort(() => 0.5 - Math.random()).slice(0, 4);
+  };
+
+  const suggestions = getSuggestions();
+
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "flex-end", justifyContent: "center", background: "rgba(0,0,0,.6)", animation: "fadeIn .3s" }}>
       <div onClick={onClose} style={{ position: "absolute", inset: 0 }} />
@@ -42,14 +73,16 @@ export function DetailModal({ product, lang, themeColor, C, onClose, onAdd, hasP
           {product.image_url ? (
             <img src={product.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           ) : (
-            <div style={{ width: "100%", height: "100%", background: `${themeColor}10`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>🍽️</div>
+            <div style={{ width: "100%", height: "100%", background: `${themeColor}10`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke={themeColor} strokeWidth="1.5" style={{ opacity: 0.5 }}><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
+            </div>
           )}
           <button onClick={onClose} style={{ position: "absolute", top: 20, right: 20, width: 36, height: 36, borderRadius: 18, background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
           </button>
         </div>
 
-        <div style={{ padding: "24px 24px 100px", overflowY: "auto", flex: 1 }}>
+        <div style={{ padding: "24px 24px 120px", overflowY: "auto", flex: 1 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
             <h2 style={{ fontSize: 24, fontWeight: 800, color: C.tx }}>{getProductName(product, lang)}</h2>
             <div style={{ fontSize: 20, fontWeight: 800, color: themeColor }}>₺{product.discount_pct ? Math.round(product.price * (1 - product.discount_pct / 100)) : product.price}</div>
@@ -67,6 +100,45 @@ export function DetailModal({ product, lang, themeColor, C, onClose, onAdd, hasP
           )}
 
           <p style={{ fontSize: 15, color: C.s2, lineHeight: 1.6, marginBottom: 30 }}>{getProductDesc(product, lang)}</p>
+
+          {/* AI SUGGESTIONS SECTION */}
+          {suggestions.length > 0 && (
+            <div style={{ marginBottom: 30, padding: "20px", borderRadius: 20, background: `linear-gradient(135deg, ${themeColor}08 0%, transparent 100%)`, border: `1px solid ${themeColor}15`, position: "relative", overflow: "hidden" }}>
+              <div style={{ position: "absolute", top: -20, right: -20, width: 100, height: 100, background: themeColor, filter: "blur(60px)", opacity: 0.1, pointerEvents: "none" }} />
+              
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                <div style={{ width: 28, height: 28, borderRadius: 8, background: themeColor, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", boxShadow: `0 4px 12px ${themeColor}40` }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+                </div>
+                <h3 style={{ fontSize: 13, fontWeight: 800, color: C.tx, textTransform: "uppercase", letterSpacing: "0.05em" }}>AI Yemek Önerileri</h3>
+              </div>
+
+              <div style={{ display: "flex", gap: 12, overflowX: "auto", margin: "0 -4px", padding: "4px" }}>
+                {suggestions.map(p => (
+                  <div key={p.id} style={{ flexShrink: 0, width: 130, background: C.cd, border: `1px solid ${C.bd}`, borderRadius: 16, overflow: "hidden", transition: "transform .2s" }} onMouseEnter={e => e.currentTarget.style.transform = "translateY(-4px)"} onMouseLeave={e => e.currentTarget.style.transform = "translateY(0)"}>
+                    <div style={{ height: 80, background: `${themeColor}05` }}>
+                      {p.image_url ? (
+                        <img src={p.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      ) : (
+                        <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={themeColor} strokeWidth="1.5" style={{ opacity: 0.3 }}><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ padding: "10px" }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: C.tx, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginBottom: 4 }}>{getProductName(p, lang)}</div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ fontSize: 11, fontWeight: 800, color: themeColor }}>₺{p.price}</span>
+                        <button onClick={() => onAdd(p, [])} style={{ width: 22, height: 22, borderRadius: 6, background: themeColor, border: "none", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {product.allergens && product.allergens.length > 0 && (
             <div style={{ marginBottom: 30 }}>
