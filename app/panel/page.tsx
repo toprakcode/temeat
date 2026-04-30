@@ -1520,7 +1520,7 @@ export default function PanelPage() {
                               <div style={{ fontSize: 11, fontWeight: 800, color: "#3b82f6", marginBottom: 12, textTransform: "uppercase" }}>Zamanlama Fırsatı</div>
                               <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: "#fff" }}>Saat {deadHour}:00 Durgunluğu</div>
                               <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.5 }}>Verilere göre bu saatte siparişler %40 düşüyor. <b>"Mutlu Saatler"</b> kampanyası ile bu boşluğu doldurabilirsiniz.</p>
-                              <button style={{ marginTop: 12, padding: "8px 14px", borderRadius: 8, border: "none", background: "#3b82f6", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Kampanya Başlat</button>
+                              <button onClick={() => setActiveTab("campaigns")} style={{ marginTop: 12, padding: "8px 14px", borderRadius: 8, border: "none", background: "#3b82f6", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Kampanya Başlat</button>
                             </div>
                           );
                         })()}
@@ -1531,7 +1531,7 @@ export default function PanelPage() {
                             <div style={{ fontSize: 11, fontWeight: 800, color: "#10b981", marginBottom: 12, textTransform: "uppercase" }}>Kombo Önerisi</div>
                             <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: "#fff" }}>{topProducts[0]?.name} + Yan Ürün</div>
                             <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.5 }}>En popüler ürününüzü bir içecek veya tatlı ile <b>%10 indirimli kombo</b> yaparak sepet ortalamasını ₺45 artırabilirsiniz.</p>
-                            <button style={{ marginTop: 12, padding: "8px 14px", borderRadius: 8, border: "none", background: "#10b981", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Kombo Oluştur</button>
+                            <button onClick={() => { setActiveTab("menu"); setTimeout(() => setShowAddProduct(true), 100); }} style={{ marginTop: 12, padding: "8px 14px", borderRadius: 8, border: "none", background: "#10b981", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Kombo Oluştur</button>
                           </div>
                         )}
 
