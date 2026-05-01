@@ -12,10 +12,12 @@ import { Sidebar, navItems } from "@/components/panel/Sidebar";
 import { SettingsForm } from "@/components/panel/SettingsForm";
 import { TableGrid } from "@/components/panel/TableGrid";
 import { CampaignModal } from "@/components/panel/CampaignModal";
-import { MenuModal } from "@/components/panel/MenuModal";
-import QRCode from "react-qr-code";
 import { useRouter } from "next/navigation";
 import { AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart as RechartsBarChart, Bar } from "recharts";
+import { KDSOverlay } from "@/components/panel/KDSOverlay";
+import { PrintArea } from "@/components/panel/PrintArea";
+import { QRCodeFrame } from "@/components/panel/QRCodeFrame";
+import { MenuModal } from "@/components/panel/MenuModal";
 
 const A_GLOBAL = DEFAULT_COLOR;
 
@@ -90,6 +92,8 @@ export default function PanelPage() {
   const [newCatName, setNewCatName] = useState("");
   const [catSaving, setCatSaving] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
 
   const flash = useCallback((msg: string) => { setToast(msg); setTimeout(() => setToast(null), 2000); }, []);
 
@@ -120,6 +124,12 @@ export default function PanelPage() {
       subscription.unsubscribe();
     };
   }, [router]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 10000);
+    return () => clearInterval(timer);
+  }, []);
+
 
   const checkRestaurant = async (userId: string) => {
     try {
@@ -306,12 +316,17 @@ export default function PanelPage() {
 
   const handleDeleteCategory = async (id: string) => {
     if (!confirm("Bu kategoriyi ve içindeki tüm ürünleri silmek istediğinize emin misiniz?")) return;
-    await supabase.from("products").delete().eq("category_id", id);
+    const { data: prodsToDelete } = await supabase.from("products").select("id").eq("category_id", id);
+    if (prodsToDelete && prodsToDelete.length > 0) {
+      const ids = prodsToDelete.map(p => p.id);
+      await supabase.from("product_extras").delete().in("product_id", ids);
+      await supabase.from("products").delete().in("id", ids);
+    }
     await supabase.from("categories").delete().eq("id", id);
     setCategories(prev => prev.filter(c => c.id !== id));
     setProducts(prev => prev.filter(p => p.category_id !== id));
     if (catFilter === id) setCatFilter("Tümü");
-    flash("Kategori silindi.");
+    flash("Kategori ve içerikleri silindi.");
   };
 
   const handleAddProduct = useCallback(async (formData: any) => {
@@ -455,81 +470,6 @@ export default function PanelPage() {
     }
   };
 
-  const QRCodeFrame = ({ value, tableNo, size = 200, id, isPrint = false }: any) => {
-    const isMain = tableNo === undefined;
-    const finalSize = isPrint ? 140 : size;
-    const logoSize = Math.floor(finalSize * 0.22); // QR boyutunun %22'si kadar logo
-    
-    return (
-      <div id={id} style={{ 
-        position: "relative", 
-        padding: qrFrameType === "none" ? 20 : isPrint ? 25 : (isMain ? 40 : 25), 
-        background: qrBgColor, 
-        borderRadius: qrFrameType === "elegant" ? (isPrint ? 25 : 40) : (isPrint ? 16 : 24), 
-        boxShadow: isPrint ? "none" : (isMain ? "0 20px 50px rgba(0,0,0,.3)" : "0 8px 20px rgba(0,0,0,.1)"), 
-        display: "flex", 
-        flexDirection: "column", 
-        alignItems: "center",
-        border: qrFrameType === "minimal" ? `1px solid ${qrColor}20` : (isPrint ? "1px solid #eee" : "none"),
-        width: isPrint ? "180px" : "auto",
-        transition: "transform .2s"
-      }}>
-        {qrFrameType === "elegant" && (
-          <div style={{ marginBottom: isPrint ? 15 : (isMain ? 25 : 15), textAlign: "center", width: "100%" }}>
-            <div style={{ fontSize: isPrint ? 14 : (isMain ? 20 : 12), fontWeight: 900, color: qrColor, letterSpacing: "0.15em", fontFamily: "serif" }}>{restaurant?.name?.toUpperCase()}</div>
-            <div style={{ height: 1.5, width: "60%", background: `linear-gradient(90deg, transparent, ${qrColor}, transparent)`, margin: (isPrint ? 6 : (isMain ? 10 : 6)) + "px auto" }} />
-            <div style={{ fontSize: isPrint ? 7 : (isMain ? 9 : 6), color: qrColor, opacity: 0.6, letterSpacing: "0.3em", fontWeight: 700 }}>GURME LEZZET DURAGI</div>
-          </div>
-        )}
-
-        {qrFrameType === "modern" && (
-          <div style={{ position: "absolute", top: isPrint ? -12 : (isMain ? -18 : -12), background: qrColor, color: qrBgColor, padding: isPrint ? "4px 14px" : (isMain ? "8px 24px" : "4px 14px"), borderRadius: isPrint ? 8 : (isMain ? 14 : 8), fontSize: isPrint ? 9 : (isMain ? 12 : 9), fontWeight: 900, boxShadow: isPrint ? "none" : `0 8px 20px ${qrColor}40`, letterSpacing: "0.05em", whiteSpace: "nowrap", zIndex: 2 }}>MENÜYÜ TARA</div>
-        )}
-
-        <div style={{ position: "relative", padding: isPrint ? 8 : (isMain ? 12 : 8), background: "#fff", borderRadius: isPrint ? 10 : (isMain ? 16 : 10), boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-          <QRCode value={value} size={finalSize} fgColor={qrColor} bgColor="#ffffff" level="H" />
-          {qrLogoVisible && (
-            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <div style={{ width: logoSize, height: logoSize, background: "#fff", borderRadius: isPrint ? 6 : (isMain ? 12 : 6), padding: isPrint ? 2 : (isMain ? 4 : 2), display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 15px rgba(0,0,0,0.1)", overflow: "hidden" }}>
-                {restaurant?.logo_url ? (
-                  <img src={restaurant.logo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: isPrint ? 3 : (isMain ? 6 : 3) }} />
-                ) : (
-                  <div style={{ width: "100%", height: "100%", background: qrColor, borderRadius: isPrint ? 4 : (isMain ? 8 : 4), display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: Math.floor(logoSize * 0.5), fontWeight: 900 }}>{restaurant?.name?.[0] || "T"}</div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {qrFrameType === "minimal" && (
-          <div style={{ marginTop: isPrint ? 12 : (isMain ? 20 : 12), textAlign: "center" }}>
-            <div style={{ fontSize: isPrint ? 8 : (isMain ? 11 : 8), fontWeight: 700, color: qrColor, letterSpacing: "0.1em" }}>MASA NUMARASI</div>
-            <div style={{ fontSize: isPrint ? 14 : (isMain ? 18 : 14), fontWeight: 900, color: qrColor, marginTop: 2 }}>{tableNo || "00"}</div>
-          </div>
-        )}
-        
-        {qrFrameType === "modern" && (
-          <div style={{ marginTop: isPrint ? 12 : (isMain ? 24 : 12), textAlign: "center", display: "flex", alignItems: "center", gap: 6 }}>
-            <div style={{ height: 1, width: isMain ? 15 : 10, background: qrColor, opacity: 0.2 }} />
-            <div style={{ fontSize: isPrint ? 8 : (isMain ? 11 : 8), fontWeight: 800, color: qrColor, opacity: 0.5, letterSpacing: "0.1em" }}>MASA {tableNo || "00"}</div>
-            <div style={{ height: 1, width: isMain ? 15 : 10, background: qrColor, opacity: 0.2 }} />
-          </div>
-        )}
-
-        {qrFrameType === "elegant" && (
-          <div style={{ marginTop: isPrint ? 15 : (isMain ? 28 : 15), display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-            <div style={{ fontSize: isPrint ? 8 : (isMain ? 10 : 8), fontWeight: 700, color: qrColor, opacity: 0.5, letterSpacing: "0.2em" }}>MASA {tableNo || "00"}</div>
-            <div style={{ width: 3, height: 3, borderRadius: 99, background: qrColor, opacity: 0.3 }} />
-          </div>
-        )}
-        
-        {qrFrameType === "none" && !isMain && (
-           <div style={{ marginTop: 10, fontSize: 12, fontWeight: 900, color: qrColor }}>MASA {tableNo}</div>
-        )}
-      </div>
-    );
-  };
-
   const handleSignOut = async () => { await supabase.auth.signOut(); window.location.href = "/auth"; };
 
   const filteredProducts = catFilter === "Tümü" ? products : products.filter(p => p.category_id === catFilter);
@@ -539,10 +479,30 @@ export default function PanelPage() {
    const tabLabel: Record<string, string> = { dashboard: "Genel Bakış", menu: "Menü Yönetimi", analytics: "Analitik", campaigns: "Kampanya Merkezi", qr: "QR Kodlar", tables: "Masalar", orders: "Siparişler", payments: "Ödemeler", reviews: "Müşteri Yorumları", settings: "Ayarlar" };
 
   const resolveServiceRequest = async (id: string) => {
+    const req = serviceRequests.find(s => s.id === id);
+    if (!req) return;
+
     const { error } = await supabase.from("service_requests").update({ status: "resolved", resolved_at: new Date().toISOString() }).eq("id", id);
+    
     if (!error) {
+      if (req.type === "payment") {
+        await supabase.from("orders")
+          .update({ status: "completed" })
+          .eq("table_no", req.table_no.toString())
+          .eq("restaurant_id", restaurant?.id)
+          .in("status", ["pending", "preparing", "ready"]);
+          
+        setOrders(prev => prev.map(o => 
+          (o.table_no.toString() === req.table_no.toString() && ["pending", "preparing", "ready"].includes(o.status)) 
+          ? { ...o, status: "completed" } 
+          : o
+        ));
+      }
       setServiceRequests(prev => prev.map(s => s.id === id ? { ...s, status: "resolved", resolved_at: new Date().toISOString() } : s));
-      flash("İstek tamamlandı.");
+      flash("Ödeme ve masa kapatıldı. ✓");
+    } else {
+      console.error("Ödeme kapatma hatası:", error);
+      flash("Hata: Ödeme kaydedilemedi.");
     }
   };
 
@@ -1024,19 +984,38 @@ export default function PanelPage() {
                 </div>
 
                 {/* TOP PRODUCTS - BENTO STYLE */}
-                <div className="card" style={{ gridColumn: "span 7", gridRow: "span 2", padding: 24 }}>
-                  <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 20 }}>En Çok Satanlar</h3>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                    {products.slice(0, 4).map((p, i) => (
-                      <div key={i} style={{ padding: 16, borderRadius: 20, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", position: "relative", overflow: "hidden" }}>
-                        <div style={{ position: "absolute", top: 0, right: 0, padding: "8px 12px", background: i === 0 ? A : "rgba(255,255,255,0.05)", fontSize: 10, fontWeight: 900, borderRadius: "0 0 0 12px" }}>#{i+1}</div>
-                        <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 4, paddingRight: 30 }}>{p.name_tr}</div>
-                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>Popüler ürün</div>
-                        <div style={{ marginTop: 12, fontSize: 16, fontWeight: 900, color: A }}>₺{p.price}</div>
-                      </div>
-                    ))}
+                <div className="card" style={{ gridColumn: "span 7", gridRow: "span 2", padding: 24, display: "flex", flexDirection: "column" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                    <h3 style={{ fontSize: 16, fontWeight: 800 }}>En Çok Satanlar</h3>
+                    <div style={{ padding: "4px 10px", borderRadius: 8, background: `${A}15`, color: A, fontSize: 10, fontWeight: 800 }}>AI ANALİZ AKTİF</div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, flex: 1 }}>
+                    {products.slice(0, 4).map((p, i) => {
+                      const productOrders = orders.filter(o => o.order_items?.some((oi: any) => oi.product_id === p.id)).length;
+                      const conversionRate = totalViewsReal > 0 ? Math.round((productOrders / totalViewsReal) * 100) : 0;
+                      
+                      return (
+                        <div key={i} style={{ padding: 16, borderRadius: 20, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", position: "relative", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                          <div style={{ position: "absolute", top: 0, right: 0, padding: "8px 12px", background: i === 0 ? A : "rgba(255,255,255,0.05)", fontSize: 10, fontWeight: 900, borderRadius: "0 0 0 12px" }}>#{i+1}</div>
+                          <div>
+                            <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 4, paddingRight: 30 }}>{p.name_tr}</div>
+                            <div style={{ fontSize: 10, color: conversionRate > 10 ? "#22c55e" : "rgba(255,255,255,0.3)", fontWeight: 700 }}>
+                              %{conversionRate} Dönüşüm Oranı
+                            </div>
+                          </div>
+                          
+                          <div style={{ marginTop: 12 }}>
+                            <div style={{ fontSize: 9, color: "rgba(255,255,255,0.4)", marginBottom: 4, fontWeight: 700 }}>AI TAVSİYESİ:</div>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: "#fff", lineHeight: 1.3 }}>
+                              {conversionRate > 15 ? "Yıldız Ürün! Menüde en başa taşıyın." : conversionRate > 5 ? "İyi gidiyor. Fotoğrafı güncelleyerek satışı artırın." : "Düşük ilgi. Fiyatı %10 indirmeyi düşünün."}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
+
 
                 {/* QUICK ACTIONS BENTO */}
                 <div className="card" style={{ gridColumn: "span 7", gridRow: "span 1", padding: 24, display: "flex", alignItems: "center", gap: 16 }}>
@@ -1360,9 +1339,10 @@ export default function PanelPage() {
                           <div style={{ flex: 1 }}>
                             <div style={{ fontSize: 11, marginBottom: 6 }}>Arka Plan</div>
                             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                              {["#ffffff", "#f8fafc", "#fff7ed", "#f0fdf4"].map(c => (
-                                <button key={c} onClick={() => setQrBgColor(c)} style={{ width: 28, height: 28, borderRadius: 6, border: qrBgColor === c ? `2px solid ${A}` : "1px solid rgba(0,0,0,.1)", background: c, cursor: "pointer" }} />
+                              {["#ffffff", "#f8fafc", "#f1f5f9", "#e2e8f0"].map(c => (
+                                <button key={c} onClick={() => setQrBgColor(c)} style={{ width: 28, height: 28, borderRadius: 6, border: qrBgColor === c ? `2px solid ${A}` : "1px solid rgba(255,255,255,.1)", background: c, cursor: "pointer" }} />
                               ))}
+                              <input type="color" value={qrBgColor} onChange={e => setQrBgColor(e.target.value)} style={{ width: 28, height: 28, borderRadius: 6, border: "none", background: "transparent", cursor: "pointer", padding: 0 }} />
                             </div>
                           </div>
                         </div>
@@ -1413,46 +1393,38 @@ export default function PanelPage() {
                   </div>
                 </div>
 
-                {/* PREVIEW */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                  <div className="card" style={{ padding: "40px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "radial-gradient(circle at 50% 50%, rgba(255,255,255,.03) 0%, rgba(255,255,255,0) 100%)", minHeight: 480 }}>
-                    <QRCodeFrame id="main-qr" value={`${typeof window !== 'undefined' ? window.location.origin : 'https://temeat.com.tr'}/${restaurant?.slug}`} />
-                    
-                    <div style={{ marginTop: 32, display: "flex", alignItems: "center", gap: 12 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: 99, background: "#22c55e" }} />
-                      <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,.4)" }}>Canlı Önizleme Aktif</div>
-                    </div>
-                  </div>
-                  
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
-                    {(() => {
-                      const planOrder = ["free", "yenimekan", "starter", "pro"];
-                      const currentPlanIndex = planOrder.indexOf(restaurant?.plan || "free");
-                      let count = 1;
-                      if (currentPlanIndex >= planOrder.indexOf("starter")) count = 10;
-                      if (currentPlanIndex >= planOrder.indexOf("pro")) count = restaurant?.table_count || 20;
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
+                  {(() => {
+                    const planOrder = ["free", "yenimekan", "starter", "pro"];
+                    const currentPlanIndex = planOrder.indexOf(restaurant?.plan || "free");
+                    let count = 1;
+                    if (currentPlanIndex >= planOrder.indexOf("starter")) count = 10;
+                    if (currentPlanIndex >= planOrder.indexOf("pro")) count = restaurant?.table_count || 20;
 
-                      const qrBaseUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://temeat.com.tr'}/${restaurant?.slug}`;
+                    const qrBaseUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://temeat.com.tr'}/${restaurant?.slug}`;
 
-                      return Array.from({ length: count }).map((_, i) => (
-                        <div key={i} className="card" style={{ padding: "12px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center" }}>
-                          <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8 }}>{count === 1 ? "Genel Menü" : `Masa ${i + 1}`}</div>
-                          <div id={`table-qr-${i}`} style={{ width: "100%", display: "flex", justifyContent: "center" }}>
-                            <QRCodeFrame 
-                              value={`${qrBaseUrl}${count === 1 ? "" : `?table=${i+1}`}`} 
-                              tableNo={i + 1}
-                              size={80} 
-                            />
-                          </div>
-                          <button onClick={() => downloadTableQR(i)} style={{ width: "100%", marginTop: 8, padding: "6px", borderRadius: 6, border: "1px solid rgba(255,255,255,.05)", background: "rgba(255,255,255,.03)", color: "rgba(255,255,255,.4)", fontSize: 10, fontWeight: 700, cursor: "pointer", transition: "all .2s" }}
-                            onMouseEnter={e => { e.currentTarget.style.color = "#fff"; e.currentTarget.style.background = "rgba(255,255,255,.08)"; }}>
-                            İndir (SVG)
-                          </button>
+                    return Array.from({ length: count }).map((_, i) => (
+                      <div key={i} className="card" style={{ padding: "12px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8 }}>{count === 1 ? "Genel Menü" : `Masa ${i + 1}`}</div>
+                        <div id={`table-qr-${i}`} style={{ width: "100%", display: "flex", justifyContent: "center" }}>
+                          <QRCodeFrame 
+                            value={`${qrBaseUrl}${count === 1 ? "" : `?table=${i+1}`}`} 
+                            tableNo={i + 1}
+                            size={80} 
+                            restaurant={restaurant}
+                            qrColor={qrColor}
+                            qrBgColor={qrBgColor}
+                            qrFrameType={qrFrameType}
+                            qrLogoVisible={qrLogoVisible}
+                          />
                         </div>
-                      ));
-                    })()}
-                  </div>
-
+                        <button onClick={() => downloadTableQR(i)} style={{ width: "100%", marginTop: 8, padding: "6px", borderRadius: 6, border: "1px solid rgba(255,255,255,.05)", background: "rgba(255,255,255,.03)", color: "rgba(255,255,255,.4)", fontSize: 10, fontWeight: 700, cursor: "pointer", transition: "all .2s" }}
+                          onMouseEnter={e => { e.currentTarget.style.color = "#fff"; e.currentTarget.style.background = "rgba(255,255,255,.08)"; }}>
+                          İndir (SVG)
+                        </button>
+                      </div>
+                    ));
+                  })()}
                 </div>
               </div>
             </div>
@@ -1525,14 +1497,11 @@ export default function PanelPage() {
                       <div style={{ position: "absolute", top: -50, right: -50, width: 200, height: 200, background: A, filter: "blur(100px)", opacity: 0.1, pointerEvents: "none" }} />
                       
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                          <div style={{ width: 40, height: 40, borderRadius: 12, background: A, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", boxShadow: `0 8px 20px ${A}40` }}>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
-                          </div>
-                          <div>
-                            <h2 style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>AI Strateji Merkezi</h2>
-                            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>Verilerinizden üretilen otomatik büyüme fırsatları</p>
-                          </div>
+                        <div>
+                          <h3 style={{ fontSize: 18, fontWeight: 900, background: `linear-gradient(to right, #fff, ${A})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                            AI Satış Stratejisi
+                          </h3>
+                          <p style={{ fontSize: 13, color: "rgba(255,255,255,.3)" }}>Yapay zeka verilerinizi analiz etti ve bu önerileri hazırladı.</p>
                         </div>
                         <div style={{ padding: "6px 12px", borderRadius: 99, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", fontSize: 11, fontWeight: 700, color: A }}>
                           CANLI ANALİZ AKTİF
@@ -1644,7 +1613,7 @@ export default function PanelPage() {
                                 <span style={{ color: "rgba(255,255,255,.4)" }}>₺{cat.value.toLocaleString()}</span>
                               </div>
                               <div style={{ height: 6, background: "rgba(255,255,255,.03)", borderRadius: 99, overflow: "hidden" }}>
-                                <div style={{ width: `${(cat.value / totalRevenue) * 100}%`, height: "100%", background: i === 0 ? A : i === 1 ? "#3b82f6" : "#444", borderRadius: 99 }} />
+                                <div style={{ width: `${totalRevenue > 0 ? (cat.value / totalRevenue) * 100 : 0}%`, height: "100%", background: i === 0 ? A : i === 1 ? "#3b82f6" : "#444", borderRadius: 99 }} />
                               </div>
                             </div>
                           ))}
@@ -1669,7 +1638,7 @@ export default function PanelPage() {
                               </div>
                               <div style={{ textAlign: "right" }}>
                                 <div style={{ fontSize: 14, fontWeight: 800 }}>₺{p.revenue.toLocaleString()}</div>
-                                <div style={{ fontSize: 10, color: "#22c55e", fontWeight: 700 }}>%{Math.round((p.revenue / totalRevenue) * 100)} Pay</div>
+                                <div style={{ fontSize: 10, color: "#22c55e", fontWeight: 700 }}>%{totalRevenue > 0 ? Math.round((p.revenue / totalRevenue) * 100) : 0} Pay</div>
                               </div>
                             </div>
                           ))}
@@ -1711,7 +1680,7 @@ export default function PanelPage() {
                 </div>
               </div>
 
-              {serviceRequests.filter(s => s.type === "payment").length === 0 ? (
+              {serviceRequests.filter(s => s.type === "payment" && s.status === "pending").length === 0 ? (
                 <div className="card" style={{ padding: "60px 20px", textAlign: "center", color: "rgba(255,255,255,.2)" }}>
                   <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}>
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.2 }}><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
@@ -1720,8 +1689,8 @@ export default function PanelPage() {
                 </div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
-                  {serviceRequests.filter(s => s.type === "payment").map(req => {
-                    const tableOrder = orders.find(o => o.table_no === req.table_no && (o.status === "pending" || o.status === "preparing" || o.status === "ready"));
+                  {serviceRequests.filter(s => s.type === "payment" && s.status === "pending").map(req => {
+                    const tableOrder = orders.find(o => o.table_no.toString() === req.table_no.toString() && (o.status === "pending" || o.status === "preparing" || o.status === "ready"));
                     return (
                       <div key={req.id} className="card" style={{ padding: 20, borderLeft: `4px solid ${req.status === "pending" ? "#a855f7" : "rgba(255,255,255,.1)"}`, opacity: req.status === "resolved" ? 0.6 : 1 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
@@ -2087,7 +2056,7 @@ export default function PanelPage() {
       )}
 
       {showAddProduct && (
-        <ProductModal key="add" title="Ürün Ekle" categories={categories} allProducts={products} initial={{}} onSave={handleAddProduct} onClose={() => setShowAddProduct(false)} themeColor={A} restaurantPlan={restaurant?.plan || "free"} />
+        <ProductModal key="add" title="Ürün Ekle" categories={categories} allProducts={products} initial={{}} onSave={handleAddProduct} onClose={() => setShowAddProduct(false)} themeColor={A} restaurantPlan={restaurant?.plan || "free"} flash={flash} />
       )}
 
       {showAddMenu && (
@@ -2096,140 +2065,48 @@ export default function PanelPage() {
           products={products} 
           themeColor={A} 
           onClose={() => setShowAddMenu(false)} 
-          onSave={handleAddProduct} // Reuse handleAddProduct since it handles is_combo payload
+          onSave={handleAddProduct}
+          flash={flash}
         />
       )}
 
       {editingProduct && (
-        editingProduct.is_combo ? (
-          <MenuModal 
-            categories={categories} 
-            products={products} 
-            initial={editingProduct}
-            themeColor={A} 
-            onClose={() => setEditingProduct(null)} 
-            onSave={handleEditProduct}
-          />
-        ) : (
-          <ProductModal 
-            key={editingProduct!.id} 
-            title="Ürünü Düzenle" 
-            categories={categories} 
-            initial={editingProduct!} 
-            onSave={handleEditProduct} 
-            onClose={() => setEditingProduct(null)} 
-            themeColor={A} 
-          />
-        )
+        <ProductModal 
+          key="edit" 
+          title="Ürünü Düzenle" 
+          categories={categories} 
+          allProducts={products} 
+          initial={editingProduct} 
+          onSave={handleEditProduct} 
+          onClose={() => setEditingProduct(null)} 
+          themeColor={A} 
+          restaurantPlan={restaurant?.plan || "free"} 
+          flash={flash}
+        />
       )}
 
       {/* KDS - KITCHEN DISPLAY SYSTEM OVERLAY */}
       {isKitchenMode && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "#050505", display: "flex", flexDirection: "column", animation: "fadeIn .3s both" }}>
-          <div style={{ height: 70, background: "#0c0c0c", borderBottom: "1px solid rgba(255,255,255,.06)", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: "-.02em" }}>TEM<span style={{ color: A }}>eat</span> <span style={{ color: "rgba(255,255,255,.3)", fontWeight: 400, marginLeft: 8 }}>KITCHEN MODE</span></div>
-              <div style={{ height: 24, width: 1, background: "rgba(255,255,255,.1)" }} />
-              <div style={{ fontSize: 14, fontWeight: 600, color: "#22c55e" }}>● Canlı Bağlantı Aktif</div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 18, fontWeight: 800 }}>{orders.filter(o => o.status !== "completed" && o.status !== "cancelled").length}</div>
-                <div style={{ fontSize: 10, color: "rgba(255,255,255,.3)", fontWeight: 700 }}>AKTİF SİPARİŞ</div>
-              </div>
-              <button onClick={() => setIsKitchenMode(false)} style={{ padding: "10px 24px", borderRadius: 12, border: "none", background: "rgba(255,255,255,.05)", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Panale Dön</button>
-            </div>
-          </div>
-          
-          <div style={{ flex: 1, padding: 24, overflowX: "auto", display: "flex", gap: 20, alignItems: "flex-start", background: "radial-gradient(circle at 50% 50%, #0a0a0a 0%, #050505 100%)" }}>
-            {orders.filter(o => o.status !== "completed" && o.status !== "cancelled").length === 0 ? (
-              <div style={{ margin: "auto", textAlign: "center", opacity: .15 }}>
-                <div style={{ marginBottom: 20, display: "flex", justifyContent: "center" }}>
-                  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2"><path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/><line x1="6" y1="17" x2="18" y2="17"/></svg>
-                </div>
-                <div style={{ fontSize: 20, fontWeight: 700 }}>Şu an mutfakta sipariş yok.</div>
-              </div>
-            ) : (
-              orders.filter(o => o.status !== "completed" && o.status !== "cancelled").map(order => (
-                <div key={order.id} style={{ width: 340, flexShrink: 0, background: "#111", border: "1px solid rgba(255,255,255,.08)", borderRadius: 20, overflow: "hidden", display: "flex", flexDirection: "column", maxHeight: "100%", boxShadow: "0 10px 40px rgba(0,0,0,.4)" }}>
-                  <div style={{ padding: 20, background: order.status === "pending" ? "#f59e0b" : order.status === "preparing" ? "#3b82f6" : "#10b981", color: "#000" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: 24, fontWeight: 900 }}>MASA {order.table_no}</span>
-                      <span style={{ fontSize: 12, fontWeight: 800, background: "rgba(0,0,0,.15)", padding: "4px 10px", borderRadius: 6 }}>
-                        {Math.floor((new Date().getTime() - new Date(order.created_at).getTime()) / 60000)} dk önce
-                      </span>
-                    </div>
-                  </div>
-                  <div style={{ flex: 1, padding: 20, overflowY: "auto" }}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                      {order.order_items?.map((item: any, idx: number) => {
-                        const product = products.find(p => p.id === item.product_id);
-                        return (
-                          <div key={idx} style={{ borderBottom: "1px solid rgba(255,255,255,.04)", paddingBottom: 10 }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                              <div style={{ fontSize: 18, fontWeight: 700 }}>
-                                <span style={{ color: A, marginRight: 8 }}>{item.quantity}x</span>
-                                {product?.name_tr || "Ürün"}
-                              </div>
-                            </div>
-                            {item.extras_selected?.length > 0 && (
-                              <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 4 }}>
-                                {item.extras_selected.map((ex: any, ei: number) => (
-                                  <span key={ei} style={{ fontSize: 11, background: "rgba(255,255,255,.05)", color: "rgba(255,255,255,.4)", padding: "2px 8px", borderRadius: 4 }}>+{ex.name_tr || ex.label}</span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div style={{ padding: 16, background: "#0c0c0c", borderTop: "1px solid rgba(255,255,255,.06)", display: "flex", gap: 10 }}>
-                    {order.status === "pending" ? (
-                      <button onClick={() => updateOrderStatus(order.id, "preparing")} style={{ flex: 1, padding: "14px 0", borderRadius: 12, border: "none", background: "#3b82f6", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>HAZIRLA</button>
-                    ) : order.status === "preparing" ? (
-                      <button onClick={() => updateOrderStatus(order.id, "ready")} style={{ flex: 1, padding: "14px 0", borderRadius: 12, border: "none", background: "#10b981", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>HAZIR</button>
-                    ) : (
-                      <button onClick={() => updateOrderStatus(order.id, "completed")} style={{ flex: 1, padding: "14px 0", borderRadius: 12, border: "none", background: "rgba(255,255,255,.1)", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>TAMAMLA</button>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+        <KDSOverlay 
+          orders={orders}
+          products={products}
+          restaurant={restaurant}
+          currentTime={currentTime}
+          themeColor={A}
+          onClose={() => setIsKitchenMode(false)}
+          onUpdateStatus={updateOrderStatus}
+        />
       )}
-      </div>
 
       {/* GLOBAL HIDDEN PRINT AREA */}
-      <div id="print-area" style={{ display: "none" }}>
-        <div style={{ 
-          display: "grid", 
-          gridTemplateColumns: "repeat(3, 1fr)", 
-          gap: "30px", 
-          padding: "20px",
-          background: "#fff"
-        }}>
-          {(() => {
-            const planOrder = ["free", "yenimekan", "starter", "pro"];
-            const currentPlanIndex = planOrder.indexOf(restaurant?.plan || "free");
-            let count = 1;
-            if (currentPlanIndex >= planOrder.indexOf("starter")) count = 10;
-            if (currentPlanIndex >= planOrder.indexOf("pro")) count = restaurant?.table_count || 20;
-            const qrBaseUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://temeat.com.tr'}/${restaurant?.slug}`;
-
-            return Array.from({ length: count }).map((_, i) => (
-              <div key={i} style={{ display: "flex", justifyContent: "center", border: "1px dashed #eee", padding: "15px", borderRadius: "8px" }}>
-                <QRCodeFrame 
-                  value={`${qrBaseUrl}${count === 1 ? "" : `?table=${i+1}`}`} 
-                  tableNo={i + 1}
-                  isPrint={true}
-                />
-              </div>
-            ));
-          })()}
-        </div>
-      </div>
+      <PrintArea 
+        restaurant={restaurant}
+        qrColor={qrColor}
+        qrBgColor={qrBgColor}
+        qrFrameType={qrFrameType}
+        qrLogoVisible={qrLogoVisible}
+      />
+    </div>
     </>
   );
 }

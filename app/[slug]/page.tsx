@@ -246,7 +246,7 @@ function MenuContent({ params: paramsPromise }: { params: Promise<{ slug: string
       `}</style>
 
       {toast && (
-        <div style={{ position: "fixed", top: 14, left: "50%", transform: "translateX(-50%)", zIndex: 200, background: C.cd, border: `1px solid ${C.bd}`, borderRadius: 100, padding: "7px 18px", fontSize: 12, fontWeight: 600, color: A, whiteSpace: "nowrap", boxShadow: "0 4px 20px rgba(0,0,0,.08)", animation: "toast .2s both" }}>
+        <div style={{ position: "fixed", top: 14, left: "50%", transform: "translateX(-50%)", zIndex: 400, background: C.cd, border: `1px solid ${C.bd}`, borderRadius: 100, padding: "7px 18px", fontSize: 12, fontWeight: 600, color: A, whiteSpace: "nowrap", boxShadow: "0 4px 20px rgba(0,0,0,.08)", animation: "toast .2s both" }}>
           {toast}
         </div>
       )}
@@ -307,7 +307,6 @@ function MenuContent({ params: paramsPromise }: { params: Promise<{ slug: string
           </div>
         </div>
 
-        {/* Categories */}
         {/* Categories */}
         {!search && categories.length > 0 && (
           <div style={{ position: "sticky", top: 60, zIndex: 25, background: C.bg, borderBottom: `1px solid ${C.bd}` }}>

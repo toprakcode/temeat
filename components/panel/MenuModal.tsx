@@ -2,6 +2,8 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { Product, Category } from "@/types";
+import { translateContent } from "@/lib/actions/translate";
+
 
 export function MenuModal({
   onClose,
@@ -10,6 +12,7 @@ export function MenuModal({
   categories = [],
   initial,
   themeColor = "#D4470A",
+  flash,
 }: {
   onClose: () => void;
   onSave: (data: any) => void;
@@ -17,12 +20,50 @@ export function MenuModal({
   categories: Category[];
   initial?: Partial<Product>;
   themeColor?: string;
+  flash?: (msg: string) => void;
 }) {
   const [name, setName] = useState(initial?.name_tr || "");
+  const [nameEn, setNameEn] = useState(initial?.name_en || "");
+  const [nameAr, setNameAr] = useState(initial?.name_ar || "");
+  const [nameDe, setNameDe] = useState(initial?.name_de || "");
+  const [nameRu, setNameRu] = useState(initial?.name_ru || "");
+  const [desc, setDesc] = useState(initial?.desc_tr || "");
+  const [descEn, setDescEn] = useState(initial?.desc_en || "");
+  const [descAr, setDescAr] = useState(initial?.desc_ar || "");
+  const [descDe, setDescDe] = useState(initial?.desc_de || "");
+  const [descRu, setDescRu] = useState(initial?.desc_ru || "");
   const [selectedCategoryId, setSelectedCategoryId] = useState(initial?.category_id || "");
   const [price, setPrice] = useState(initial?.price ? String(initial.price) : "");
   const [selectedItems, setSelectedItems] = useState<string[]>(initial?.combo_items || []);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isTranslating, setIsTranslating] = useState(false);
+
+  const handleAutoTranslate = async () => {
+    if (!name.trim()) return;
+    setIsTranslating(true);
+    try {
+      const targetLangs = ["en", "ar", "de", "ru"];
+      const translatedNames = await translateContent(name, targetLangs);
+      setNameEn(translatedNames.en || "");
+      setNameAr(translatedNames.ar || "");
+      setNameDe(translatedNames.de || "");
+      setNameRu(translatedNames.ru || "");
+      
+      if (desc.trim()) {
+        const translatedDescs = await translateContent(desc, targetLangs);
+        setDescEn(translatedDescs.en || "");
+        setDescAr(translatedDescs.ar || "");
+        setDescDe(translatedDescs.de || "");
+        setDescRu(translatedDescs.ru || "");
+      }
+      flash?.("Paket içeriği tüm dillere çevrildi! 🤖");
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => 
@@ -46,14 +87,23 @@ export function MenuModal({
 
     onSave({
       name_tr: name,
+      name_en: nameEn,
+      name_ar: nameAr,
+      name_de: nameDe,
+      name_ru: nameRu,
+      desc_tr: desc || `${selectedItems.length} ürünlük özel menü.`,
+      desc_en: descEn,
+      desc_ar: descAr,
+      desc_de: descDe,
+      desc_ru: descRu,
       category_id: selectedCategoryId,
       price: Number(price),
       is_combo: true,
       combo_items: selectedItems,
       is_active: true,
       is_available: true,
-      desc_tr: initial?.desc_tr || `${selectedItems.length} ürünlük özel menü.`
     });
+
   };
 
   return (
@@ -76,9 +126,25 @@ export function MenuModal({
           <div style={{ padding: 32, borderRight: "1px solid rgba(255,255,255,.05)", overflowY: "auto" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
               <div>
-                <label style={{ fontSize: 12, fontWeight: 800, color: themeColor, marginBottom: 8, display: "block" }}>MENÜ ADI</label>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                  <label style={{ fontSize: 12, fontWeight: 800, color: themeColor }}>MENÜ ADI</label>
+                  <button onClick={handleAutoTranslate} disabled={isTranslating} style={{ fontSize: 10, fontWeight: 800, color: "#3b82f6", background: "transparent", border: "none", cursor: "pointer" }}>
+                    {isTranslating ? "ÇEVİRİLİYOR..." : "🤖 AI ÇEVİRİ"}
+                  </button>
+                </div>
                 <input value={name} onChange={e => setName(e.target.value)} placeholder="Örn: Efsane Öğle Menüsü" style={{ width: "100%", padding: "14px", borderRadius: 12, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.1)", color: "#fff", outline: "none" }} />
               </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                <input value={nameEn} onChange={e => setNameEn(e.target.value)} placeholder="Name (EN)" style={{ width: "100%", padding: "10px", borderRadius: 10, background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.05)", color: "#fff", fontSize: 11 }} />
+                <input value={nameAr} onChange={e => setNameAr(e.target.value)} placeholder="Name (AR)" style={{ width: "100%", padding: "10px", borderRadius: 10, background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.05)", color: "#fff", fontSize: 11, textAlign: "right" }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 800, color: themeColor, marginBottom: 8, display: "block" }}>AÇIKLAMA (TR)</label>
+                <textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="Menü açıklaması..." rows={2} style={{ width: "100%", padding: "14px", borderRadius: 12, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.1)", color: "#fff", outline: "none", resize: "none" }} />
+              </div>
+
 
               <div>
                 <label style={{ fontSize: 12, fontWeight: 800, color: themeColor, marginBottom: 8, display: "block" }}>KATEGORİ</label>

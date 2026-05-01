@@ -102,6 +102,20 @@ export function ProductCard({
               </span>
             </div>
           )}
+
+          {/* SOCIAL PROOF INDICATOR */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+            <div style={{ width: 6, height: 6, borderRadius: 99, background: "#10b981", animation: "pulse 2s infinite" }} />
+            <span style={{ fontSize: 10, color: "rgba(16, 185, 129, 0.8)", fontWeight: 700 }}>
+              {(() => {
+                // Pseudo-random but consistent number of viewers
+                const seed = p.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                const viewers = 2 + (seed % 6);
+                return lang === 'tr' ? `Şu an ${viewers} kişi inceliyor` : `${viewers} people viewing right now`;
+              })()}
+            </span>
+          </div>
+
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto", paddingTop: 8 }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
             <span style={{ fontSize: 16, fontWeight: 800 }}>₺{discPrice || p.price}</span>

@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { translateContent } from "@/lib/actions/translate";
 import { Category, Product } from "@/types";
+
 import { ALLERGENS } from "@/lib/constants";
 
 export function ProductModal({
@@ -12,6 +14,7 @@ export function ProductModal({
   onSave,
   onClose,
   themeColor = "#D4470A",
+  flash,
 }: {
   title: string;
   categories: Category[];
@@ -21,11 +24,19 @@ export function ProductModal({
   allProducts?: Product[];
   themeColor?: string;
   restaurantPlan?: string;
+  flash?: (msg: string) => void;
 }) {
   const [step, setStep] = useState(1);
   const [name, setName] = useState(initial.name_tr || "");
   const [nameEn, setNameEn] = useState(initial.name_en || "");
+  const [nameAr, setNameAr] = useState(initial.name_ar || "");
+  const [nameDe, setNameDe] = useState(initial.name_de || "");
+  const [nameRu, setNameRu] = useState(initial.name_ru || "");
   const [desc, setDesc] = useState(initial.desc_tr || "");
+  const [descEn, setDescEn] = useState(initial.desc_en || "");
+  const [descAr, setDescAr] = useState(initial.desc_ar || "");
+  const [descDe, setDescDe] = useState(initial.desc_de || "");
+  const [descRu, setDescRu] = useState(initial.desc_ru || "");
   const [price, setPrice] = useState(initial.price ? String(initial.price) : "");
   const [discount, setDiscount] = useState(initial.discount_pct ? String(initial.discount_pct) : "0");
   const [label, setLabel] = useState((initial as any).label || ""); 
@@ -70,6 +81,40 @@ export function ProductModal({
     setAiLoading(false);
   };
 
+  const [isTranslating, setIsTranslating] = useState(false);
+
+  const handleAutoTranslate = async () => {
+    if (!name.trim()) { setError("Çeviri için önce ürün adını girmelisiniz."); return; }
+    setIsTranslating(true);
+    setError(null);
+    try {
+      const targetLangs = ["en", "ar", "de", "ru"];
+      
+      // Translate Name
+      const translatedNames = await translateContent(name, targetLangs);
+      setNameEn(translatedNames.en || "");
+      setNameAr(translatedNames.ar || "");
+      setNameDe(translatedNames.de || "");
+      setNameRu(translatedNames.ru || "");
+
+      // Translate Description if exists
+      if (desc.trim()) {
+        const translatedDescs = await translateContent(desc, targetLangs);
+        setDescEn(translatedDescs.en || "");
+        setDescAr(translatedDescs.ar || "");
+        setDescDe(translatedDescs.de || "");
+        setDescRu(translatedDescs.ru || "");
+      }
+      
+      flash?.("Tüm dillere başarıyla çevrildi! ✨");
+    } catch (err) {
+      console.error(err);
+      setError("AI Çeviri sırasında bir hata oluştu.");
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!name.trim()) { setStep(1); setError("Ürün adı zorunlu."); return; }
     if (!price || isNaN(Number(price))) { setStep(3); setError("Geçerli bir fiyat girin."); return; }
@@ -96,7 +141,14 @@ export function ProductModal({
         category_id: catId,
         name_tr: name.trim(),
         name_en: nameEn.trim() || null,
+        name_ar: nameAr.trim() || null,
+        name_de: nameDe.trim() || null,
+        name_ru: nameRu.trim() || null,
         desc_tr: desc.trim() || null,
+        desc_en: descEn.trim() || null,
+        desc_ar: descAr.trim() || null,
+        desc_de: descDe.trim() || null,
+        desc_ru: descRu.trim() || null,
         price: Number(price),
         discount_pct: Number(discount) || 0,
         label: label || null,
@@ -109,6 +161,7 @@ export function ProductModal({
         image_url: finalImageUrl,
         extras: extras.filter(e => e.name_tr.trim() !== ""),
       });
+
     } catch (err: any) {
       setError(err.message || "Kaydedilirken bir hata oluştu.");
     } finally {
@@ -168,17 +221,44 @@ export function ProductModal({
               </div>
 
               <div>
-                <label style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,.3)", marginBottom: 8, display: "block" }}>ÜRÜN ADI</label>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                  <label style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,.3)" }}>ÜRÜN ADI</label>
+                  <button onClick={handleAutoTranslate} disabled={isTranslating} style={{ fontSize: 10, fontWeight: 800, color: "#3b82f6", background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 8l6 6 6-6"/></svg>
+                    {isTranslating ? "ÇEVİRİLİYOR..." : "🤖 TÜM DİLLERE ÇEVİR"}
+                  </button>
+                </div>
                 <input value={name} onChange={e => setName(e.target.value)} placeholder="Örn: Gurme Burger" style={{ width: "100%", padding: "14px", borderRadius: 12, background: "#111", border: "1px solid rgba(255,255,255,.1)", color: "#fff", outline: "none" }} />
+              </div>
+
+              {/* OTHER LANGUAGES (COLLAPSIBLE OR GRID) */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div style={{ opacity: nameEn ? 1 : 0.3 }}>
+                  <label style={{ fontSize: 9, fontWeight: 800, color: "rgba(255,255,255,.3)", marginBottom: 4, display: "block" }}>ENGLISH NAME</label>
+                  <input value={nameEn} onChange={e => setNameEn(e.target.value)} placeholder="Name (EN)" style={{ width: "100%", padding: "10px", borderRadius: 10, background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.05)", color: "#fff", fontSize: 12 }} />
+                </div>
+                <div style={{ opacity: nameAr ? 1 : 0.3 }}>
+                  <label style={{ fontSize: 9, fontWeight: 800, color: "rgba(255,255,255,.3)", marginBottom: 4, display: "block" }}>ARABIC NAME</label>
+                  <input value={nameAr} onChange={e => setNameAr(e.target.value)} placeholder="Name (AR)" style={{ width: "100%", padding: "10px", borderRadius: 10, background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.05)", color: "#fff", fontSize: 12, textAlign: "right" }} />
+                </div>
+                <div style={{ opacity: nameDe ? 1 : 0.3 }}>
+                  <label style={{ fontSize: 9, fontWeight: 800, color: "rgba(255,255,255,.3)", marginBottom: 4, display: "block" }}>GERMAN NAME</label>
+                  <input value={nameDe} onChange={e => setNameDe(e.target.value)} placeholder="Name (DE)" style={{ width: "100%", padding: "10px", borderRadius: 10, background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.05)", color: "#fff", fontSize: 12 }} />
+                </div>
+                <div style={{ opacity: nameRu ? 1 : 0.3 }}>
+                  <label style={{ fontSize: 9, fontWeight: 800, color: "rgba(255,255,255,.3)", marginBottom: 4, display: "block" }}>RUSSIAN NAME</label>
+                  <input value={nameRu} onChange={e => setNameRu(e.target.value)} placeholder="Name (RU)" style={{ width: "100%", padding: "10px", borderRadius: 10, background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.05)", color: "#fff", fontSize: 12 }} />
+                </div>
               </div>
 
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                  <label style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,.3)" }}>AÇIKLAMA</label>
+                  <label style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,.3)" }}>AÇIKLAMA (TR)</label>
                   <button onClick={generateWithAI} disabled={aiLoading} style={{ fontSize: 10, fontWeight: 800, color: themeColor, background: "transparent", border: "none", cursor: "pointer" }}>{aiLoading ? "YAZILIYOR..." : "AI İLE YAZ"}</button>
                 </div>
-                <textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="Ürününüzü tarif edin..." rows={3} style={{ width: "100%", padding: "14px", borderRadius: 12, background: "#111", border: "1px solid rgba(255,255,255,.1)", color: "#fff", outline: "none", resize: "none" }} />
+                <textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="Ürününüzü tarif edin..." rows={2} style={{ width: "100%", padding: "14px", borderRadius: 12, background: "#111", border: "1px solid rgba(255,255,255,.1)", color: "#fff", outline: "none", resize: "none" }} />
               </div>
+
             </div>
           )}
 
