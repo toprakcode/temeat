@@ -1,9 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Product, Category } from "@/types";
-import { translateContent } from "@/lib/actions/translate";
-
 
 export function MenuModal({
   onClose,
@@ -36,34 +34,6 @@ export function MenuModal({
   const [price, setPrice] = useState(initial?.price ? String(initial.price) : "");
   const [selectedItems, setSelectedItems] = useState<string[]>(initial?.combo_items || []);
   const [searchTerm, setSearchTerm] = useState("");
-  const [isTranslating, setIsTranslating] = useState(false);
-
-  const handleAutoTranslate = async () => {
-    if (!name.trim()) return;
-    setIsTranslating(true);
-    try {
-      const targetLangs = ["en", "ar", "de", "ru"];
-      const translatedNames = await translateContent(name, targetLangs);
-      setNameEn(translatedNames.en || "");
-      setNameAr(translatedNames.ar || "");
-      setNameDe(translatedNames.de || "");
-      setNameRu(translatedNames.ru || "");
-      
-      if (desc.trim()) {
-        const translatedDescs = await translateContent(desc, targetLangs);
-        setDescEn(translatedDescs.en || "");
-        setDescAr(translatedDescs.ar || "");
-        setDescDe(translatedDescs.de || "");
-        setDescRu(translatedDescs.ru || "");
-      }
-      flash?.("Paket içeriği tüm dillere çevrildi! 🤖");
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsTranslating(false);
-    }
-  };
-
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => 
@@ -103,7 +73,6 @@ export function MenuModal({
       is_active: true,
       is_available: true,
     });
-
   };
 
   return (
@@ -128,9 +97,6 @@ export function MenuModal({
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                   <label style={{ fontSize: 12, fontWeight: 800, color: themeColor }}>MENÜ ADI</label>
-                  <button onClick={handleAutoTranslate} disabled={isTranslating} style={{ fontSize: 10, fontWeight: 800, color: "#3b82f6", background: "transparent", border: "none", cursor: "pointer" }}>
-                    {isTranslating ? "ÇEVİRİLİYOR..." : "🤖 AI ÇEVİRİ"}
-                  </button>
                 </div>
                 <input value={name} onChange={e => setName(e.target.value)} placeholder="Örn: Efsane Öğle Menüsü" style={{ width: "100%", padding: "14px", borderRadius: 12, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.1)", color: "#fff", outline: "none" }} />
               </div>
@@ -144,7 +110,6 @@ export function MenuModal({
                 <label style={{ fontSize: 12, fontWeight: 800, color: themeColor, marginBottom: 8, display: "block" }}>AÇIKLAMA (TR)</label>
                 <textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="Menü açıklaması..." rows={2} style={{ width: "100%", padding: "14px", borderRadius: 12, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.1)", color: "#fff", outline: "none", resize: "none" }} />
               </div>
-
 
               <div>
                 <label style={{ fontSize: 12, fontWeight: 800, color: themeColor, marginBottom: 8, display: "block" }}>KATEGORİ</label>

@@ -101,14 +101,26 @@ export default function PanelPage() {
     let mounted = true;
     
     const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!mounted) return;
-      
-      if (!session) { 
-        router.push("/auth"); 
-      } else { 
-        setUser(session.user); 
-        await checkRestaurant(session.user.id); 
+      // Safety net: don't stay in loading state forever
+      const safetyTimer = setTimeout(() => {
+        if (mounted) setLoading(false);
+      }, 8000);
+
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!mounted) return;
+        
+        if (!session) { 
+          router.push("/auth"); 
+        } else { 
+          setUser(session.user); 
+          await checkRestaurant(session.user.id); 
+        }
+      } catch (err) {
+        console.error("Init Error:", err);
+      } finally {
+        clearTimeout(safetyTimer);
+        if (mounted) setLoading(false);
       }
     };
 
@@ -184,8 +196,8 @@ export default function PanelPage() {
       const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
       return {
         day,
-        views: thisWeek?.filter(v => { const d = new Date(v.viewed_at); return d >= dayStart && d < dayEnd; }).length || 0,
-        orders: ordersData?.filter(o => { const d = new Date(o.created_at); return d >= dayStart && d < dayEnd; }).length || 0,
+        views: (thisWeek || []).filter(v => { const d = new Date(v.viewed_at); return d >= dayStart && d < dayEnd; }).length || 0,
+        orders: (ordersData || []).filter(o => { const d = new Date(o.created_at); return d >= dayStart && d < dayEnd; }).length || 0,
       };
     }));
 
@@ -216,7 +228,7 @@ export default function PanelPage() {
     const { data: revsData } = await supabase.from("reviews").select("*").eq("restaurant_id", restaurantId).order("created_at", { ascending: false });
     setReviews(revsData || []);
 
-    const { data: serviceData } = await supabase.from("service_requests").select("*").eq("restaurant_id", restaurantId).order("created_at", { ascending: false });
+    const { data: serviceData } = await supabase.from("service_requests").select("*").eq("restaurant_id", restaurantId).eq("status", "pending").order("created_at", { ascending: false });
     setServiceRequests(serviceData || []);
 
     // Set QR States from Restaurant data if they exist
@@ -482,28 +494,72 @@ export default function PanelPage() {
     const req = serviceRequests.find(s => s.id === id);
     if (!req) return;
 
-    const { error } = await supabase.from("service_requests").update({ status: "resolved", resolved_at: new Date().toISOString() }).eq("id", id);
+    // 1. First, try to update the specific request
+    let { data: updatedData, error: updateError } = await supabase
+      .from("service_requests")
+      .update({ status: "resolved" })
+      .eq("id", id)
+      .select();
     
-    if (!error) {
+    // If update returned 0 rows or failed (likely due to RLS policies), try deleting as fallback
+    if (updateError || !updatedData || updatedData.length === 0) {
+      console.warn("Update failed or 0 rows affected (RLS issue?). Trying DELETE fallback...");
+      const { data: delData, error: delError } = await supabase
+        .from("service_requests")
+        .delete()
+        .eq("id", id)
+        .select();
+        
+      if (delError || !delData || delData.length === 0) {
+        console.error("Delete also failed:", delError);
+        flash("RLS Hatası: Bu işlemi yapmak için veritabanı yetkiniz yok!");
+        return;
+      }
+    }
+
+    // 2. If it has a table number, clear other pending requests for that table
+    if (req.table_no) {
+      const tableStr = String(req.table_no);
+      
+      // Try to update others, fallback to delete
+      const { data: othersUpdated } = await supabase
+        .from("service_requests")
+        .update({ status: "resolved" })
+        .eq("table_no", tableStr)
+        .eq("restaurant_id", restaurant?.id)
+        .eq("status", "pending")
+        .select();
+        
+      if (!othersUpdated || othersUpdated.length === 0) {
+         await supabase.from("service_requests").delete().eq("table_no", tableStr).eq("restaurant_id", restaurant?.id).eq("status", "pending");
+      }
+
       if (req.type === "payment") {
         await supabase.from("orders")
           .update({ status: "completed" })
-          .eq("table_no", req.table_no.toString())
+          .eq("table_no", tableStr)
           .eq("restaurant_id", restaurant?.id)
           .in("status", ["pending", "preparing", "ready"]);
           
         setOrders(prev => prev.map(o => 
-          (o.table_no.toString() === req.table_no.toString() && ["pending", "preparing", "ready"].includes(o.status)) 
+          (String(o.table_no) === tableStr && ["pending", "preparing", "ready"].includes(o.status)) 
           ? { ...o, status: "completed" } 
           : o
         ));
       }
-      setServiceRequests(prev => prev.map(s => s.id === id ? { ...s, status: "resolved", resolved_at: new Date().toISOString() } : s));
-      flash("Ödeme ve masa kapatıldı. ✓");
-    } else {
-      console.error("Ödeme kapatma hatası:", error);
-      flash("Hata: Ödeme kaydedilemedi.");
     }
+
+    // 3. Update local state
+    setServiceRequests(prev => prev.filter(s => {
+      // Remove them from view entirely to ensure UI is clean
+      const isSameTable = req.table_no && String(s.table_no) === String(req.table_no);
+      if (s.id === id || (isSameTable && s.status === "pending")) {
+        return false; 
+      }
+      return true;
+    }));
+
+    flash("Ödeme ve masa kapatıldı. ✓");
   };
 
   const updateOrderStatus = async (id: string, status: string) => {

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { translateContent } from "@/lib/actions/translate";
 import { Category, Product } from "@/types";
 
 import { ALLERGENS } from "@/lib/constants";
@@ -79,40 +78,6 @@ export function ProductModal({
     await new Promise(r => setTimeout(r, 1500)); 
     setDesc(generate(name));
     setAiLoading(false);
-  };
-
-  const [isTranslating, setIsTranslating] = useState(false);
-
-  const handleAutoTranslate = async () => {
-    if (!name.trim()) { setError("Çeviri için önce ürün adını girmelisiniz."); return; }
-    setIsTranslating(true);
-    setError(null);
-    try {
-      const targetLangs = ["en", "ar", "de", "ru"];
-      
-      // Translate Name
-      const translatedNames = await translateContent(name, targetLangs);
-      setNameEn(translatedNames.en || "");
-      setNameAr(translatedNames.ar || "");
-      setNameDe(translatedNames.de || "");
-      setNameRu(translatedNames.ru || "");
-
-      // Translate Description if exists
-      if (desc.trim()) {
-        const translatedDescs = await translateContent(desc, targetLangs);
-        setDescEn(translatedDescs.en || "");
-        setDescAr(translatedDescs.ar || "");
-        setDescDe(translatedDescs.de || "");
-        setDescRu(translatedDescs.ru || "");
-      }
-      
-      flash?.("Tüm dillere başarıyla çevrildi! ✨");
-    } catch (err) {
-      console.error(err);
-      setError("AI Çeviri sırasında bir hata oluştu.");
-    } finally {
-      setIsTranslating(false);
-    }
   };
 
   const handleSave = async () => {
@@ -223,10 +188,6 @@ export function ProductModal({
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                   <label style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,.3)" }}>ÜRÜN ADI</label>
-                  <button onClick={handleAutoTranslate} disabled={isTranslating} style={{ fontSize: 10, fontWeight: 800, color: "#3b82f6", background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 8l6 6 6-6"/></svg>
-                    {isTranslating ? "ÇEVİRİLİYOR..." : "🤖 TÜM DİLLERE ÇEVİR"}
-                  </button>
                 </div>
                 <input value={name} onChange={e => setName(e.target.value)} placeholder="Örn: Gurme Burger" style={{ width: "100%", padding: "14px", borderRadius: 12, background: "#111", border: "1px solid rgba(255,255,255,.1)", color: "#fff", outline: "none" }} />
               </div>
