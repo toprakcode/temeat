@@ -35,8 +35,19 @@ export function ProductCard({
   const discPrice = p.discount_pct ? Math.round(p.price * (1 - p.discount_pct / 100)) : null;
 
   return (
-    <div style={{ animation: `fadeUp .4s ${i * .03}s both`, background: C.cd, borderRadius: 16, border: `1px solid ${C.bd}`, overflow: "hidden", display: "flex", flexDirection: "column", opacity: p.is_available === false ? 0.7 : 1, filter: p.is_available === false ? "grayscale(0.5)" : "none" }}>
-      <div onClick={() => onClick(p)} style={{ position: "relative", width: "100%", paddingTop: "60%", cursor: "pointer", flexShrink: 0 }}>
+    <div style={{ 
+      animation: `fadeUp .4s ${i * .03}s both`, 
+      background: C.cd, 
+      borderRadius: 24, 
+      border: `1px solid ${C.bd}`, 
+      overflow: "hidden", 
+      display: "flex", 
+      flexDirection: "column", 
+      opacity: p.is_available === false ? 0.7 : 1, 
+      filter: p.is_available === false ? "grayscale(0.5)" : "none",
+      boxShadow: "0 4px 20px rgba(0,0,0,.03)"
+    }}>
+      <div onClick={() => onClick(p)} style={{ position: "relative", width: "100%", paddingTop: "65%", cursor: "pointer", flexShrink: 0 }}>
         <div style={{ position: "absolute", inset: 0 }}>
           {p.image_url
             ? <img src={p.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -51,87 +62,84 @@ export function ProductCard({
           </div>
         )}
         {p.discount_pct > 0 && p.is_available !== false && (
-          <div style={{ position: "absolute", top: 8, left: 8, background: themeColor, color: "#fff", fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 5, zIndex: 11 }}>-{p.discount_pct}%</div>
+          <div style={{ position: "absolute", top: 12, left: 12, background: "#ef4444", color: "#fff", fontSize: 11, fontWeight: 800, padding: "5px 10px", borderRadius: 10, zIndex: 11 }}>-%{p.discount_pct}</div>
         )}
         {isAIChoice && p.is_available !== false && (
           <div style={{ 
             position: "absolute", 
-            top: 8, 
-            right: 8, 
+            top: 12, 
+            right: 12, 
             background: `linear-gradient(135deg, ${themeColor} 0%, #ff8c00 100%)`, 
             color: "#fff", 
-            fontSize: 9, 
+            fontSize: 10, 
             fontWeight: 800, 
-            padding: "4px 8px", 
-            borderRadius: 8, 
+            padding: "5px 10px", 
+            borderRadius: 10, 
             zIndex: 11,
             display: "flex",
             alignItems: "center",
             gap: 4,
             boxShadow: "0 4px 12px rgba(0,0,0,0.2)"
           }}>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
             AI SEÇİMİ
           </div>
         )}
       </div>
-      <div style={{ padding: "12px 14px", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
-        <div onClick={() => onClick(p)} style={{ fontWeight: 700, fontSize: 14, letterSpacing: "-.01em", cursor: "pointer", lineHeight: 1.3 }}>
+      <div style={{ padding: "20px", flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+        <div onClick={() => onClick(p)} style={{ fontWeight: 800, fontSize: 18, letterSpacing: "-.02em", cursor: "pointer", lineHeight: 1.2, color: C.tx }}>
           {getProductName(p, lang)}
         </div>
-        <div style={{ fontSize: 11, color: C.mt, lineHeight: 1.4, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+        <div style={{ fontSize: 13, color: C.mt, lineHeight: 1.6, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
           {getProductDesc(p, lang)}
         </div>
-        {p.allergens?.length > 0 && (
-          <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
-            {p.allergens.map(a => {
-              const allergen = ALLERGENS.find(al => al.key === a);
-              return allergen ? (
-                <span key={a} style={{ fontSize: 9, background: C.bg, border: `1px solid ${C.bd}`, borderRadius: 4, padding: "1px 6px", color: C.mt, fontWeight: 600 }}>
-                  {allergen.label}
-                </span>
-              ) : null;
-            })}
-          </div>
-        )}
-          {hasPrepInfo && p.prep_time && (
-            <div style={{ display: "flex", gap: 8, fontSize: 10, color: C.mt }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                {p.prep_time} {t.prep}
+        
+        {/* Badges Row */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
+          {p.allergens?.length > 0 && p.allergens.map(a => {
+            const allergen = ALLERGENS.find(al => al.key === a);
+            return allergen ? (
+              <span key={a} style={{ fontSize: 10, background: C.bg, border: `1px solid ${C.bd}`, borderRadius: 8, padding: "3px 10px", color: C.mt, fontWeight: 600 }}>
+                {allergen.label}
               </span>
-            </div>
-          )}
-
-          {/* SOCIAL PROOF INDICATOR */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
-            <div style={{ width: 6, height: 6, borderRadius: 99, background: "#10b981", animation: "pulse 2s infinite" }} />
-            <span style={{ fontSize: 10, color: "rgba(16, 185, 129, 0.8)", fontWeight: 700 }}>
-              {(() => {
-                // Pseudo-random but consistent number of viewers
-                const seed = p.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-                const viewers = 2 + (seed % 6);
-                return lang === 'tr' ? `Şu an ${viewers} kişi inceliyor` : `${viewers} people viewing right now`;
-              })()}
+            ) : null;
+          })}
+          {hasPrepInfo && p.prep_time && (
+            <span style={{ fontSize: 11, color: C.mt, fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              {p.prep_time} {t.prep}
             </span>
-          </div>
+          )}
+        </div>
 
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto", paddingTop: 8 }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-            <span style={{ fontSize: 16, fontWeight: 800 }}>₺{discPrice || p.price}</span>
-            {discPrice && <span style={{ fontSize: 11, color: C.dm, textDecoration: "line-through" }}>₺{p.price}</span>}
+        {/* SOCIAL PROOF INDICATOR */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+          <div style={{ width: 6, height: 6, borderRadius: 99, background: "#10b981", animation: "pulse 2s infinite" }} />
+          <span style={{ fontSize: 10, color: "rgba(16, 185, 129, 0.8)", fontWeight: 700 }}>
+            {(() => {
+              const seed = p.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+              const viewers = 2 + (seed % 6);
+              return lang === 'tr' ? `Şu an ${viewers} kişi inceliyor` : `${viewers} people viewing right now`;
+            })()}
+          </span>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto", paddingTop: 16 }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+            <span style={{ fontSize: 20, fontWeight: 900, color: C.tx }}>₺{discPrice || p.price}</span>
+            {discPrice && <span style={{ fontSize: 13, color: C.mt, textDecoration: "line-through" }}>₺{p.price}</span>}
           </div>
           {hasCart && (
             p.is_available === false ? (
-              <span style={{ fontSize: 10, fontWeight: 700, color: C.dm, textTransform: "uppercase" }}>Tükendi</span>
+              <span style={{ fontSize: 11, fontWeight: 800, color: C.dm, textTransform: "uppercase", letterSpacing: "0.05em" }}>Tükendi</span>
             ) : cartQty > 0 ? (
-              <div style={{ display: "flex", alignItems: "center", background: C.al, borderRadius: 8, border: `1.5px solid ${themeColor}20` }}>
-                <button onClick={() => onRemove(p)} style={{ width: 28, height: 28, border: "none", background: "none", cursor: "pointer", fontSize: 16, color: themeColor }}>−</button>
-                <span style={{ fontWeight: 700, fontSize: 13, color: themeColor, minWidth: 16, textAlign: "center" }}>{cartQty}</span>
-                <button onClick={() => onAdd(p)} style={{ width: 28, height: 28, border: "none", background: themeColor, cursor: "pointer", fontSize: 16, color: "#fff", borderRadius: "0 6px 6px 0" }}>+</button>
+              <div style={{ display: "flex", alignItems: "center", background: C.al, borderRadius: 12, border: `1.5px solid ${themeColor}20` }}>
+                <button onClick={() => onRemove(p)} style={{ width: 36, height: 36, border: "none", background: "none", cursor: "pointer", fontSize: 20, color: themeColor }}>−</button>
+                <span style={{ fontWeight: 800, fontSize: 15, color: themeColor, minWidth: 20, textAlign: "center" }}>{cartQty}</span>
+                <button onClick={() => onAdd(p)} style={{ width: 36, height: 36, border: "none", background: themeColor, cursor: "pointer", fontSize: 20, color: "#fff", borderRadius: "0 12px 12px 0" }}>+</button>
               </div>
             ) : (
-              <button onClick={() => onAdd(p)} style={{ padding: "6px 14px", borderRadius: 8, border: `1.5px solid ${C.bd}`, background: "transparent", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", color: C.tx }}>+ {t.add}</button>
+              <button onClick={() => onAdd(p)} style={{ height: 40, padding: "0 20px", borderRadius: 12, border: `1px solid ${C.bd}`, background: C.cd, fontSize: 13, fontWeight: 700, color: C.tx, cursor: "pointer" }}>+ {t.add}</button>
             )
           )}
         </div>

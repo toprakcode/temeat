@@ -125,9 +125,9 @@ const MOCK_CATEGORIES: DbCategory[] = [
 ];
 
 const MOCK_PRODUCTS: DbProduct[] = [
-  { id: "p1", category_id: "c1", name_tr: "Izgara Antrikot", name_en: "Grilled Entrecote", desc_tr: "Karamelize soğan ve bebek patates ile", desc_en: "With caramelized onions and baby potatoes", price: 540, discount_pct: 10, image_url: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600", calories: 650, prep_time: 25, serves: 1, name_ar: null, name_de: null, name_ru: null, desc_ar: null, desc_de: null, desc_ru: null },
-  { id: "p2", category_id: "c1", name_tr: "Deniz Mahsüllü Linguine", name_en: "Seafood Linguine", desc_tr: "Taze karides ve kalamar ile", desc_en: "With fresh shrimp and calamari", price: 420, discount_pct: 0, image_url: "https://images.unsplash.com/photo-1563379091339-03b21bc4a4f8?w=600", calories: 520, prep_time: 18, serves: 1, name_ar: null, name_de: null, name_ru: null, desc_ar: null, desc_de: null, desc_ru: null },
-  { id: "p3", category_id: "c2", name_tr: "Trüflü Burrata", name_en: "Truffle Burrata", desc_tr: "Roka ve balzamik sirke ile", desc_en: "With arugula and balsamic vinegar", price: 310, discount_pct: 0, image_url: "https://images.unsplash.com/photo-1600335895229-6e75511ee94e?w=600", calories: 340, prep_time: 10, serves: 2, name_ar: null, name_de: null, name_ru: null, desc_ar: null, desc_de: null, desc_ru: null },
+  { id: "p1", category_id: "c1", name_tr: "TEMeat Special Burger", name_en: "TEMeat Special Burger", desc_tr: "Wagyu eti, karamelize soğan ve özel sos ile", desc_en: "Wagyu beef, caramelized onions and special sauce", price: 540, discount_pct: 10, image_url: "/burger.png", calories: 650, prep_time: 25, serves: 1, name_ar: null, name_de: null, name_ru: null, desc_ar: null, desc_de: null, desc_ru: null },
+  { id: "p2", category_id: "c1", name_tr: "Napoliten Pizza", name_en: "Neapolitan Pizza", desc_tr: "Taze mozzarella, fesleğen ve San Marzano domates", desc_en: "Fresh mozzarella, basil and San Marzano tomatoes", price: 420, discount_pct: 0, image_url: "/pizza.png", calories: 520, prep_time: 18, serves: 1, name_ar: null, name_de: null, name_ru: null, desc_ar: null, desc_de: null, desc_ru: null },
+  { id: "p3", category_id: "c2", name_tr: "Akdeniz Salatası", name_en: "Mediterranean Salad", desc_tr: "Avokado, kinoa ve beyaz peynir ile", desc_en: "With avocado, quinoa and feta cheese", price: 310, discount_pct: 0, image_url: "/salad.png", calories: 340, prep_time: 10, serves: 1, name_ar: null, name_de: null, name_ru: null, desc_ar: null, desc_de: null, desc_ru: null },
   { id: "p4", category_id: "c3", name_tr: "Egzotik Passion", name_en: "Exotic Passion", desc_tr: "Çarkıfelek meyvesi ve nane", desc_en: "Passion fruit and mint", price: 185, discount_pct: 5, image_url: "https://images.unsplash.com/photo-1536935338788-846bb9981813?w=600", calories: 120, prep_time: 5, serves: 1, name_ar: null, name_de: null, name_ru: null, desc_ar: null, desc_de: null, desc_ru: null },
   { id: "p5", category_id: "c4", name_tr: "San Sebastian Cheesecake", name_en: "San Sebastian", desc_tr: "Belçika çikolatası sosu ile", desc_en: "With Belgian chocolate sauce", price: 210, discount_pct: 0, image_url: "https://images.unsplash.com/photo-1543508282-5c1f427f023f?w=600", calories: 480, prep_time: 5, serves: 1, name_ar: null, name_de: null, name_ru: null, desc_ar: null, desc_de: null, desc_ru: null },
 ];
@@ -217,27 +217,25 @@ function MenuApp({ plan, lang, onLangChange, restaurant, categories, allProducts
         </div>
       )}
 
-      <div style={{ background: C.cd, borderBottom: `1px solid ${C.bd}`, position: "sticky", top: 0, zIndex: 30, boxShadow: scrolled ? "0 4px 12px rgba(0,0,0,.05)" : "none", transition: "all .3s" }}>
-        <div style={{ padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0 }}>
+      <div style={{ background: C.cd, borderBottom: `1px solid ${C.bd}`, position: "sticky", top: 0, zIndex: 30, boxShadow: scrolled ? "0 4px 12px rgba(0,0,0,.08)" : "none", transition: "all .3s" }}>
+        <div style={{ padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
             {hasFeature("logo") ? (
-              <div style={{ width: 40, height: 40, borderRadius: 12, background: A, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 900, fontSize: 18 }}>G</div>
+              <div style={{ width: 34, height: 34, borderRadius: 10, background: A, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 900, fontSize: 14 }}>G</div>
             ) : (
               <Logo size="sm" withTagline={false} isDark={dark} />
             )}
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-.02em", color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{hasFeature("logo") ? "Gusto Mediterranean" : "deneme"}</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
-                <div style={{ fontSize: 11, color: "#22c55e", fontWeight: 700 }}>● 09:00 - 23:00</div>
-              </div>
+              <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: "-.02em", color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{hasFeature("logo") ? "Gusto Mediterranean" : "deneme"}</div>
+              {hasFeature("hours") && <div style={{ fontSize: 9, color: "#22c55e", fontWeight: 700, marginTop: 1 }}>● 09:00 - 23:00</div>}
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             {hasFeature("lang") && (
-              <div style={{ display: "flex", background: "#000", borderRadius: 12, padding: 4 }}>
+              <div style={{ display: "flex", background: "#000", borderRadius: 10, padding: 3 }}>
                 {(["tr", "en", "ar", "de", "ru"] as LangKey[]).map(l => (
                   <button key={l} onClick={() => onLangChange(l)}
-                    style={{ padding: "5px 7px", border: "none", cursor: "pointer", fontSize: 10, fontWeight: lang === l ? 800 : 400, background: lang === l ? "#333" : "transparent", color: "#fff", borderRadius: 8, minWidth: 26 }}>
+                    style={{ padding: "4px 6px", border: "none", cursor: "pointer", fontSize: 9, fontWeight: lang === l ? 800 : 400, background: lang === l ? "#333" : "transparent", color: "#fff", borderRadius: 7, minWidth: 26 }}>
                     {l.toUpperCase()}
                   </button>
                 ))}
@@ -245,8 +243,8 @@ function MenuApp({ plan, lang, onLangChange, restaurant, categories, allProducts
             )}
             {hasFeature("dark") && (
               <button onClick={() => setDark(!dark)}
-                style={{ width: 36, height: 36, borderRadius: 12, border: `1px solid ${C.bd}`, background: C.cd, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: C.tx }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                style={{ width: 32, height: 32, borderRadius: 10, border: `1px solid ${C.bd}`, background: C.cd, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: C.tx }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
               </button>
             )}
           </div>
@@ -256,28 +254,28 @@ function MenuApp({ plan, lang, onLangChange, restaurant, categories, allProducts
       <div style={{ flex: 1, overflowY: "auto" }} onScroll={(e: any) => setScrolled(e.target.scrollTop > 20)}>
         {/* WiFi */}
         {hasFeature("wifi") && (
-          <div style={{ padding: "12px 20px", borderBottom: `1px solid ${C.bd}`, display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.mt} strokeWidth="2"><path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg>
-              <span style={{ fontSize: 12, color: C.mt, fontWeight: 500 }}>WiFi:</span>
-              <div style={{ background: C.cd, border: `1px solid ${C.bd}`, borderRadius: 8, padding: "4px 12px", fontSize: 12, fontWeight: 700, color: C.tx }}>gusto-free-wifi</div>
+          <div style={{ padding: "16px 20px", borderBottom: `1px solid ${C.bd}`, display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.mt} strokeWidth="2.5"><path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg>
+              <span style={{ fontSize: 13, color: C.mt, fontWeight: 500 }}>WiFi:</span>
+              <div style={{ background: C.cd, border: `1px solid ${C.bd}`, borderRadius: 10, padding: "6px 14px", fontSize: 13, fontWeight: 700, color: C.tx }}>gusto-free-wifi</div>
             </div>
           </div>
         )}
 
         {/* Chef's Picks */}
         {chefPicks.length > 0 && !search && (
-          <div style={{ padding: "16px 20px 0" }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: A, marginBottom: 10, letterSpacing: ".06em", textTransform: "uppercase" }}>{t.chef}</div>
-            <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 4 }}>
+          <div style={{ padding: "20px 20px 10px" }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: A, marginBottom: 12, letterSpacing: ".08em", textTransform: "uppercase" }}>{t.chef}</div>
+            <div style={{ display: "flex", gap: 16, overflowX: "auto", paddingBottom: 12 }}>
               {chefPicks.map((p: any) => (
-                <div key={p.id} onClick={() => setDet(p)} style={{ width: 180, flexShrink: 0, cursor: "pointer" }}>
-                  <div style={{ position: "relative", width: 180, height: 120, borderRadius: 14, overflow: "hidden", marginBottom: 6 }}>
+                <div key={p.id} onClick={() => setDet(p)} style={{ width: 200, flexShrink: 0, cursor: "pointer" }}>
+                  <div style={{ position: "relative", width: 200, height: 130, borderRadius: 20, overflow: "hidden", marginBottom: 10, boxShadow: "0 8px 25px rgba(0,0,0,0.15)" }}>
                     <img src={p.image_url} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" />
-                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,.6), transparent 50%)" }} />
-                    <div style={{ position: "absolute", bottom: 8, left: 10 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>{getProductName(p, lang)}</div>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: "#fff" }}>₺{getDiscountedPrice(p)}</div>
+                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,.8), transparent 60%)" }} />
+                    <div style={{ position: "absolute", bottom: 10, left: 12 }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: "#fff" }}>{getProductName(p, lang)}</div>
+                      <div style={{ fontSize: 15, fontWeight: 900, color: "#fff", marginTop: 4 }}>₺{getDiscountedPrice(p)}</div>
                     </div>
                   </div>
                 </div>
@@ -287,24 +285,24 @@ function MenuApp({ plan, lang, onLangChange, restaurant, categories, allProducts
         )}
 
         {/* Search */}
-        <div style={{ padding: "14px 20px 10px" }}>
+        <div style={{ padding: "20px 20px 12px" }}>
           <div style={{ position: "relative" }}>
             <input type="text" value={search} onChange={e => setSearch(e.target.value)}
               placeholder={t.search}
-              style={{ width: "100%", padding: "11px 16px 11px 36px", borderRadius: 12, border: `1.5px solid ${search ? A + "40" : C.bd}`, background: C.cd, color: C.tx, fontSize: 14, outline: "none" }} />
-            <div style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", opacity: 0.4 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+              style={{ width: "100%", padding: "14px 16px 14px 44px", borderRadius: 14, border: `1.5px solid ${search ? A + "40" : C.bd}`, background: C.cd, color: C.tx, fontSize: 15, outline: "none" }} />
+            <div style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", opacity: 0.4 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
             </div>
           </div>
         </div>
 
         {/* Categories (Sticky) */}
         {!search && (
-          <div style={{ position: "sticky", top: 0, zIndex: 25, background: C.bg, borderBottom: `1px solid ${C.bd}` }}>
+          <div style={{ position: "sticky", top: 62, zIndex: 25, background: C.bg, borderBottom: `1px solid ${C.bd}`, marginBottom: 12 }}>
             <div style={{ display: "flex", overflowX: "auto", scrollbarWidth: "none", msOverflowStyle: "none" }}>
               {categories.map((c: any) => (
                 <button key={c.id} onClick={() => setActiveCat(c.id)}
-                  style={{ flexShrink: 0, padding: "14px 18px", border: "none", cursor: "pointer", fontSize: 13, fontWeight: activeCat === c.id ? 800 : 500, color: activeCat === c.id ? A : C.mt, background: "transparent", borderBottom: activeCat === c.id ? `3px solid ${A}` : "3px solid transparent", transition: "all .2s", whiteSpace: "nowrap" }}>
+                  style={{ flexShrink: 0, padding: "16px 20px", border: "none", cursor: "pointer", fontSize: 14, fontWeight: activeCat === c.id ? 800 : 500, color: activeCat === c.id ? A : C.mt, background: "transparent", borderBottom: activeCat === c.id ? `3px solid ${A}` : "3px solid transparent", transition: "all .2s", whiteSpace: "nowrap" }}>
                   {c.name}
                 </button>
               ))}

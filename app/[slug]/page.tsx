@@ -210,7 +210,7 @@ function MenuContent({ params: paramsPromise }: { params: Promise<{ slug: string
     setActiveCat(catId);
     const el = document.getElementById(`cat-${catId}`);
     if (el) {
-      const headerOffset = 130;
+      const headerOffset = 160;
       const elementPosition = el.getBoundingClientRect().top;
       const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
       window.scrollTo({ top: offsetPosition, behavior: "smooth" });
@@ -240,9 +240,9 @@ function MenuContent({ params: paramsPromise }: { params: Promise<{ slug: string
         @keyframes toast{0%{opacity:0;transform:translateX(-50%) scale(.95)}100%{opacity:1;transform:translateX(-50%) scale(1)}}
         ::-webkit-scrollbar{display:none}
         .cat-bar::-webkit-scrollbar{display:none}
-        .product-grid{display:grid;grid-template-columns:1fr;gap:12px;padding:16px}
-        @media(min-width:640px){.product-grid{grid-template-columns:1fr 1fr;gap:16px;padding:20px}}
-        @media(min-width:1024px){.product-grid{grid-template-columns:1fr 1fr 1fr;gap:20px;padding:24px}}
+        .product-grid{display:grid;grid-template-columns:1fr;gap:20px;padding:20px}
+        @media(min-width:640px){.product-grid{grid-template-columns:1fr 1fr;gap:20px;padding:24px}}
+        @media(min-width:1024px){.product-grid{grid-template-columns:1fr 1fr 1fr;gap:24px;padding:32px}}
       `}</style>
 
       {toast && (
@@ -252,44 +252,46 @@ function MenuContent({ params: paramsPromise }: { params: Promise<{ slug: string
       )}
 
       {/* Header */}
-      <div style={{ background: dark ? "#1E1E1E" : "#fff", borderBottom: `1px solid ${C.bd}`, position: "sticky", top: 0, zIndex: 30, boxShadow: scrolled ? "0 4px 12px rgba(0,0,0,.05)" : "none", transition: "all .3s" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{ background: dark ? "#1E1E1E" : "#fff", borderBottom: `1px solid ${C.bd}`, position: "sticky", top: 0, zIndex: 30, boxShadow: scrolled ? "0 4px 12px rgba(0,0,0,.08)" : "none", transition: "all .3s" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "20px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 16 }}>
             {hasFeature("white_label") && restaurant!.logo_url ? (
-              <img src={restaurant!.logo_url} alt="" style={{ width: 32, height: 32, borderRadius: 8, objectFit: "cover" }} />
+              <img src={restaurant!.logo_url} alt="" style={{ width: 44, height: 44, borderRadius: 14, objectFit: "cover" }} />
             ) : (
               <Logo size="sm" withTagline={false} isDark={dark} />
             )}
             <div style={{ minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: "-.02em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{restaurant!.name}</div>
-                {restaurant!.wifi_password && (
-                  <button 
-                    onClick={() => {
-                      navigator.clipboard.writeText(restaurant!.wifi_password!);
-                      flash("WiFi Şifresi Kopyalandı!");
-                    }}
-                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "2px 6px", display: "flex", alignItems: "center", gap: 4, cursor: "pointer", color: A }}
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg>
-                    <span style={{ fontSize: 9, fontWeight: 700 }}>WIFI</span>
-                  </button>
-                )}
+                <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-.02em", color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{restaurant!.name}</div>
               </div>
-              {restaurant!.hours && <div style={{ fontSize: 10, color: "#22c55e", fontWeight: 600 }}>● {restaurant!.hours.replace("-", " - ")}</div>}
+              {restaurant!.hours && <div style={{ fontSize: 11, color: "#22c55e", fontWeight: 700, marginTop: 4 }}>● {restaurant!.hours.replace("-", " - ")}</div>}
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0, marginLeft: 8 }}>
-            <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: `1px solid ${C.bd}` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0, marginLeft: 12 }}>
+            {/* Premium Language Switcher (Black Pill) */}
+            <div style={{ display: "flex", background: "#000", borderRadius: 12, padding: 4 }}>
               {LANGS.map(l => (
-                <button key={l.key} onClick={() => setLang(l.key)} style={{ padding: "5px 6px", border: "none", cursor: "pointer", fontSize: 9, fontWeight: lang === l.key ? 700 : 400, background: lang === l.key ? C.tx : "transparent", color: lang === l.key ? C.bg : C.mt }}>{l.label}</button>
+                <button key={l.key} onClick={() => setLang(l.key)} 
+                  style={{ 
+                    padding: "6px 8px", 
+                    border: "none", 
+                    cursor: "pointer", 
+                    fontSize: 10, 
+                    fontWeight: lang === l.key ? 800 : 400, 
+                    background: lang === l.key ? "#333" : "transparent", 
+                    color: "#fff", 
+                    borderRadius: 8,
+                    minWidth: 28
+                  }}>
+                  {l.label.toUpperCase()}
+                </button>
               ))}
             </div>
-            <button onClick={() => setDark(!dark)} style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${C.bd}`, background: "transparent", cursor: "pointer", color: C.mt, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <button onClick={() => setDark(!dark)} style={{ width: 38, height: 38, borderRadius: 12, border: `1px solid ${C.bd}`, background: C.cd, cursor: "pointer", color: C.mt, display: "flex", alignItems: "center", justifyContent: "center" }}>
               {dark ? (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
               ) : (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
               )}
             </button>
           </div>
@@ -297,22 +299,67 @@ function MenuContent({ params: paramsPromise }: { params: Promise<{ slug: string
       </div>
 
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+        {/* WiFi Section (Prominent like Demo) */}
+        {restaurant!.wifi_password && (
+          <div style={{ padding: "16px 20px", borderBottom: `1px solid ${C.bd}`, display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.mt} strokeWidth="2.5"><path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg>
+                <span style={{ fontSize: 13, color: C.mt, fontWeight: 500 }}>WiFi:</span>
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(restaurant!.wifi_password!);
+                    flash("WiFi Şifresi Kopyalandı!");
+                  }}
+                  style={{ background: C.cd, border: `1px solid ${C.bd}`, borderRadius: 10, padding: "6px 14px", fontSize: 13, fontWeight: 700, color: C.tx, cursor: "pointer" }}
+                >
+                  {restaurant!.wifi_password}
+                </button>
+             </div>
+          </div>
+        )}
+
+        {/* Chef's Picks (Premium Feature from Demo) */}
+        {products.filter(p => p.is_chef_pick && p.is_active).length > 0 && !search && (
+          <div style={{ padding: "20px 20px 10px" }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: A, marginBottom: 12, letterSpacing: ".08em", textTransform: "uppercase" }}>{t.chef}</div>
+            <div style={{ display: "flex", gap: 16, overflowX: "auto", paddingBottom: 12, scrollbarWidth: "none", msOverflowStyle: "none" }}>
+              {products.filter(p => p.is_chef_pick && p.is_active).map((p) => (
+                <div key={p.id} onClick={() => setDetailProduct(p)} style={{ width: 200, flexShrink: 0, cursor: "pointer" }}>
+                  <div style={{ position: "relative", width: 200, height: 130, borderRadius: 20, overflow: "hidden", marginBottom: 10, boxShadow: "0 8px 25px rgba(0,0,0,0.15)" }}>
+                    {p.image_url ? (
+                      <img src={p.image_url} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" />
+                    ) : (
+                      <div style={{ width: "100%", height: "100%", background: `${A}15`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={A} strokeWidth="1.5" style={{ opacity: 0.3 }}><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
+                      </div>
+                    )}
+                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,.8), transparent 60%)" }} />
+                    <div style={{ position: "absolute", bottom: 10, left: 12, right: 12 }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{getProductName(p, lang)}</div>
+                      <div style={{ fontSize: 15, fontWeight: 900, color: "#fff", marginTop: 4 }}>₺{p.discount_pct ? Math.round(p.price * (1 - p.discount_pct / 100)) : p.price}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {/* Search */}
-        <div style={{ padding: "14px 20px 10px" }}>
+        <div style={{ padding: "20px 20px 12px" }}>
           <div style={{ position: "relative" }}>
-            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={t.search} style={{ width: "100%", padding: "11px 16px 11px 36px", borderRadius: 12, border: `1.5px solid ${C.bd}`, background: C.cd, color: C.tx, fontSize: 14, outline: "none" }} />
-            <span style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)", opacity: 0.4, display: "flex", alignItems: "center" }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={t.search} style={{ width: "100%", padding: "14px 16px 14px 44px", borderRadius: 14, border: `1.5px solid ${search ? A + "40" : C.bd}`, background: C.cd, color: C.tx, fontSize: 15, outline: "none" }} />
+            <span style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", opacity: 0.4, display: "flex", alignItems: "center" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </span>
           </div>
         </div>
 
         {/* Categories */}
         {!search && categories.length > 0 && (
-          <div style={{ position: "sticky", top: 60, zIndex: 25, background: C.bg, borderBottom: `1px solid ${C.bd}` }}>
+          <div style={{ position: "sticky", top: 84, zIndex: 25, background: dark ? "#1E1E1E" : "#fff", borderBottom: `1px solid ${C.bd}`, marginBottom: 12 }}>
             <div className="cat-bar" ref={catNavRef} style={{ display: "flex", overflowX: "auto" }}>
               {categories.map(cat => (
-                <button key={cat.id} id={`nav-${cat.id}`} onClick={() => scrollToCat(cat.id)} style={{ flexShrink: 0, padding: "14px 16px", border: "none", cursor: "pointer", fontSize: 13, fontWeight: activeCat === cat.id ? 700 : 500, color: activeCat === cat.id ? A : C.mt, background: "transparent", borderBottom: activeCat === cat.id ? `3px solid ${A}` : "3px solid transparent" }}>
+                <button key={cat.id} id={`nav-${cat.id}`} onClick={() => scrollToCat(cat.id)} style={{ flexShrink: 0, padding: "16px 20px", border: "none", cursor: "pointer", fontSize: 14, fontWeight: activeCat === cat.id ? 800 : 500, color: activeCat === cat.id ? A : C.mt, background: "transparent", borderBottom: activeCat === cat.id ? `3px solid ${A}` : "3px solid transparent" }}>
                   {getTranslatedName(cat, lang)}
                 </button>
               ))}
@@ -323,7 +370,7 @@ function MenuContent({ params: paramsPromise }: { params: Promise<{ slug: string
 
 
         {/* Products */}
-        <div style={{ paddingBottom: 100 }}>
+        <div style={{ paddingBottom: 180 }}>
           {search ? (
             <div className="product-grid">
               {products.filter(p => getProductName(p, lang).toLowerCase().includes(search.toLowerCase())).map((p, i) => (
@@ -392,24 +439,35 @@ function MenuContent({ params: paramsPromise }: { params: Promise<{ slug: string
         )}
       </div>
 
-      {/* Bottom Bar */}
-      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, borderTop: `1px solid ${C.bd}`, background: C.bg, zIndex: 20, padding: "10px 20px 16px" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", gap: 8 }}>
+      {/* Bottom Bar (Premium Action Buttons) */}
+      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, borderTop: `1px solid ${C.bd}`, background: C.cd, zIndex: 40, padding: "20px 20px 48px", display: "flex", gap: 16, boxShadow: "0 -4px 20px rgba(0,0,0,.05)" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", gap: 16, width: "100%" }}>
           <button onClick={async () => {
             await supabase.from("service_requests").insert({ restaurant_id: restaurant!.id, table_no: tableNo || "—", type: "waiter", status: "pending" });
             flash(t.waiter_notified);
-          }} style={{ flex: 1, padding: 11, borderRadius: 11, border: `1.5px solid ${C.bd}`, background: C.cd, color: C.tx, fontSize: 11, fontWeight: 600 }}>{t.waiter}</button>
+          }} style={{ flex: 1, height: 60, borderRadius: 18, border: `1px solid ${C.bd}`, background: C.cd, color: C.tx, fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, boxShadow: "0 2px 12px rgba(0,0,0,.04)" }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <span>{t.waiter}</span>
+          </button>
           
-          <button onClick={() => setShowPaymentSelect(true)} style={{ flex: 1, padding: 11, borderRadius: 11, border: `1.5px solid ${C.bd}`, background: C.cd, color: C.tx, fontSize: 11, fontWeight: 600 }}>{t.bill}</button>
+          <button onClick={() => setShowPaymentSelect(true)} style={{ flex: 1, height: 60, borderRadius: 18, border: `1px solid ${C.bd}`, background: C.cd, color: C.tx, fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, boxShadow: "0 2px 12px rgba(0,0,0,.04)" }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            <span>{t.bill}</span>
+          </button>
 
           {lastOrderId && (
-            <Link href={`/${slug}/order/${lastOrderId}`} style={{ flex: 1, padding: 11, borderRadius: 11, border: `1.5px solid ${A}60`, background: `${A}20`, color: "#fff", fontSize: 11, fontWeight: 700, textDecoration: "none", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Link href={`/${slug}/order/${lastOrderId}`} style={{ flex: 1, height: 60, borderRadius: 18, border: `1.5px solid ${A}60`, background: `${A}20`, color: "#fff", fontSize: 13, fontWeight: 700, textDecoration: "none", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
               Takip Et
             </Link>
           )}
 
           {cartCount > 0 && (
-            <button onClick={() => setShowCart(true)} style={{ flex: 1.5, padding: "11px 16px", borderRadius: 11, border: "none", background: A, color: "#fff", fontSize: 13, fontWeight: 700 }}>₺{cartTotal}</button>
+            <button onClick={() => setShowCart(true)} style={{ position: "absolute", top: -80, right: 20, padding: "14px 24px", borderRadius: 100, border: "none", background: A, color: "#fff", fontSize: 16, fontWeight: 800, display: "flex", alignItems: "center", gap: 12, boxShadow: `0 10px 30px ${A}40`, animation: "toast .3s both" }}>
+               <span>{cartCount}x</span>
+               <div style={{ width: 1, height: 20, background: "rgba(255,255,255,.3)" }} />
+               <span>₺{cartTotal}</span>
+            </button>
           )}
         </div>
       </div>
